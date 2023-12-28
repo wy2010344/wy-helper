@@ -1,0 +1,63 @@
+{
+  "version": "0.1.0",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "contentEditable"
+  ],
+  "engines": {
+    "node": ">=10"
+  },
+  "scripts": {
+    "start": "tsdx watch",
+    "build": "tsdx build && sh ./scripts/postbuild.sh",
+    "test": "tsdx test",
+    "lint": "tsdx lint",
+    "prepare": "tsdx build &&  sh ./scripts/postbuild.sh",
+    "size": "size-limit",
+    "analyze": "size-limit --why"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "tsdx lint"
+    }
+  },
+  "prettier": {
+    "printWidth": 80,
+    "semi": true,
+    "singleQuote": true,
+    "trailingComma": "es5"
+  },
+  "name": "wy-dom-helper",
+  "author": "wyknmjj",
+  "module": "dist/esm/index.js",
+  "size-limit": [
+    {
+      "path": "dist/wy-dom-helper.cjs.production.min.js",
+      "limit": "10 KB"
+    },
+    {
+      "path": "dist/wy-dom-helper.esm.js",
+      "limit": "10 KB"
+    }
+  ],
+  "devDependencies": {
+    "@size-limit/preset-small-lib": "^11.0.1",
+    "@types/stylis": "^4.2.5",
+    "csstype": "^3.1.3",
+    "husky": "^8.0.3",
+    "size-limit": "^11.0.1",
+    "tsdx": "^0.14.1",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "wy-helper": "^0.1.0"
+  },
+  "dependencies": {
+    "stylis": "^4.3.1"
+  }
+}
