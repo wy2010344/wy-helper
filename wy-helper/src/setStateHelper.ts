@@ -1,6 +1,7 @@
 
 export type SetStateAction<T> = T | ((v: T) => T)
-export declare type SetValue<F> = (v: F) => void;
+export type SetValue<F> = (v: F, ...vs: any[]) => void;
+export type GetValue<F> = (...vs: any[]) => F;
 export type ReduceState<T> = SetValue<SetStateAction<T>>
 
 
@@ -65,6 +66,7 @@ export function buildSubSetArray<T>(
     })
   }
 }
+
 
 export function serialEvent<T extends (...args: any[]) => any>(
   ..._vs: (T | undefined | null)[]

@@ -1,4 +1,5 @@
-import { emptyFun } from "./util"
+import { ReduceState } from "./setStateHelper"
+import { FalseType, emptyFun } from "./util"
 
 export type PromiseResult<T> = {
   type: "success",
@@ -7,6 +8,36 @@ export type PromiseResult<T> = {
   type: "error",
   value: any
 }
+
+export type PromiseResultSuccessValue<T> = T extends {
+  type: "success"
+  value: infer V
+} ? V : never
+export type VersionPromiseResult<T> = PromiseResult<T> & {
+  version: number
+}
+export type GetPromiseRequest<T> = (signal?: AbortSignal, ...vs: any[]) => Promise<T>;
+export type OnVersionPromiseFinally<T> = (
+  data: VersionPromiseResult<T>,
+  ...vs: any[]
+) => void
+export function createAbortController() {
+  if ("AbortController" in globalThis) {
+    const signal = new AbortController();
+    return {
+      signal: signal.signal,
+      cancel() {
+        signal.abort();
+      },
+    };
+  }
+  return {
+    signal: undefined,
+    cancel: emptyFun,
+  };
+}
+
+export type OutPromiseOrFalse<T> = (GetPromiseRequest<T>) | FalseType;
 
 export function buildSerialRequestSingle<Req extends any[], Res>(
   callback: (...vs: Req) => Promise<Res>,
@@ -51,4 +82,21 @@ export function buildSerialRequestSingle<Req extends any[], Res>(
       circleRun()
     }
   }
+}
+
+
+export function buildPromiseResultSetData<F extends PromiseResult<any>>(
+  updateData: ReduceState<F | undefined>
+): ReduceState<PromiseResultSuccessValue<F>> {
+  return function setData(fun) {
+    updateData((old) => {
+      if (old?.type == "success") {
+        return {
+          ...old,
+          value: typeof fun == "function" ? (fun as any)(old.value) : fun,
+        };
+      }
+      return old;
+    });
+  };
 }
