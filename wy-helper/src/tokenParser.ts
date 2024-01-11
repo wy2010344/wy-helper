@@ -118,6 +118,17 @@ export function notMathChar<Q extends Que>(...charCodes: number[]): ParseFun<Q> 
   }
 }
 
+export function matchStep<Q extends Que>(step: (n: number) => boolean): ParseFun<Q> {
+  return function (que) {
+    return que.step1Code(step) as Q | undefined
+  }
+}
+
+export function matchBetween<Q extends Que>(begin: number, end: number): ParseFun<Q> {
+  return function (que) {
+    return que.step1Code(v => begin <= v && v <= end) as Q | undefined
+  }
+}
 
 export function andMatch(...rules: ParseFun<any>[]) {
   return function <Q extends BaseQue<any, any>>(que: Q) {

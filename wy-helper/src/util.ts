@@ -1,6 +1,6 @@
 
 /**6种情况为false,NaN是数字类型*/
-export type FalseType = false | undefined | null | 0 | ""
+export type FalseType = false | undefined | null | 0 | "" | void
 export type EmptyFun = (...vs: any[]) => void
 
 
@@ -16,6 +16,7 @@ export function emptyFun(...vs: any[]) { }
 
 export type AnyFunction = (...vs: any[]) => any
 export function quote<T>(v: T, ...vs: any[]) { return v }
+export async function quotePromise<T>(v: T, ...vs: any[]) { return v }
 export function expandFunCall<T extends AnyFunction>(
   fun: T
 ) {

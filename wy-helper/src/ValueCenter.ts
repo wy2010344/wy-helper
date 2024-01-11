@@ -1,4 +1,4 @@
-import { emptyFun } from "./util"
+import { EmptyFun, emptyFun, quote } from "./util"
 
 type EventHandler<T> = (v: T) => void
 export interface VirtualEventCenter<T> {
@@ -11,7 +11,7 @@ export function eventCenter<T>() {
     poolSize() {
       return pool.size
     },
-    subscribe(notify: EventHandler<T>) {
+    subscribe(notify: EventHandler<T>): EmptyFun {
       if (pool.has(notify)) {
         return emptyFun
       }
@@ -53,4 +53,15 @@ export function valueCenterOf<T>(value: T): ValueCenter<T> {
     },
     subscribe
   }
+}
+
+export function subSubscriber<P, C>(subscribe: Subscriber<P>, filter: (p: P) => C, notify: EventHandler<C>) {
+  let lastValue: C | undefined
+  return subscribe(function (p) {
+    const value = filter(p)
+    if (value != lastValue) {
+      lastValue = value
+      notify(value)
+    }
+  })
 }
