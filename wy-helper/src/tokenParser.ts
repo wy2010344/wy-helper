@@ -1,3 +1,4 @@
+import { quote } from "./util";
 
 export type ReadArray<T> = {
   length: number;
@@ -37,6 +38,21 @@ export class Que extends BaseQue<string, string>{
       }
     }
   }
+
+  /**
+   * 匹配到这些字眼,提前进入结束
+   * @param vs 
+   * @returns 
+   */
+  matchToEnd(vs: string[]) {
+    for (const v of vs) {
+      if (this.content.startsWith(v, this.i)) {
+        return void 0;
+      }
+    }
+    return this
+  }
+
   protected stepQue(step: number): Que {
     return new Que(this.content, step)
   }
@@ -78,10 +94,10 @@ export class LineCharQue extends Que {
  * 解析,如果解析成功,返回正数.解析失败,返回负数
  */
 export type ParseFun<Q extends BaseQue<any, any>> = (que: Q) => (Q | void)
-export function matchVS<V, VS extends QueArray<V>>(...vs: Match<V>[]): ParseFun<BaseQue<V, VS>> {
+export function matchVS<V, F extends BaseQue<V, any>>(...vs: Match<V>[]): ParseFun<F> {
   return function (que) {
     for (const v of vs) {
-      const next = que.step1(v)
+      const next = que.step1(v) as F
       if (next) {
         que = next
       } else {
@@ -94,6 +110,12 @@ export function matchVS<V, VS extends QueArray<V>>(...vs: Match<V>[]): ParseFun<
 export function match<Q extends Que>(...vs: string[]): ParseFun<Q> {
   return function (que) {
     return que.match(vs) as Q | undefined
+  }
+}
+
+export function matchToEnd<Q extends Que>(...vs: string[]): ParseFun<Q> {
+  return function (que) {
+    return que.matchToEnd(vs)
   }
 }
 
@@ -110,6 +132,15 @@ export function orMatch(...rules: ParseFun<any>[]) {
       }
     }
   }
+}
+
+/**
+ * 最后一个可选为空
+ * @param rules 
+ * @returns 
+ */
+export function orMatchEmpty(...rules: ParseFun<any>[]) {
+  return orMatch(...rules, quote)
 }
 
 export function notMathChar<Q extends Que>(...charCodes: number[]): ParseFun<Q> {
@@ -145,20 +176,44 @@ export function andMatch(...rules: ParseFun<any>[]) {
   }
 }
 
-export function manyMatch(rule: ParseFun<any>, min = 0) {
+export function manyMatch(
+  rule: ParseFun<any>,
+  min = 0,
+  between?: ParseFun<any>,
+  first?: ParseFun<any>
+) {
+  function goLast<Q>(count: number, last: Q) {
+    if (count < min) {
+      return
+    }
+    return last
+  }
   return function <Q extends BaseQue<any, any>>(que: Q) {
     let last = que
     let count = 0
     while (true) {
+      if (!count && first) {
+        const nlast = first(last)
+        if (nlast) {
+          last = nlast
+        } else {
+          return goLast(count, last)
+        }
+      }
+      if (count > 0 && between) {
+        const nlast = between(last)
+        if (nlast) {
+          last = nlast
+        } else {
+          return goLast(count, last)
+        }
+      }
       const nlast = rule(last)
       if (nlast) {
         count++
         last = nlast
       } else {
-        if (count < min) {
-          return
-        }
-        return last
+        return goLast(count, last)
       }
     }
   }
@@ -213,6 +268,36 @@ export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3>(
   ],
   merge: (...vs: [T1, T2, T3]) => T
 ): ParseFunGet<Q, T>
+export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4>(
+  args: [
+    ParseFunGet<Q, T1>,
+    ParseFunGet<Q, T2>,
+    ParseFunGet<Q, T3>,
+    ParseFunGet<Q, T4>,
+  ],
+  merge: (...vs: [T1, T2, T3, T4]) => T
+): ParseFunGet<Q, T>
+export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4, T5>(
+  args: [
+    ParseFunGet<Q, T1>,
+    ParseFunGet<Q, T2>,
+    ParseFunGet<Q, T3>,
+    ParseFunGet<Q, T4>,
+    ParseFunGet<Q, T5>,
+  ],
+  merge: (...vs: [T1, T2, T3, T4, T5]) => T
+): ParseFunGet<Q, T>
+export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4, T5, T6>(
+  args: [
+    ParseFunGet<Q, T1>,
+    ParseFunGet<Q, T2>,
+    ParseFunGet<Q, T3>,
+    ParseFunGet<Q, T4>,
+    ParseFunGet<Q, T5>,
+    ParseFunGet<Q, T6>,
+  ],
+  merge: (...vs: [T1, T2, T3, T4, T5, T6]) => T
+): ParseFunGet<Q, T>
 export function andRuleGet<Q extends BaseQue<any, any>, T>(
   args: ParseFunGet<Q, any>[],
   merge: (...vs: any) => T
@@ -261,6 +346,39 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5>(
     ParseFunGet<Q, T5>
   ]
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T5>
+export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6>(
+  ...rules: [
+    ParseFunGet<Q, T1>,
+    ParseFunGet<Q, T2>,
+    ParseFunGet<Q, T3>,
+    ParseFunGet<Q, T4>,
+    ParseFunGet<Q, T5>,
+    ParseFunGet<Q, T6>
+  ]
+): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6>
+export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T7>(
+  ...rules: [
+    ParseFunGet<Q, T1>,
+    ParseFunGet<Q, T2>,
+    ParseFunGet<Q, T3>,
+    ParseFunGet<Q, T4>,
+    ParseFunGet<Q, T5>,
+    ParseFunGet<Q, T6>,
+    ParseFunGet<Q, T7>
+  ]
+): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6 | T7>
+export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T7, T8>(
+  ...rules: [
+    ParseFunGet<Q, T1>,
+    ParseFunGet<Q, T2>,
+    ParseFunGet<Q, T3>,
+    ParseFunGet<Q, T4>,
+    ParseFunGet<Q, T5>,
+    ParseFunGet<Q, T6>,
+    ParseFunGet<Q, T7>,
+    ParseFunGet<Q, T8>
+  ]
+): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6 | T7 | T8>
 export function orRuleGet<Q extends BaseQue<any, any>>(...rules: ParseFunGet<Q, any>[]): ParseFunGet<Q, any> {
   return function (que) {
     for (const rule of rules) {
@@ -271,21 +389,91 @@ export function orRuleGet<Q extends BaseQue<any, any>>(...rules: ParseFunGet<Q, 
     }
   }
 }
-
-export function manyRuleGet<Q extends BaseQue<any, any>, T>(rule: ParseFunGet<Q, T>, min = 0): ParseFunGet<Q, T[]> {
+export function alawaysGet<Q extends BaseQue<any, any>, T>(callback: (que: Q) => T): ParseFunGet<Q, T>
+export function alawaysGet<Q extends BaseQue<any, any>>(): ParseFunGet<Q, undefined>
+export function alawaysGet() {
+  const cb = arguments[0]
+  return ruleGet(quote, function (que) {
+    return cb?.(que)
+  })
+}
+/**
+ * 
+ * @param rule 
+ * @param min 
+ * @param between 
+ * @returns 
+ */
+export function manyRuleGet<Q extends BaseQue<any, any>, T>(
+  rule: ParseFunGet<Q, T>,
+  min = 0,
+  between?: ParseFun<any>,
+  first?: ParseFun<any>
+): ParseFunGet<Q, T[]> {
+  function goLast(vs: T[], last: Q) {
+    if (vs.length < min) {
+      return
+    }
+    return success(vs, last)
+  }
   return function (que) {
     const vs: T[] = []
     let last = que
+    let idx = 0
     while (true) {
+      if (!idx && first) {
+        const nlast = first(last)
+        if (nlast) {
+          last = nlast
+        } else {
+          return goLast(vs, last)
+        }
+      }
+      if (idx > 0 && between) {
+        const nlast = between(last)
+        if (nlast) {
+          last = nlast
+        } else {
+          return goLast(vs, last)
+        }
+      }
       const nlast = rule(last)
       if (nlast) {
+        idx++
         last = nlast.end
         vs.push(nlast.value)
       } else {
-        if (vs.length < min) {
-          return
+        return goLast(vs, last)
+      }
+    }
+  }
+}
+
+/**
+ * 
+ * @param firstRule 
+ * @param restRule
+ * @param reduce 从左到右叠加
+ */
+export function reduceRuleGet<Q extends BaseQue<any, any>, T, F>(
+  firstRule: ParseFunGet<Q, T>,
+  restRule: ParseFunGet<Q, F>,
+  reduce: (init: T, rest: F) => T
+): ParseFunGet<Q, T> {
+  return function (que) {
+    let last = que
+    const rest = firstRule(last)
+    if (rest) {
+      last = rest.end
+      let init = rest.value
+      while (true) {
+        const nLast = restRule(last)
+        if (nLast) {
+          last = nLast.end
+          init = reduce(init, nLast.value)
+        } else {
+          return success(init, last)
         }
-        return success(vs, last)
       }
     }
   }
@@ -294,6 +482,64 @@ export function manyRuleGet<Q extends BaseQue<any, any>, T>(rule: ParseFunGet<Q,
 
 export const ruleGetString: RuleCallback<Que, string> = function (begin, end) {
   return begin.content.slice(begin.i, end.i)
+}
+
+export function ruleStrBetween(begin: string, end = begin) {
+  if (begin.length == 1 && end.length == 1) {
+    return andMatch(
+      match(begin),
+      manyMatch(
+        orMatch(
+          match('\\\\'),
+          match(`\\${end}`),
+          notMathChar(end.charCodeAt(0))
+        )
+      ),
+      //可能结束了,但没有闭合
+      orMatch(
+        matchEnd,
+        match(end)
+      )
+    )
+  } else {
+    throw new Error('只允许单字符')
+  }
+}
+
+export function ruleStrBetweenGet(
+  begin: string,
+  end = begin,
+) {
+  if (begin.length == 1 && end.length == 1) {
+    return andRuleGet(
+      [
+        ruleGet<Que, Que>(match(begin), quote),
+        manyRuleGet(
+          orRuleGet(
+            ruleGet(match('\\\\'), function (que) {
+              return '\\'
+            }),
+            ruleGet(match(`\\${end}`), function (que) {
+              return end
+            }),
+            ruleGet(notMathChar(end.charCodeAt(0)), function (que) {
+              return que.content[que.i]
+            })
+          )
+        ),
+        //可能结束了,但没有闭合
+        ruleGet(orMatch(
+          matchEnd,
+          match(end)
+        ), quote)
+      ],
+      function (a, b, c) {
+        return b.join('')
+      }
+    )
+  } else {
+    throw new Error('只允许单字符')
+  }
 }
 
 
