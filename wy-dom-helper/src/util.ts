@@ -130,6 +130,46 @@ export function forceFlow(div: Element | null | undefined) {
   }
 }
 
+
+export function mergeStyle(div: ElementCSSInlineStyle, style: CSSProperties, clear?: boolean) {
+  if (clear) {
+    for (let key in style) {
+      (div.style as any)[key] = ''
+    }
+  } else {
+    for (let key in style) {
+      (div.style as any)[key] = style[key as keyof CSSProperties]
+    }
+  }
+}
+export function forceFlowStyle(div: ElementCSSInlineStyle & Element, style: CSSProperties) {
+  mergeStyle(div, style, true)
+  forceFlow(div)
+  mergeStyle(div, style)
+  return style
+}
+export function forceFlowInitStyle<T extends ElementCSSInlineStyle & Element>(
+  div: T,
+  initStyle: CSSProperties,
+  showStyle: CSSProperties,
+  /**比如高度动画的退出,需要测量之前的真实高度,然后缩减到指定高度 */
+  replaceInitStyle?: (div: T, style: CSSProperties) => CSSProperties
+) {
+  mergeStyle(div, showStyle, true)
+  mergeStyle(div, initStyle)
+  if (replaceInitStyle) {
+    const iInitStyle = replaceInitStyle(div, initStyle)
+    mergeStyle(div, initStyle, true)
+    mergeStyle(div, iInitStyle)
+    forceFlow(div)
+    mergeStyle(div, iInitStyle, true)
+  } else {
+    forceFlow(div)
+    mergeStyle(div, initStyle, true)
+  }
+  mergeStyle(div, showStyle)
+  return showStyle
+}
 /**
  * 强制进行动画
  * @param div 
