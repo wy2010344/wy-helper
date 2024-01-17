@@ -8,8 +8,14 @@ export type QueArray<T> = ReadArray<T> & {
   slice(begin?: number, end?: number): QueArray<T>
 }
 
-type Match<V> = (v: V) => boolean
-export class BaseQue<V, VS extends QueArray<V>> {
+export type Match<V> = (v: V) => boolean
+
+export type BaseQue<V, VS extends QueArray<V>> = {
+  readonly i: number
+  readonly content: VS
+  step1(callback: Match<V>): BaseQue<V, VS> | void
+}
+export class BQue<V, VS extends QueArray<V>> implements BaseQue<V, VS> {
   constructor(
     public readonly content: VS,
     //下标
@@ -23,14 +29,14 @@ export class BaseQue<V, VS extends QueArray<V>> {
     }
   }
   protected stepQue(step: number) {
-    return new BaseQue<V, VS>(this.content, step)
+    return new BQue<V, VS>(this.content, step)
   }
   toString() {
     return JSON.stringify(this)
   }
 }
 
-export class Que extends BaseQue<string, string>{
+export class Que extends BQue<string, string>{
   match(vs: string[]) {
     for (const v of vs) {
       if (this.content.startsWith(v, this.i)) {
@@ -62,7 +68,6 @@ export class Que extends BaseQue<string, string>{
     })
   }
 }
-
 export class LineCharQue extends Que {
   constructor(
     content: string, i: number = 0,
@@ -88,8 +93,6 @@ export class LineCharQue extends Que {
     return new LineCharQue(this.content, step, line, character)
   }
 }
-
-
 /**
  * 解析,如果解析成功,返回正数.解析失败,返回负数
  */
@@ -379,6 +382,33 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T
     ParseFunGet<Q, T8>
   ]
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6 | T7 | T8>
+export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T7, T8, T9>(
+  ...rules: [
+    ParseFunGet<Q, T1>,
+    ParseFunGet<Q, T2>,
+    ParseFunGet<Q, T3>,
+    ParseFunGet<Q, T4>,
+    ParseFunGet<Q, T5>,
+    ParseFunGet<Q, T6>,
+    ParseFunGet<Q, T7>,
+    ParseFunGet<Q, T8>,
+    ParseFunGet<Q, T9>
+  ]
+): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6 | T7 | T8 | T9>
+export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
+  ...rules: [
+    ParseFunGet<Q, T1>,
+    ParseFunGet<Q, T2>,
+    ParseFunGet<Q, T3>,
+    ParseFunGet<Q, T4>,
+    ParseFunGet<Q, T5>,
+    ParseFunGet<Q, T6>,
+    ParseFunGet<Q, T7>,
+    ParseFunGet<Q, T8>,
+    ParseFunGet<Q, T9>,
+    ParseFunGet<Q, T10>
+  ]
+): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6 | T7 | T8 | T9 | T10>
 export function orRuleGet<Q extends BaseQue<any, any>>(...rules: ParseFunGet<Q, any>[]): ParseFunGet<Q, any> {
   return function (que) {
     for (const rule of rules) {
