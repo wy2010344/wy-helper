@@ -1,4 +1,4 @@
-import { quote } from "./util";
+import { quote } from "../util";
 
 export type ReadArray<T> = {
   length: number;
@@ -182,8 +182,8 @@ export function andMatch(...rules: ParseFun<any>[]) {
 export function manyMatch(
   rule: ParseFun<any>,
   min = 0,
-  between?: ParseFun<any>,
-  first?: ParseFun<any>
+  between: ParseFun<any> = quote,
+  first: ParseFun<any> = quote
 ) {
   function goLast<Q>(count: number, last: Q) {
     if (count < min) {
@@ -195,26 +195,25 @@ export function manyMatch(
     let last = que
     let count = 0
     while (true) {
-      if (!count && first) {
-        const nlast = first(last)
-        if (nlast) {
-          last = nlast
+      if (count) {
+        const alast = between(last)
+        if (alast) {
+          last = alast
+        } else {
+          return goLast(count, last)
+        }
+      } else {
+        const alast = first(last)
+        if (alast) {
+          last = alast
         } else {
           return goLast(count, last)
         }
       }
-      if (count > 0 && between) {
-        const nlast = between(last)
-        if (nlast) {
-          last = nlast
-        } else {
-          return goLast(count, last)
-        }
-      }
-      const nlast = rule(last)
-      if (nlast) {
+      const blast = rule(last)
+      if (blast) {
         count++
-        last = nlast
+        last = blast
       } else {
         return goLast(count, last)
       }
@@ -431,14 +430,14 @@ export function alawaysGet() {
  * 
  * @param rule 
  * @param min 
- * @param between 
+ * @param prefix:预判断 
  * @returns 
  */
 export function manyRuleGet<Q extends BaseQue<any, any>, T>(
   rule: ParseFunGet<Q, T>,
   min = 0,
-  between?: ParseFun<any>,
-  first?: ParseFun<any>
+  between: ParseFun<any> = quote,
+  first: ParseFun<any> = quote
 ): ParseFunGet<Q, T[]> {
   function goLast(vs: T[], last: Q) {
     if (vs.length < min) {
@@ -451,27 +450,26 @@ export function manyRuleGet<Q extends BaseQue<any, any>, T>(
     let last = que
     let idx = 0
     while (true) {
-      if (!idx && first) {
-        const nlast = first(last)
-        if (nlast) {
-          last = nlast
+      if (idx) {
+        const alast = between(last)
+        if (alast) {
+          last = alast
+        } else {
+          return goLast(vs, last)
+        }
+      } else {
+        const alast = first(last)
+        if (alast) {
+          last = alast
         } else {
           return goLast(vs, last)
         }
       }
-      if (idx > 0 && between) {
-        const nlast = between(last)
-        if (nlast) {
-          last = nlast
-        } else {
-          return goLast(vs, last)
-        }
-      }
-      const nlast = rule(last)
-      if (nlast) {
+      const blast = rule(last)
+      if (blast) {
         idx++
-        last = nlast.end
-        vs.push(nlast.value)
+        last = blast.end
+        vs.push(blast.value)
       } else {
         return goLast(vs, last)
       }
@@ -513,65 +511,6 @@ export function reduceRuleGet<Q extends BaseQue<any, any>, T, F>(
 export const ruleGetString: RuleCallback<Que, string> = function (begin, end) {
   return begin.content.slice(begin.i, end.i)
 }
-
-export function ruleStrBetween(begin: string, end = begin) {
-  if (begin.length == 1 && end.length == 1) {
-    return andMatch(
-      match(begin),
-      manyMatch(
-        orMatch(
-          match('\\\\'),
-          match(`\\${end}`),
-          notMathChar(end.charCodeAt(0))
-        )
-      ),
-      //可能结束了,但没有闭合
-      orMatch(
-        matchEnd,
-        match(end)
-      )
-    )
-  } else {
-    throw new Error('只允许单字符')
-  }
-}
-
-export function ruleStrBetweenGet(
-  begin: string,
-  end = begin,
-) {
-  if (begin.length == 1 && end.length == 1) {
-    return andRuleGet(
-      [
-        ruleGet<Que, Que>(match(begin), quote),
-        manyRuleGet(
-          orRuleGet(
-            ruleGet(match('\\\\'), function (que) {
-              return '\\'
-            }),
-            ruleGet(match(`\\${end}`), function (que) {
-              return end
-            }),
-            ruleGet(notMathChar(end.charCodeAt(0)), function (que) {
-              return que.content[que.i]
-            })
-          )
-        ),
-        //可能结束了,但没有闭合
-        ruleGet(orMatch(
-          matchEnd,
-          match(end)
-        ), quote)
-      ],
-      function (a, b, c) {
-        return b.join('')
-      }
-    )
-  } else {
-    throw new Error('只允许单字符')
-  }
-}
-
 
 export const whiteList = ' \r\n\t'.split('')
 
