@@ -1,4 +1,4 @@
-import { EmptyFun, emptyFun, quote } from "./util"
+import { EmptyFun, emptyFun } from "./util"
 
 type EventHandler<T> = (v: T) => void
 export interface VirtualEventCenter<T> {
