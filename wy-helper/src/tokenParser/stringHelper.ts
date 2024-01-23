@@ -2,6 +2,7 @@ import { quote } from "../util"
 import { Que, andMatch, andRuleGet, manyMatch, manyRuleGet, match, matchEnd, matchToEnd, notMathChar, orMatch, orRuleGet, ruleGet } from "./tokenParser"
 
 export function ruleStrBetween(begin: string, end = begin) {
+  const matchTheEnd = matchToEnd(end)
   return andMatch(
     match(begin),
     manyMatch(
@@ -10,9 +11,10 @@ export function ruleStrBetween(begin: string, end = begin) {
         match(`\\${end[0]}`),
         notMathChar()
       ),
-      0,
-      matchToEnd(end),
-      matchToEnd(end)
+      {
+        first: matchTheEnd,
+        between: matchTheEnd
+      }
     ),
     //可能结束了,但没有闭合
     orMatch(
@@ -27,6 +29,7 @@ export function ruleStrBetweenGet(
   end = begin,
 ) {
 
+  const matchTheEnd = matchToEnd(end)
   return andRuleGet(
     [
       ruleGet<Que, Que>(match(begin), quote),
@@ -42,9 +45,10 @@ export function ruleStrBetweenGet(
             return que.content[que.i]
           })
         ),
-        0,
-        matchToEnd(end),
-        matchToEnd(end)
+        {
+          between: matchTheEnd,
+          first: matchTheEnd
+        }
       ),
       //可能结束了,但没有闭合
       ruleGet(orMatch(
@@ -66,6 +70,7 @@ export function ruleStrBetweenPart(
   inEnd: string,
   end = begin
 ) {
+  const matchTheEnd = matchToEnd(inBegin, end)
   return andMatch(
     orMatch(
       match(begin),
@@ -78,10 +83,11 @@ export function ruleStrBetweenPart(
         match(`\\${inBegin[0]}`),//+1
         notMathChar(),//每次加1
       ),
-      0,
-      //每次预先检查,符合则跳出.
-      matchToEnd(inBegin, end),
-      matchToEnd(inBegin, end)
+      {
+        //每次预先检查,符合则跳出.
+        first: matchTheEnd,
+        between: matchTheEnd
+      }
     ),
     //可能结束了,但没有闭合
     orMatch(
@@ -100,6 +106,7 @@ export function ruleStrBetweenPartGet(
   inEnd: string,
   end = begin
 ) {
+  const matchTheEnd = matchToEnd(inBegin, end)
   return andRuleGet(
     [
       ruleGet(
@@ -118,9 +125,10 @@ export function ruleStrBetweenPartGet(
             return que.content[que.i]
           })
         ),
-        0,
-        matchToEnd(inBegin, end),
-        matchToEnd(inBegin, end)
+        {
+          between: matchTheEnd,
+          first: matchTheEnd
+        }
       ),
       ruleGet(
         orMatch(

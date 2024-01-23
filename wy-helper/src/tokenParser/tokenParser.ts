@@ -1,4 +1,4 @@
-import { quote } from "../util";
+import { emptyObject, quote } from "../util";
 
 export type ReadArray<T> = {
   length: number;
@@ -51,6 +51,9 @@ export class Que extends BQue<string, string>{
    * @returns 
    */
   matchToEnd(vs: string[]) {
+    if (this.i == this.content.length) {
+      return this
+    }
     for (const v of vs) {
       if (this.content.startsWith(v, this.i)) {
         return void 0;
@@ -95,6 +98,7 @@ export class LineCharQue extends Que {
 }
 /**
  * 解析,如果解析成功,返回正数.解析失败,返回负数
+ * 这里不处理错误.
  */
 export type ParseFun<Q extends BaseQue<any, any>> = (que: Q) => (Q | void)
 export function matchVS<V, F extends BaseQue<V, any>>(...vs: Match<V>[]): ParseFun<F> {
@@ -116,6 +120,11 @@ export function match<Q extends Que>(...vs: string[]): ParseFun<Q> {
   }
 }
 
+/**
+ * 遇到这些字,进入结束
+ * @param vs 
+ * @returns 
+ */
 export function matchToEnd<Q extends Que>(...vs: string[]): ParseFun<Q> {
   return function (que) {
     return que.matchToEnd(vs)
@@ -181,9 +190,15 @@ export function andMatch(...rules: ParseFun<any>[]) {
 
 export function manyMatch(
   rule: ParseFun<any>,
-  min = 0,
-  between: ParseFun<any> = quote,
-  first: ParseFun<any> = quote
+  {
+    min = 0,
+    between = quote,
+    first = quote
+  }: {
+    min?: number
+    between?: ParseFun<any>
+    first?: ParseFun<any>
+  } = emptyObject as any
 ) {
   function goLast<Q>(count: number, last: Q) {
     if (count < min) {
@@ -227,24 +242,39 @@ export class ParserSuccess<Q extends BaseQue<any, any>, T>{
     public readonly end: Q
   ) { }
 }
+export class ParseError {
+  constructor(
+    public readonly message: string
+  ) { }
+}
 function success<Q extends BaseQue<any, any>, T>(v: T, que: Q) {
   return new ParserSuccess(v, que)
 }
 
-
-export type ParseFunGet<Q extends BaseQue<any, any>, T> = (que: Q) => (ParserSuccess<Q, T> | void)
-
+/**
+ * 使用try...catch来抛出错误...
+ */
+export type ParseFunGet<Q extends BaseQue<any, any>, T> = (que: Q) => ParserSuccess<Q, T> | ParseError
+export function isParseSuccess<T extends ParserSuccess<any, any>>(v: T | ParseError): v is T {
+  return v instanceof ParserSuccess
+}
 
 type RuleCallback<Q extends BaseQue<any, any>, T> = (begin: Q, end: Q) => T
 export function ruleGet<Q extends BaseQue<any, any>, T>(
   rule: ParseFun<Q>,
-  callback: RuleCallback<Q, T>
+  callback: RuleCallback<Q, T>,
+  failMsg = ''
 ): ParseFunGet<Q, T> {
   return function (que) {
     const end = rule(que)
     if (end) {
-      return success(callback(que, end), end)
+      try {
+        return success(callback(que, end), end)
+      } catch (err) {
+        return new ParseError(err as string)
+      }
     }
+    return new ParseError(failMsg)
   }
 }
 
@@ -308,14 +338,19 @@ export function andRuleGet<Q extends BaseQue<any, any>, T>(
     const values: any[] = []
     for (const rg of args) {
       const end = rg(que)
-      if (end) {
+      if (isParseSuccess(end)) {
         que = end.end
         values.push(end.value)
       } else {
-        return
+        return end
       }
     }
-    return success(merge.apply(null, values), que)
+    try {
+      const out = merge.apply(null, values)
+      return success(out, que)
+    } catch (err) {
+      return new ParseError(err as string)
+    }
   }
 }
 export function orRuleGet<Q extends BaseQue<any, any>, T1, T2>(
@@ -410,12 +445,15 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6 | T7 | T8 | T9 | T10>
 export function orRuleGet<Q extends BaseQue<any, any>>(...rules: ParseFunGet<Q, any>[]): ParseFunGet<Q, any> {
   return function (que) {
+    let last: ParseError = null as any
     for (const rule of rules) {
       const v = rule(que)
-      if (v) {
+      if (isParseSuccess(v)) {
         return v
       }
+      last = v
     }
+    return last
   }
 }
 export function alawaysGet<Q extends BaseQue<any, any>, T>(callback: (que: Q) => T): ParseFunGet<Q, T>
@@ -433,17 +471,31 @@ export function alawaysGet() {
  * @param prefix:预判断 
  * @returns 
  */
-export function manyRuleGet<Q extends BaseQue<any, any>, T>(
+export function manyRuleGet<Q extends BaseQue<any, any>, T, F = T[]>(
   rule: ParseFunGet<Q, T>,
-  min = 0,
-  between: ParseFun<any> = quote,
-  first: ParseFun<any> = quote
-): ParseFunGet<Q, T[]> {
+  {
+    min = 0,
+    between = quote,
+    first = quote,
+    map = quote as any
+  }: {
+    min?: number,
+    between?: ParseFun<any>,
+    first?: ParseFun<any>
+    /**如果返回是空字符串...*/
+    map?(v: T[]): F
+  } = emptyObject as any
+): ParseFunGet<Q, F> {
   function goLast(vs: T[], last: Q) {
     if (vs.length < min) {
-      return
+      return new ParseError(`need at min ${min} but get ${vs.length}`)
     }
-    return success(vs, last)
+    try {
+      const out = map(vs)
+      return success(out, last)
+    } catch (err) {
+      return new ParseError(err as string)
+    }
   }
   return function (que) {
     const vs: T[] = []
@@ -466,7 +518,7 @@ export function manyRuleGet<Q extends BaseQue<any, any>, T>(
         }
       }
       const blast = rule(last)
-      if (blast) {
+      if (isParseSuccess(blast)) {
         idx++
         last = blast.end
         vs.push(blast.value)
@@ -486,41 +538,67 @@ export function manyRuleGet<Q extends BaseQue<any, any>, T>(
 export function reduceRuleGet<Q extends BaseQue<any, any>, T, F>(
   firstRule: ParseFunGet<Q, T>,
   restRule: ParseFunGet<Q, F>,
-  reduce: (init: T, rest: F) => T
+  reduce: (init: T, rest: F) => T | void | undefined | null
 ): ParseFunGet<Q, T> {
   return function (que) {
     let last = que
     const rest = firstRule(last)
-    if (rest) {
+    if (isParseSuccess(rest)) {
       last = rest.end
       let init = rest.value
       while (true) {
         const nLast = restRule(last)
-        if (nLast) {
-          last = nLast.end
-          init = reduce(init, nLast.value)
+        if (isParseSuccess(nLast)) {
+          const out = reduce(init, nLast.value)
+          if (out) {
+            last = nLast.end
+            init = out
+          } else {
+            return success(init, last)
+          }
         } else {
           return success(init, last)
         }
       }
     }
+    return rest
   }
 }
 
+export function ruleGetTranslate<A extends BaseQue<any, any>, T, F>(
+  parseFunGet: ParseFunGet<A, T>,
+  translate: (t: T) => F
+): ParseFunGet<A, F> {
+  return function (que) {
+    const out = parseFunGet(que)
+    if (isParseSuccess(out)) {
+      try {
+        const v = translate(out.value)
+        return success(v, out.end)
+      } catch (err) {
+        return new ParseError(err as string)
+      }
+    }
+    return out
+  }
+}
 
 export const ruleGetString: RuleCallback<Que, string> = function (begin, end) {
   return begin.content.slice(begin.i, end.i)
 }
 
 export const whiteList = ' \r\n\t'.split('')
-
+const whiteSpaceMatch = orMatch(
+  ...whiteList.map(v => match(v))
+)
 export const whiteSpaceRule = manyMatch(
-  orMatch(
-    ...whiteList.map(v => match(v))
-  ),
-  1
+  whiteSpaceMatch,
+  { min: 1 }
 )
 
+export const whiteSpaceRuleZero = manyMatch(
+  whiteSpaceMatch
+)
 
 
 export function arraySplitInto<T>(vs: T[], fun: (v: T) => any) {
