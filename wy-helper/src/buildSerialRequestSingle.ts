@@ -41,7 +41,7 @@ export type OutPromiseOrFalse<T> = (GetPromiseRequest<T>) | FalseType;
 
 export function buildSerialRequestSingle<Req extends any[], Res>(
   callback: (...vs: Req) => Promise<Res>,
-  effect: (res: PromiseResult<Res>) => void = emptyFun,
+  effect: (res: PromiseResult<Res>, req: Req) => void = emptyFun,
   cacheList: Req[] = []
 ) {
   return function (...vs: Req) {
@@ -61,13 +61,14 @@ export function buildSerialRequestSingle<Req extends any[], Res>(
         while (cacheList.length > 1) {
           cacheList.shift()
         }
-        callback(...cacheList[0])
+        const req = cacheList[0]
+        callback(...req)
           .then(res => {
             if (checkRun()) {
               effect({
                 type: "success",
                 value: res
-              })
+              }, req)
             }
           })
           .catch(err => {
@@ -75,7 +76,7 @@ export function buildSerialRequestSingle<Req extends any[], Res>(
               effect({
                 type: "error",
                 value: err
-              })
+              }, req)
             }
           })
       }

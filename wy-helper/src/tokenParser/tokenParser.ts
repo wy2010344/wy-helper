@@ -1,9 +1,5 @@
-import { emptyObject, quote } from "../util";
+import { ReadArray, quote } from "../util";
 
-export type ReadArray<T> = {
-  length: number;
-  [index: number]: T;
-};
 export type QueArray<T> = ReadArray<T> & {
   slice(begin?: number, end?: number): QueArray<T>
 }
@@ -190,15 +186,9 @@ export function andMatch(...rules: ParseFun<any>[]) {
 
 export function manyMatch(
   rule: ParseFun<any>,
-  {
-    min = 0,
-    between = quote,
-    first = quote
-  }: {
-    min?: number
-    between?: ParseFun<any>
-    first?: ParseFun<any>
-  } = emptyObject as any
+  min = 0,
+  between: ParseFun<any> = quote,
+  first: ParseFun<any> = quote
 ) {
   function goLast<Q>(count: number, last: Q) {
     if (count < min) {
@@ -471,31 +461,17 @@ export function alawaysGet() {
  * @param prefix:预判断 
  * @returns 
  */
-export function manyRuleGet<Q extends BaseQue<any, any>, T, F = T[]>(
+export function manyRuleGet<Q extends BaseQue<any, any>, T>(
   rule: ParseFunGet<Q, T>,
-  {
-    min = 0,
-    between = quote,
-    first = quote,
-    map = quote as any
-  }: {
-    min?: number,
-    between?: ParseFun<any>,
-    first?: ParseFun<any>
-    /**如果返回是空字符串...*/
-    map?(v: T[]): F
-  } = emptyObject as any
-): ParseFunGet<Q, F> {
+  min = 0,
+  between: ParseFun<any> = quote,
+  first: ParseFun<any> = quote
+): ParseFunGet<Q, T[]> {
   function goLast(vs: T[], last: Q) {
     if (vs.length < min) {
       return new ParseError(`need at min ${min} but get ${vs.length}`)
     }
-    try {
-      const out = map(vs)
-      return success(out, last)
-    } catch (err) {
-      return new ParseError(err as string)
-    }
+    return success(vs, last)
   }
   return function (que) {
     const vs: T[] = []
@@ -593,7 +569,7 @@ const whiteSpaceMatch = orMatch(
 )
 export const whiteSpaceRule = manyMatch(
   whiteSpaceMatch,
-  { min: 1 }
+  1
 )
 
 export const whiteSpaceRuleZero = manyMatch(

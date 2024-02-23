@@ -42,11 +42,6 @@ const isPureWord = andMatch(
 type AttrMap = {
   [key in string]: string | true
 }
-class PureText {
-  constructor(
-    public readonly value: string
-  ) { }
-}
 class XmlBeginNode {
   constructor(
     public readonly key: string,
@@ -64,7 +59,7 @@ const matchTheEnd = matchToEnd('<')
 /**
  * 匹配纯字符串区域
  */
-const matchInlineContent = manyRuleGet(
+const matchInlineContent = ruleGetTranslate(manyRuleGet(
   orRuleGet(
     ruleGet(match('\\\\'), v => '\\'),
     ruleGet(match(`\\<`), v => '<'),
@@ -72,14 +67,12 @@ const matchInlineContent = manyRuleGet(
       return que.content[que.i]
     })
   ),
-  {
-    between: matchTheEnd,
-    first: matchTheEnd,
-    map(v) {
-      return new PureText(v.join(""))
-    },
-  }
-)
+  0,
+  matchTheEnd,
+  matchTheEnd
+), function (vs) {
+  return vs.join('')
+})
 
 function getStrValue(a: Que, b: Que) {
   return ruleGetString(a, b)
@@ -122,9 +115,8 @@ const matchBracket: ParseFunGet<Que, XmlBeginNode> = andRuleGet(
     ruleGet(whiteSpaceRuleZero, quote),
     manyRuleGet(
       argRuleGet,
-      {
-        between: whiteSpaceRuleZero
-      }
+      0,
+      whiteSpaceRuleZero
     ),
     ruleGet(whiteSpaceRuleZero, quote),
     ruleGet(
@@ -161,8 +153,8 @@ const matchBracketEnd = andRuleGet(
 const parseXml = reduceRuleGet(
   ruleGetTranslate(matchInlineContent, v => {
     const last = new XmlNode("", {}, [])
-    if (v.value) {
-      last.children.push(v.value)
+    if (v) {
+      last.children.push(v)
     }
     return [last] as XmlNode[]
   }),
@@ -207,8 +199,8 @@ const parseXml = reduceRuleGet(
     if (!last) {
       throw 'unexpected end!'
     }
-    if (content.value) {
-      last.children.push(content.value)
+    if (content) {
+      last.children.push(content)
     }
     return init
   }
