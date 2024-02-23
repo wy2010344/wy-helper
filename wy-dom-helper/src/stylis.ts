@@ -11,10 +11,10 @@ function toCssFragment(className: string, css: string) {
 
 export function createBodyStyleTag() {
   const style = document.createElement("style")
-  const body = document.body
+  const head = document.head
   const className = newClassName()
   style.id = className
-  body.appendChild(style)
+  head.appendChild(style)
   return style
 }
 

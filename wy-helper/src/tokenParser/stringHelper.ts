@@ -11,10 +11,9 @@ export function ruleStrBetween(begin: string, end = begin) {
         match(`\\${end[0]}`),
         notMathChar()
       ),
-      {
-        first: matchTheEnd,
-        between: matchTheEnd
-      }
+      0,
+      matchTheEnd,
+      matchTheEnd
     ),
     //可能结束了,但没有闭合
     orMatch(
@@ -45,10 +44,9 @@ export function ruleStrBetweenGet(
             return que.content[que.i]
           })
         ),
-        {
-          between: matchTheEnd,
-          first: matchTheEnd
-        }
+        0,
+        matchTheEnd,
+        matchTheEnd
       ),
       //可能结束了,但没有闭合
       ruleGet(orMatch(
@@ -83,11 +81,9 @@ export function ruleStrBetweenPart(
         match(`\\${inBegin[0]}`),//+1
         notMathChar(),//每次加1
       ),
-      {
-        //每次预先检查,符合则跳出.
-        first: matchTheEnd,
-        between: matchTheEnd
-      }
+      0,
+      matchTheEnd,
+      matchTheEnd
     ),
     //可能结束了,但没有闭合
     orMatch(
@@ -125,10 +121,9 @@ export function ruleStrBetweenPartGet(
             return que.content[que.i]
           })
         ),
-        {
-          between: matchTheEnd,
-          first: matchTheEnd
-        }
+        0,
+        matchTheEnd,
+        matchTheEnd
       ),
       ruleGet(
         orMatch(

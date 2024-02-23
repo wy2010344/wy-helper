@@ -88,3 +88,23 @@ export function wrapPromise<T>(cb: PromiseCB<T> | null | undefined, promise: Pro
 export function wrapPromiseFun<T>(cb: PromiseCB<T> | null | undefined, fun: () => Promise<T>,) {
   return wrapPromise(cb, fun())
 }
+
+
+export async function mapPromiseAll<K extends string, V>(map: {
+  [key in K]: Promise<V>
+}) {
+  const keys: string[] = []
+  const promiseList: Promise<any>[] = []
+  for (const key in map) {
+    keys.push(key)
+    promiseList.push(map[key])
+  }
+  const list = await Promise.all(promiseList)
+  const out: { [key: string]: V } = {}
+  for (let i = 0; i < keys.length; i++) {
+    out[keys[i]] = list[i]
+  }
+  return out as {
+    [key in K]: V
+  }
+}

@@ -121,93 +121,27 @@ export function observerIntersection(
 }
 
 
-export function forceFlow(div: Element | null | undefined) {
-  //强制回流
-  if (div) {
-    const scrollTop = div.scrollTop
-    div.scrollTop = scrollTop
-    return scrollTop
-  }
-}
 
-
-export function mergeStyle(div: ElementCSSInlineStyle, style: CSSProperties, clear?: boolean) {
-  if (clear) {
-    for (let key in style) {
-      (div.style as any)[key] = ''
+export function getCommonParentNode(oNode1: Element | null, oNode2: Element) {
+  while (true) {
+    if (!oNode1) {
+      return oNode2
     }
-  } else {
-    for (let key in style) {
-      (div.style as any)[key] = style[key as keyof CSSProperties]
+    if (oNode1.contains(oNode2)) {
+      return oNode1
     }
+    oNode1 = oNode1.parentNode as Element;
   }
-}
-export function forceFlowStyle(div: ElementCSSInlineStyle & Element, style: CSSProperties) {
-  mergeStyle(div, style, true)
-  forceFlow(div)
-  mergeStyle(div, style)
-  return style
-}
-export function forceFlowInitStyle<T extends ElementCSSInlineStyle & Element>(
-  div: T,
-  initStyle: CSSProperties,
-  showStyle: CSSProperties,
-  /**比如高度动画的退出,需要测量之前的真实高度,然后缩减到指定高度 */
-  replaceInitStyle?: (div: T, style: CSSProperties) => CSSProperties
-) {
-  mergeStyle(div, showStyle, true)
-  mergeStyle(div, initStyle)
-  if (replaceInitStyle) {
-    const iInitStyle = replaceInitStyle(div, initStyle)
-    mergeStyle(div, initStyle, true)
-    mergeStyle(div, iInitStyle)
-    forceFlow(div)
-    mergeStyle(div, iInitStyle, true)
-  } else {
-    forceFlow(div)
-    mergeStyle(div, initStyle, true)
-  }
-  mergeStyle(div, showStyle)
-  return showStyle
-}
-/**
- * 强制进行动画
- * @param div 
- * @param classNames 
- */
-export function forceFlowClassNames(div: Element, classNames: string) {
-  const list = splitClassNames(classNames)
-  list.forEach(row => div.classList.remove(row))
-  forceFlow(div)
-  list.forEach(row => div.classList.add(row))
-  return classNames
-}
-export function forceFlowInitClassNames(div: Element, initCls: string, showCls: string) {
-  const inits = splitClassNames(initCls)
-  const shows = splitClassNames(showCls)
-  shows.forEach(function (fc) {
-    div.classList.remove(fc)
-  })
-  inits.forEach(function (tc) {
-    div.classList.add(tc)
-  })
-  forceFlow(div)
-  inits.forEach(function (tc) {
-    div.classList.remove(tc)
-  })
-  shows.forEach(function (fc) {
-    div.classList.add(fc)
-  })
-  return showCls
 }
 
 export function requestBatchAnimationFrame(fun: EmptyFun) {
   cacheList.push(fun)
   if (cacheList.length == 1) {
-    requestAnimationFrame(function () {
-      cacheList.forEach(run)
-      cacheList.length = 0
-    })
+    requestAnimationFrame(clearCacheList)
   }
 }
 const cacheList: EmptyFun[] = []
+function clearCacheList() {
+  cacheList.forEach(run)
+  cacheList.length = 0
+}

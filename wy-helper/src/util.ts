@@ -46,8 +46,19 @@ export function iterableToList<T>(entity: IterableIterator<T>) {
 }
 
 
+export function alawaysTrue() {
+  return true
+}
 
-
+export function defaultToGetTrue(value: any) {
+  if (value) {
+    if (typeof value == 'function') {
+      return value
+    }
+    return alawaysTrue
+  }
+  return undefined
+}
 
 export function getCacheCreateMap<K, V>(createV: (key: K) => V) {
   const map = new Map<K, V>()
@@ -68,3 +79,33 @@ export function delay(n: number) {
     setTimeout(resolve, n)
   })
 }
+
+
+
+export function lazyGet<T>(fun: () => T) {
+  let value: T | undefined = undefined
+  return function () {
+    if (!value) {
+      value = fun()
+    }
+    return value
+  }
+}
+
+
+
+
+
+export function setToAdd<V>(set: Set<V>, ...vs: V[]) {
+  const aSet = new Set(set)
+  for (const v of vs) {
+    aSet.add(v)
+  }
+  return aSet
+}
+
+
+export type ReadArray<T> = {
+  length: number;
+  [index: number]: T;
+};

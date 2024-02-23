@@ -1,3 +1,4 @@
+import { ReadArray } from "./util"
 
 
 export class ArrayHelper<V>{
@@ -33,25 +34,60 @@ export class ArrayHelper<V>{
     this.safeCopy()
     this.array[n] = v
   }
-  forEach(fun: (v: V, i: number) => void) {
+  forEach(fun: (v: V, i: number, self: ArrayHelper<V>) => void) {
     for (let i = 0; i < this.array.length; i++) {
-      fun(this.array[i], i)
+      fun(this.array[i], i, this)
     }
   }
-  forEachRight(fun: (v: V, i: number) => void) {
+  forEachRight(fun: (v: V, i: number, self: ArrayHelper<V>) => void) {
     for (let i = this.array.length - 1; i > -1; i--) {
-      fun(this.array[i], i)
+      fun(this.array[i], i, this)
     }
   }
-  removeWhere(fun: (v: V, i: number) => any) {
+  /**
+   * 就是forEachRight的一个简化
+   * @param fun 
+   * @returns 
+   */
+  removeWhere(fun: (v: V, i: number, self: ArrayHelper<V>) => any) {
     let count = 0
     for (let i = this.array.length - 1; i > -1; i--) {
       const row = this.array[i]
-      if (fun(row, i)) {
+      if (fun(row, i, this)) {
         count++
         this.removeAt(i)
       }
     }
     return count
   }
+}
+
+
+
+export function arrayFindIndexFrom<T>(
+  vs: ReadArray<T>,
+  from: number,
+  predict: (row: T, i: number, t: ReadArray<T>) => any,
+  end = vs.length) {
+  const theEnd = Math.min(end, vs.length)
+  for (let i = from; i < theEnd; i++) {
+    if (predict(vs[i], i, vs)) {
+      return i
+    }
+  }
+  return -1
+}
+
+
+
+export function arrayFindFrom<T>(
+  vs: ReadArray<T>,
+  from: number,
+  predict: (row: T, i: number, t: ReadArray<T>) => any,
+  end = vs.length) {
+  const index = arrayFindIndexFrom(vs, from, predict, end)
+  if (index < 0) {
+    return
+  }
+  return vs[index]
 }
