@@ -93,7 +93,7 @@ export function splitClassNames(names: string) {
 }
 
 import * as CSS from 'csstype';
-import { EmptyFun, quote, run } from 'wy-helper'
+import { EmptyFun, Point, quote, run } from 'wy-helper'
 export interface CSSProperties extends CSS.Properties<string | number> {
   /**
    * The index signature was removed to enable closed typing for style
@@ -144,4 +144,29 @@ const cacheList: EmptyFun[] = []
 function clearCacheList() {
   cacheList.forEach(run)
   cacheList.length = 0
+}
+
+
+
+
+
+
+
+
+/**
+ * 获得元素排除translateX,translateY的位置
+ * @param element 
+ * @returns 
+ */
+export function getPageOffset(element: HTMLElement) {
+  const point: Point = {
+    x: 0,
+    y: 0
+  }
+  while (element) {
+    point.x = point.x + element.offsetLeft
+    point.y = point.y + element.offsetTop
+    element = element.offsetParent as any
+  }
+  return point
 }

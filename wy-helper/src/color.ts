@@ -1,3 +1,4 @@
+import { mixNumber } from "."
 
 export const GB_MAX_VALUE = 255
 export interface BGColor {
@@ -65,4 +66,22 @@ export function randomColor() {
 		blue: random255(),
 		alpha: random255(),
 	})
+}
+
+
+export function mixColor(a: BGColor, b: BGColor, c: number): BGColor {
+	return {
+		red: mixNumber(a.red, b.red, c),
+		green: mixNumber(a.green, b.green, c),
+		blue: mixNumber(a.blue, b.blue, c),
+		alpha: mixNumber(a.alpha, b.alpha, c)
+	}
+}
+
+
+export function colorEqual(a: BGColor, b: BGColor) {
+	return a.alpha == b.alpha
+		&& a.green == b.green
+		&& a.blue == b.blue
+		&& a.red == b.red
 }

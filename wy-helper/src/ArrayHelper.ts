@@ -91,3 +91,17 @@ export function arrayFindFrom<T>(
   }
   return vs[index]
 }
+
+
+
+
+function arrayIndexFormat<T>(vs: ReadArray<T>, index: number) {
+  return index < 0 ? vs.length + index : index
+}
+
+export function arrayToMove<T>(list: T[], startIndex: number, endIndex: number) {
+  list = list.slice()
+  const [item] = list.splice(startIndex, 1)
+  list.splice(endIndex, 0, item)
+  return list
+}

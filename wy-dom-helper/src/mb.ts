@@ -317,3 +317,39 @@ export function afterCursor(editor: HTMLElement) {
   r.setStart(r0.endContainer, r0.endOffset)
   return r.toString()
 }
+
+
+
+
+
+
+
+
+var _elementStyle = document.createElement('div').style;
+var _vendor = (function () {
+  var vendors = ['t', 'webkitT', 'MozT', 'msT', 'OT'],
+    transform,
+    i = 0,
+    l = vendors.length;
+
+  for (; i < l; i++) {
+    transform = vendors[i] + 'ransform';
+    if (transform in _elementStyle) return vendors[i].substr(0, vendors[i].length - 1);
+  }
+
+  return false;
+})();
+/**
+ * 加前缀
+ * @param style 
+ * @returns 
+ */
+function prefixStyle(style: string) {
+  if (_vendor === false) return false;
+  if (_vendor === '') return style;
+  return _vendor + style.charAt(0).toUpperCase() + style.substr(1);
+}
+
+const style = {
+
+}
