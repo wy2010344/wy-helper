@@ -34,11 +34,14 @@ export function toReduceState<T>(set: (v: T) => void, get: () => T,) {
     }
   }
 }
-export interface ValueCenter<T> {
+
+export interface ReadValueCenter<T> {
   get(): T
+  subscribe: Subscriber<T>
+}
+export interface ValueCenter<T> extends ReadValueCenter<T> {
   set(v: T): void
   poolSize(): number
-  subscribe: Subscriber<T>
 }
 export function valueCenterOf<T>(value: T): ValueCenter<T> {
   const { subscribe, notify, poolSize } = eventCenter<T>()
@@ -54,7 +57,10 @@ export function valueCenterOf<T>(value: T): ValueCenter<T> {
     subscribe
   }
 }
-
+export function syncMergeCenter<T>(c: ReadValueCenter<T>, cb: EventHandler<T>) {
+  cb(c.get())
+  return c.subscribe(cb)
+}
 export function subSubscriber<P, C>(subscribe: Subscriber<P>, filter: (p: P) => C, notify: EventHandler<C>) {
   let lastValue: C | undefined
   return subscribe(function (p) {

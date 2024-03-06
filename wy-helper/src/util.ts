@@ -81,6 +81,12 @@ export function delay(n: number) {
 }
 
 
+export function asLazy<T>(v: T) {
+  return function () {
+    return v
+  }
+}
+
 
 export function lazyGet<T>(fun: () => T) {
   let value: T | undefined = undefined
