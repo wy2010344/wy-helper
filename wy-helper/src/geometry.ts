@@ -7,6 +7,8 @@ export interface Point<T = number> {
   y: T
 }
 
+export type PointKey = keyof Point
+
 export const pointZero = {
   x: 0,
   y: 0
@@ -78,6 +80,7 @@ export interface BoundingBox<T = number> {
   bottom: T
   left: T
 }
+export type BoundingBoxKey = keyof BoundingBox
 
 export const boundingBoxZero = {
   top: 0,
@@ -96,7 +99,9 @@ export function boundingBoxEqual<T>(a: BoundingBox<T>, b: BoundingBox<T>, eq: Co
 
 export function convertBoundingBoxToBox<T>({
   left,
-  right, top, bottom
+  right,
+  top,
+  bottom
 }: BoundingBox<T>): Box<T> {
   return {
     x: { min: left, max: right },
