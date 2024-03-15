@@ -1,6 +1,6 @@
 import { mixNumber } from "./NumberHelper"
 import { removeWhere } from "./equal"
-import { Axis, Box, Point, axisEqual, boxEqual, pointEqual, pointZero } from "./geometry"
+import { Axis, Box, Point, PointKey, axisEqual, boxEqual, pointEqual, pointZero } from "./geometry"
 import { EmptyFun } from "./util"
 
 export interface ReorderItemData {
@@ -10,7 +10,7 @@ export interface ReorderItemData {
 
 function checkReorder(
   order: ReorderItemData[],
-  direction: ReorderDirection,
+  direction: PointKey,
   value: any,
   offsetP: Point,
   velocityP: Point,
@@ -61,7 +61,6 @@ type MoveV = {
   onFinish(): void
 }
 
-export type ReorderDirection = 'x' | 'y'
 export class Reorder {
   checkToMove(key: any, offset: Point, diff: Point) {
     const item = checkReorder(this.layoutList, this.direction, key, offset, diff)
@@ -74,8 +73,8 @@ export class Reorder {
     private moveItem: (itemKey: any, baseKey: any) => void
   ) { }
   private layoutList: ReorderItemData[] = []
-  private direction: ReorderDirection = 'y'
-  updateLayoutList(direction: ReorderDirection, shouldRemove: (key: any) => boolean) {
+  private direction: PointKey = 'y'
+  updateLayoutList(direction: PointKey, shouldRemove: (key: any) => boolean) {
     this.direction = direction
     removeWhere(this.layoutList, function (value) {
       return shouldRemove(value.value)
