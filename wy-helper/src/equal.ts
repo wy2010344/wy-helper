@@ -1,3 +1,4 @@
+import { quote } from "."
 
 export type Compare<T> = (a: T, b: T) => any
 
@@ -42,3 +43,21 @@ export const removeEqual = buildRemoveWhere(simpleEqual)
 export const removeWhere = buildRemoveWhere(function <T>(fun: (v: T, i: number) => any, v: T, i: number) {
   return fun(v, i)
 })
+
+
+
+
+
+
+
+export function objectDiffDeleteKey<T>(
+  oldProps: Record<string, T>,
+  newProps: Record<string, T>,
+  each: (key: string) => void
+) {
+  for (const oldKey in oldProps) {
+    if (!(oldKey in newProps)) {
+      each(oldKey)
+    }
+  }
+}

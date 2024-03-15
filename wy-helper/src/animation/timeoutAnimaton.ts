@@ -1,5 +1,5 @@
 import { simpleEqual } from ".."
-import { ReadValueCenter, Subscriber, ValueCenter, valueCenterOf } from "../ValueCenter"
+import { ReadValueCenter, ValueCenter, valueCenterOf } from "../ValueCenter"
 import { SetValue } from "../setStateHelper"
 import { emptyFun } from "../util"
 
@@ -49,7 +49,6 @@ export class TimeoutAnimate<T, F> implements ReadValueCenter<TimeoutAnimateData<
     this.center = valueCenterOf({
       value
     })
-    this.subscribe = this.subscribe.bind(this)
   }
   private timeoutCB = singleTimeoutCallback()
   changeTo(value: T, config?: TimeoutAnimateConfig<F>, onFinish?: (v: boolean) => void) {

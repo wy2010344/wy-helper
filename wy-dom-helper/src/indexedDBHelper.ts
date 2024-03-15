@@ -36,7 +36,9 @@ export function getIndexedDB(config: IndexedDBConfig) {
     }
     const idbReq = indexedDB.open(config.name, config.upgradeneeded.length)
     if (config.onblocked) {
-      idbReq.addEventListener("blocked", config.onblocked)
+      idbReq.addEventListener("blocked", function (e) {
+        config.onblocked!(e as any)
+      })
     }
     idbReq.addEventListener("error", err => {
       console.error(`open indexDB ${config.name}`, err)
@@ -61,5 +63,66 @@ export function getIndexedDB(config: IndexedDBConfig) {
       addVersionChange()
       resolve(idbReq.result)
     })
+  })
+}
+
+
+export function getIDBRequestPromise<T>(req: IDBRequest<any>) {
+  return new Promise<T>(function (resolve, reject) {
+    req.addEventListener("success", function (e) {
+      resolve(req.result)
+    })
+    req.addEventListener("error", function (e) {
+      reject(req.error)
+    })
+  })
+}
+
+export function getIDBTransactionPromise(trans: IDBTransaction) {
+  return new Promise<any>(function (resolve, reject) {
+    trans.addEventListener("complete", resolve);
+    trans.addEventListener("abort", function () {
+      reject(trans.error)
+    });
+  })
+}
+
+export function buildGetIDBObjectStoreAndTrans<M extends readonly string[]>(getIdb: () => IDBDatabase, tables: M) {
+  type KM = M[number]
+  return function <T extends {
+    [key in KM]?: true
+  }>(map: T, mode?: IDBTransactionMode) {
+    const list: KM[] = []
+    for (const key in map) {
+      if (map[key as KM] && tables.includes(key)) {
+        list.push(key)
+      }
+    }
+    const trans = getIdb().transaction(list as string[], mode)
+    const retMap: {
+      [k in keyof T]: IDBObjectStore
+    } = {} as any
+    list.forEach(key => {
+      retMap[key] = trans.objectStore(key as string)
+    })
+    return [retMap, trans] as const
+  }
+}
+
+/**
+ * 删除Index上某个匹配的值
+ * @param store 
+ * @param index 
+ * @param value 
+ */
+export function removeIndexOnly(store: IDBObjectStore, index: IDBIndex, value: string | number) {
+  const c = index.openKeyCursor(IDBKeyRange.only(value))
+  c.addEventListener("success", function (e) {
+    const cursor = c.result
+    if (cursor) {
+      // 删除匹配的数据
+      store.delete(cursor.primaryKey);
+      cursor.continue();
+    }
   })
 }

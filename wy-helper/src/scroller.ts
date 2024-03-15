@@ -233,7 +233,7 @@ export function buildScroll({
       moveM = {
         beginValue: v,
         //不必精确时间,只是用于计算动量
-        beginTime: Date.now(),
+        beginTime: performance.now(),
         value: v,
         latestValue: n
       }
@@ -257,7 +257,7 @@ export function buildScroll({
           const { destination, duration } = momentum(
             newY,
             last.beginValue,
-            Date.now() - last.beginTime,
+            performance.now() - last.beginTime,
             wrapperSize(),
             lowerMargin,
             upperMargin

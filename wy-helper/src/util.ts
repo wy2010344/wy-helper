@@ -115,3 +115,10 @@ export type ReadArray<T> = {
   length: number;
   [index: number]: T;
 };
+
+
+
+
+export class WrapperValue<T>{
+  constructor(public readonly value: T) { }
+}

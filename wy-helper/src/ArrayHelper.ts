@@ -1,4 +1,4 @@
-import { ReadArray } from "./util"
+import { ReadArray, emptyArray } from "./util"
 
 
 export class ArrayHelper<V>{
@@ -62,6 +62,8 @@ export class ArrayHelper<V>{
   }
 }
 
+export type NoInsertArrayHelper<T> = Omit<ArrayHelper<T>, 'insert'>
+export const emptyArrayHelper = new ArrayHelper(emptyArray) as NoInsertArrayHelper<any>
 
 
 export function arrayFindIndexFrom<T>(
@@ -90,13 +92,6 @@ export function arrayFindFrom<T>(
     return
   }
   return vs[index]
-}
-
-
-
-
-function arrayIndexFormat<T>(vs: ReadArray<T>, index: number) {
-  return index < 0 ? vs.length + index : index
 }
 
 export function arrayToMove<T>(list: T[], startIndex: number, endIndex: number) {

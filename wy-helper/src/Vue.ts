@@ -1,23 +1,30 @@
-class Dep {
-  static uid = 0
-  id = Dep.uid++
-  static target: Watcher | null
-  static watcherCount = 0
-  subs: { [key: number]: Watcher } = {}
-  depend() {
-    if (Dep.target) {
-      this.subs[Dep.target.id] = Dep.target
+import { EmptyFun } from "./util"
+const m = globalThis as any
+const DepKey = 'wy-helper-dep-cache'
+if (!m[DepKey]) {
+  class Dep {
+    static uid = 0
+    id = Dep.uid++
+    static target: Watcher | null
+    static watcherCount = 0
+    subs: { [key: number]: Watcher } = {}
+    depend() {
+      if (Dep.target) {
+        this.subs[Dep.target.id] = Dep.target
+      }
+    }
+    notify() {
+      const oldSubs = this.subs
+      this.subs = {}
+      for (const key in oldSubs) {
+        oldSubs[key].update()
+      }
     }
   }
-  notify() {
-    const oldSubs = this.subs
-    this.subs = {}
-    for (const key in oldSubs) {
-      oldSubs[key].update()
-    }
-  }
+  m[DepKey] = Dep
 }
-export type ShouldChange<T> = (a: T, b: T) => boolean
+const Dep = m[DepKey]
+export type ShouldChange<T> = (a: T, b: T) => any
 /**
  * 必须默认true，因为引用类似修改无法通过相等判断
  * @param a 
@@ -79,67 +86,35 @@ interface LifeModel {
   AtomCache<T>(fun: () => T, shouldChange?: ShouldChange<T>): () => T
   destroyList: (() => void)[]
 }
-class LifeModelImpl implements LifeModel {
-  AtomCache<T>(fun: () => T, shouldChange: ShouldChange<T> = notEqualChange): () => T {
-    return this.Cache(fun, shouldChange)
-  }
-  Cache<T>(fun: () => T, shouldChange: ShouldChange<T> = alawaysChange): () => T {
-    const dep = new Dep()
-    let cache: T
-    this.Watch(function () {
-      const nv = fun()
-      if (shouldChange(cache, nv)) {
-        cache = nv
-        dep.notify()
-      }
-    })
-    return function () {
-      dep.depend()
-      return cache
+
+
+
+export function cacheOf<T>(fun: () => T, shouldChange: ShouldChange<T> = alawaysChange) {
+  const dep = new Dep()
+  let cache: T
+  const destroy = watch(function () {
+    const nv = fun()
+    if (shouldChange(cache, nv)) {
+      cache = nv
+      dep.notify()
     }
-  }
-  WatchAfter<B>(exp: () => B, after: (b: B) => void): void {
-    this.pool.push(Watcher.ofAfter(exp, after))
-  }
-  WatchBefore<A>(before: () => A, exp: (a: A) => void): void {
-    this.pool.push(Watcher.ofBefore(before, exp))
-  }
-  WatchExp<A, B>(before: () => A, exp: (a: A) => B, after: (b: B) => void): void {
-    this.pool.push(Watcher.ofExp(before, exp, after))
-  }
-  Watch(exp: () => void): void {
-    this.pool.push(Watcher.of(exp))
-  }
-  destroyList: (() => void)[] = []
-  private pool: Watcher[] = []
-  destroy() {
-    while (this.pool.length > 0) {
-      this.pool.pop()!.disable()
-    }
-    for (let destroy of this.destroyList) {
-      destroy()
-    }
-  }
+  })
+  return [function () {
+    dep.depend()
+    return cache
+  }, destroy] as const
 }
-export function newLifeModel(): {
-  me: LifeModel,
-  destroy(): void
-} {
-  const lm = new LifeModelImpl()
-  return {
-    me: lm,
-    destroy() {
-      lm.destroy()
-    }
-  }
+
+export function atomCacheOf<T>(fun: () => T, shouldChange: ShouldChange<T> = notEqualChange) {
+  return cacheOf(fun, shouldChange)
 }
-export type LifeModelReturn = ReturnType<typeof newLifeModel>
 class Watcher {
-  private constructor(
+  constructor(
     private realUpdate: (it: Watcher) => void
   ) {
     Dep.watcherCount++
     this.update()
+    this.disable = this.disable.bind(this)
   }
   static uid = 0
   id = Watcher.uid++
@@ -153,37 +128,37 @@ class Watcher {
     this.enable = false
     Dep.watcherCount--
   }
+}
 
-  static of(exp: () => void) {
-    return new Watcher(function (it) {
-      Dep.target = it
-      exp()
-      Dep.target = null
-    })
-  }
-  static ofExp<A, B>(before: () => A, exp: (a: A) => B, after: (b: B) => void) {
-    return new Watcher(function (it) {
-      const a = before()
-      Dep.target = it
-      const b = exp(a)
-      Dep.target = null
-      after(b)
-    })
-  }
-  static ofBefore<A, B>(before: () => A, exp: (a: A) => void) {
-    return new Watcher(function (it) {
-      const a = before()
-      Dep.target = it
-      exp(a)
-      Dep.target = null
-    })
-  }
-  static ofAfter<B>(exp: () => B, after: (b: B) => void) {
-    return new Watcher(function (it) {
-      Dep.target = it
-      const b = exp()
-      Dep.target = null
-      after(b)
-    })
-  }
+export function watch(exp: () => void) {
+  return new Watcher(function (it) {
+    Dep.target = it
+    exp()
+    Dep.target = null
+  }).disable
+}
+export function watchExp<A, B>(before: () => A, exp: (a: A) => B, after: (b: B) => void) {
+  return new Watcher(function (it) {
+    const a = before()
+    Dep.target = it
+    const b = exp(a)
+    Dep.target = null
+    after(b)
+  }).disable
+}
+export function watchBefore<A>(before: () => A, exp: (a: A) => void) {
+  return new Watcher(function (it) {
+    const a = before()
+    Dep.target = it
+    exp(a)
+    Dep.target = null
+  }).disable
+}
+export function watchAfter<B>(exp: () => B, after: (b: B) => void) {
+  return new Watcher(function (it) {
+    Dep.target = it
+    const b = exp()
+    Dep.target = null
+    after(b)
+  }).disable
 }
