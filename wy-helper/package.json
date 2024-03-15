@@ -36,9 +36,7 @@
     "Vue"
   ],
   "scripts": {
-    "dev": "vite",
     "build": "tsc && vite build && sh './scripts/postbuild.sh'",
-    "preview": "vite preview",
     "prepare": "yarn build"
   },
   "devDependencies": {

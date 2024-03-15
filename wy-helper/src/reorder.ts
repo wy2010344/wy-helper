@@ -10,7 +10,7 @@ export interface ReorderItemData {
 
 function checkReorder(
   order: ReorderItemData[],
-  direction: "x" | "y",
+  direction: ReorderDirection,
   value: any,
   offsetP: Point,
   velocityP: Point,
@@ -61,7 +61,7 @@ type MoveV = {
   onFinish(): void
 }
 
-type ReorderDirection = 'x' | 'y'
+export type ReorderDirection = 'x' | 'y'
 export class Reorder {
   checkToMove(key: any, offset: Point, diff: Point) {
     const item = checkReorder(this.layoutList, this.direction, key, offset, diff)
@@ -136,18 +136,10 @@ export class Reorder {
       return true
     }
   }
-
-  getChild(
-    key: any,
-    getTrans: () => Point,
-    changeTo: (value: Point) => void
-  ) {
-    return new ReorderChild(this, key, getTrans, changeTo)
-  }
 }
 
 
-class ReorderChild {
+export class ReorderChild {
   private cb: Box | undefined = undefined
   private lockWaitSort = false
   constructor(
@@ -155,9 +147,7 @@ class ReorderChild {
     public readonly key: any,
     private getTrans: () => Point,
     private changeTo: (value: Point) => void
-  ) {
-    this.setMoveDiff = this.setMoveDiff.bind(this)
-  }
+  ) { }
   getBox() {
     return this.cb!
   }

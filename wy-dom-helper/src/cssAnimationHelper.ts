@@ -1,7 +1,7 @@
 import { EmptyFun, StoreRef } from "wy-helper"
 import { CSSProperties, getCommonParentNode, requestBatchAnimationFrame, splitClassNames } from "./util"
 
-export function forceFlow(div: Element | null | undefined) {
+function forceFlow(div: Element | null | undefined) {
   //强制回流
   if (div) {
     const scrollTop = div.scrollTop
@@ -114,7 +114,7 @@ function createTempList() {
   }
   tempList.length = 0
 }
-function requesetBatchAnimationForceFlow(div: Element, after: EmptyFun) {
+export function requesetBatchAnimationForceFlow(div: Element, after: EmptyFun) {
   tempList.push({
     div,
     after

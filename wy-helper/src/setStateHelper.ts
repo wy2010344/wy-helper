@@ -84,17 +84,20 @@ export function serialEvent<T extends (...args: any[]) => any>(
   }
 }
 
-export function objectDeepEqual(a: any, b: any) {
+export function objectDeepEqual(a: any, b: any, deps = Infinity) {
   if (a == b) {
     //内存相等,或相同的值
     return true;
+  }
+  if (deps == 0) {
+    return
   }
   if (Array.isArray(a)) {
     if (Array.isArray(b)) {
       //都是列表
       if (a.length == b.length) {
         for (let i = 0; i < a.length; i++) {
-          if (!objectDeepEqual(a[i], b[i])) {
+          if (!objectDeepEqual(a[i], b[i], deps - 1)) {
             return false;
           }
         }
@@ -117,7 +120,7 @@ export function objectDeepEqual(a: any, b: any) {
         if (aKey != bkey) {
           return false;
         }
-        if (!objectDeepEqual(a[aKey], b[bkey])) {
+        if (!objectDeepEqual(a[aKey], b[bkey], deps - 1)) {
           return false;
         }
       }
