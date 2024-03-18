@@ -86,6 +86,36 @@ export const momentum = {
     //表示 momentum 动画的减速度。
     deceleration?: number,
   } = emptyObject): MomentumCall {
+    deceleration = Math.abs(deceleration)
+    function withSpeed(
+      current: number,
+      /**速度,可能为负数*/
+      speed: number,
+      wrapperSize: number,
+      lowerMargin: number,
+      upperMargin: number
+    ) {
+      const absSpeed = Math.abs(speed)
+      //速度除以减速度,得变成0的时间
+      let duration = absSpeed / deceleration;
+      //时间*((初速度+0)/2)=位移,即均匀减速运动,需要使用二次方quadratic,easeOut
+      let destination = current + duration * (absSpeed / 2) * (speed < 0 ? -1 : 1);
+      //超出边界的时间,减少位移
+      if (destination < lowerMargin) {
+        destination = wrapperSize ? lowerMargin - (wrapperSize / 2.5 * (absSpeed / 8)) : lowerMargin;
+        let distance = Math.abs(destination - current);
+        duration = distance / absSpeed;
+      } else if (destination > upperMargin) {
+        destination = wrapperSize ? wrapperSize / 2.5 * (absSpeed / 8) : upperMargin;
+        let distance = Math.abs(current) + destination;
+        duration = distance / absSpeed;
+      }
+
+      return {
+        destination: Math.round(destination),
+        duration: duration
+      };
+    }
     return function (
       current,
       start,
@@ -94,27 +124,7 @@ export const momentum = {
       lowerMargin,
       upperMargin
     ) {
-      var distance = current - start,
-        speed = Math.abs(distance) / time,
-        destination,
-        duration;
-      destination = current + (speed * speed) / (2 * deceleration) * (distance < 0 ? -1 : 1);
-      duration = speed / deceleration;
-
-      if (destination < lowerMargin) {
-        destination = wrapperSize ? lowerMargin - (wrapperSize / 2.5 * (speed / 8)) : lowerMargin;
-        distance = Math.abs(destination - current);
-        duration = distance / speed;
-      } else if (destination > upperMargin) {
-        destination = wrapperSize ? wrapperSize / 2.5 * (speed / 8) : upperMargin;
-        distance = Math.abs(current) + destination;
-        duration = distance / speed;
-      }
-
-      return {
-        destination: Math.round(destination),
-        duration: duration
-      };
+      return withSpeed(current, (current - start) / time, wrapperSize, lowerMargin, upperMargin)
     }
   },
   bScroll(

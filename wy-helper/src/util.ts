@@ -2,20 +2,20 @@
 /**6种情况为false,NaN是数字类型*/
 export type FalseType = false | undefined | null | 0 | "" | void
 export type EmptyFun = (...vs: any[]) => void
+export function quote<T>(v: T, ...vs: any[]) { return v }
+export const objectFreeze = 'freeze' in Object ? Object.freeze.bind(Object) : quote
 
-
-export const emptyArray = [] as readonly any[]
+export const emptyArray = objectFreeze([]) as readonly any[]
 export function getTheEmptyArray<T>() {
   return emptyArray as T[]
 }
 export function createEmptyArray<T>() {
   return [] as T[]
 }
-export const emptyObject = {}
+export const emptyObject = objectFreeze({})
 export function emptyFun(...vs: any[]) { }
 
 export type AnyFunction = (...vs: any[]) => any
-export function quote<T>(v: T, ...vs: any[]) { return v }
 export async function quotePromise<T>(v: T, ...vs: any[]) { return v }
 export function expandFunCall<T extends AnyFunction>(
   fun: T

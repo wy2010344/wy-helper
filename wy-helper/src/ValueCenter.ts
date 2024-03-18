@@ -1,4 +1,4 @@
-import { EmptyFun, alawaysTrue, emptyFun } from "./util"
+import { EmptyFun, alawaysTrue, emptyFun, run } from "./util"
 
 type EventHandler<T> = (v: T) => void
 export interface VirtualEventCenter<T> {
@@ -91,8 +91,37 @@ export function syncMergeCenter<T>(c: ReadValueCenter<T>, cb: EventHandler<T>) {
 }
 
 
+// 定义将元素类型映射成另一种类型的映射函数
+type MapTo<T> = { [K in keyof T]: ValueCenter<T[K]> };
+type ExtractValues<T> = {
+  -readonly [K in keyof T]: T[K] extends ReadValueCenter<infer U> ? U : never;
+};
+function baseCenterArray<VS extends readonly ReadValueCenter<any>[]>(vs: any, list: VS, cb: EventHandler<ExtractValues<VS>>, delay = run) {
+  function callback() {
+    cb(vs)
+  }
+  const destroys = list.map((row, i) => {
+    vs[i] = row.get()
+    return row.subscribe(function (c) {
+      vs[i] = c
+      delay(callback)
+    })
+  })
+  return function () {
+    destroys.forEach(run)
+  }
+}
+export function subscribeCenterArray<VS extends readonly ReadValueCenter<any>[]>(list: VS, cb: EventHandler<ExtractValues<VS>>, delay = run) {
+  const vs = [] as any
+  return baseCenterArray(vs, list, cb, delay)
+}
 
-
+export function syncMergeCenterArray<VS extends readonly ReadValueCenter<any>[]>(list: VS, cb: EventHandler<ExtractValues<VS>>, delay = run) {
+  const vs = [] as unknown as any
+  const destroy = baseCenterArray(vs, list, cb, delay)
+  cb(vs)
+  return destroy
+}
 /**
  * 事实上可以用于多种状态机
  * @param reducer 
