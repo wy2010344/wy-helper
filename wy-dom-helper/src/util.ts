@@ -93,7 +93,7 @@ export function splitClassNames(names: string) {
 }
 
 import * as CSS from 'csstype';
-import { EmptyFun, Point, quote, run } from 'wy-helper'
+import { EmptyFun, Point, SetValue, buildThrottle, quote, run } from 'wy-helper'
 export interface CSSProperties extends CSS.Properties<string | number> {
   /**
    * The index signature was removed to enable closed typing for style
@@ -169,4 +169,9 @@ export function getPageOffset(element: HTMLElement) {
     element = element.offsetParent as any
   }
   return point
+}
+export function requestAnimationFrameThrottle(call: EmptyFun): EmptyFun
+export function requestAnimationFrameThrottle<T>(call: SetValue<T>): SetValue<T>
+export function requestAnimationFrameThrottle(call: EmptyFun): EmptyFun {
+  return buildThrottle(requestBatchAnimationFrame, call)
 }

@@ -1,4 +1,4 @@
-import { ReadArray, emptyArray } from "./util"
+import { ReadArray, emptyArray, objectFreeze } from "./util"
 
 
 export class ArrayHelper<V>{
@@ -63,7 +63,7 @@ export class ArrayHelper<V>{
 }
 
 export type NoInsertArrayHelper<T> = Omit<ArrayHelper<T>, 'insert'>
-export const emptyArrayHelper = new ArrayHelper(emptyArray) as NoInsertArrayHelper<any>
+export const emptyArrayHelper = objectFreeze(new ArrayHelper(emptyArray)) as NoInsertArrayHelper<any>
 
 
 export function arrayFindIndexFrom<T>(
@@ -98,5 +98,14 @@ export function arrayToMove<T>(list: T[], startIndex: number, endIndex: number) 
   list = list.slice()
   const [item] = list.splice(startIndex, 1)
   list.splice(endIndex, 0, item)
+  return list
+}
+
+
+export function arrayCountCreateWith<T>(n: number, create: (i: number) => T) {
+  const list: T[] = []
+  for (let i = 0; i < n; i++) {
+    list.push(create(i))
+  }
   return list
 }

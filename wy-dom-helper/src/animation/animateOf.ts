@@ -1,67 +1,48 @@
-import { AnimationFunZXX } from 'wy-helper'
+
+
 /**
- * 产生动画
- * 现实中是有个副作用值(类型可能是颜色)
- * 然后选择一种动画
- * 然后动画结束
- * @param xp 
+ * https://easings.net/#
  */
-export function animationOf(xp: {
-  /**持续时间 毫秒，1000毫秒是1秒*/
-  duration: number
-  /**开始的值 */
-  from?: number
-  /**结束的值 */
-  target: number
-  /**回调位移,与时间 */
-  call?(num: number, t: number): void
-  /**位移变化，与时间变化 */
-  diff?(num: number, t: number): void
-  /**使用的动画 */
-  change: AnimationFunZXX,
-  /**结束时调用 */
-  end?(): void
-}) {
-  let cancel = false
-  const start = Date.now()
-  const calls: ((num: number, t: number) => void)[] = []
-  if (xp.call) {
-    calls.push(xp.call)
-  }
-  if (xp.diff) {
-    const diff = xp.diff
-    let lastnum = 0
-    let lastT = 0
-    calls.push(function (num, t) {
-      diff(num - lastnum, t - lastT)
-      lastnum = num
-      lastT = t
-    })
-  }
-  function oneCall(num: number, t: number) {
-    for (let call of calls) {
-      call(num, t)
-    }
-  }
-  function animate() {
-    const t = Date.now() - start
-    if (t > xp.duration) {
-      //结束
-      oneCall(xp.target, xp.duration)
-      if (xp.end) {
-        xp.end()
-      }
-    } else {
-      const y = xp.change(t, xp.from || 0, xp.target, xp.duration)
-      oneCall(y, t)
-      if (!cancel) {
-        requestAnimationFrame(animate)
-      }
-    }
-  }
-  animate()
-  return function () {
-    cancel = true
+export const easeCssFn = {
+  sine: {
+    in: 'cubic-bezier(0.12, 0, 0.39, 0)',
+    out: 'cubic-bezier(0.61, 1, 0.88, 1)',
+    inOut: 'cubic-bezier(0.37, 0, 0.63, 1)'
+  },
+  quad: {
+    in: 'cubic-bezier(0.11, 0, 0.5, 0)',
+    out: 'cubic-bezier(0.5, 1, 0.89, 1)',
+    inOut: 'cubic-bezier(0.45, 0, 0.55, 1)'
+  },
+  cubic: {
+    in: 'cubic-bezier(0.32, 0, 0.67, 0)',
+    out: 'cubic-bezier(0.33, 1, 0.68, 1)',
+    inOut: 'cubic-bezier(0.65, 0, 0.35, 1)'
+  },
+  quart: {
+    in: 'cubic-bezier(0.5, 0, 0.75, 0)',
+    out: 'cubic-bezier(0.25, 1, 0.5, 1)',
+    inOut: 'cubic-bezier(0.76, 0, 0.24, 1)'
+  },
+  quint: {
+    in: 'cubic-bezier(0.64, 0, 0.78, 0)',
+    out: 'cubic-bezier(0.22, 1, 0.36, 1)',
+    inOut: 'cubic-bezier(0.83, 0, 0.17, 1)'
+  },
+  expo: {
+    in: 'cubic-bezier(0.7, 0, 0.84, 0)',
+    out: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    inOut: 'cubic-bezier(0.87, 0, 0.13, 1)'
+  },
+  circ: {
+    in: 'cubic-bezier(0.55, 0, 1, 0.45)',
+    out: 'cubic-bezier(0, 0.55, 0.45, 1)',
+    inOut: 'cubic-bezier(0.85, 0, 0.15, 1)'
+  },
+  back: {
+    in: 'cubic-bezier(0.36, 0, 0.66, -0.56)',
+    out: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+    inOut: 'cubic-bezier(0.68, -0.6, 0.32, 1.6)'
   }
 }
 
