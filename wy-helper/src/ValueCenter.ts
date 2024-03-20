@@ -1,15 +1,16 @@
 import { EmptyFun, alawaysTrue, emptyFun, run } from "./util"
 
 type EventHandler<T> = (v: T) => void
+type EventChangeHandler<T> = (v: T, old: T) => void
 export interface VirtualEventCenter<T> {
-  subscribe(notify: EventHandler<T>): EmptyFun
+  subscribe(notify: EventChangeHandler<T>): EmptyFun
 }
 export class EventCenter<T>{
-  private pool = new Set<EventHandler<T>>()
+  private pool = new Set<EventChangeHandler<T>>()
   poolSize() {
     return this.pool.size
   }
-  subscribe(notify: EventHandler<T>): EmptyFun {
+  subscribe(notify: EventChangeHandler<T>): EmptyFun {
     if (this.pool.has(notify)) {
       return emptyFun
     }
@@ -19,8 +20,8 @@ export class EventCenter<T>{
       that.pool.delete(notify)
     }
   }
-  notify(v: T) {
-    this.pool.forEach(notify => notify(v))
+  notify(v: T, oldV: T) {
+    this.pool.forEach(notify => notify(v, oldV))
   }
 
 }
@@ -49,7 +50,7 @@ export class ReadValueCenterProxyImpl<T> implements ReadValueCenter<T>{
   get(): T {
     return this.center.get()
   }
-  subscribe(ev: EventHandler<T>) {
+  subscribe(ev: EventChangeHandler<T>) {
     return this.center.subscribe(ev)
   }
 }
@@ -59,8 +60,9 @@ export class ValueCenterDefaultImpl<T> implements ValueCenter<T>{
   ) { }
   private ec = new EventCenter<T>()
   set(v: T): void {
+    const oldValue = this.value
     this.value = v
-    this.ec.notify(v)
+    this.ec.notify(v, oldValue)
   }
   poolSize(): number {
     return this.ec.poolSize()
@@ -68,7 +70,7 @@ export class ValueCenterDefaultImpl<T> implements ValueCenter<T>{
   get(): T {
     return this.value
   }
-  subscribe(ev: EventHandler<T>) {
+  subscribe(ev: EventChangeHandler<T>) {
     return this.ec.subscribe(ev)
   }
 

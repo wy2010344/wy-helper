@@ -6,6 +6,10 @@ export function simpleEqual<T>(a: T, b: T) {
   return a == b
 }
 
+export function simpleNotEqual<T>(a: T, b: T) {
+  return a != b
+}
+
 export function arrayEqual<T>(a1: readonly T[], a2: readonly T[], equal: (x: T, y: T) => boolean) {
   if (a1 == a2) {
     return true
@@ -24,6 +28,30 @@ export function arrayEqual<T>(a1: readonly T[], a2: readonly T[], equal: (x: T, 
 
 export function arrayNotEqualDepsWithEmpty(a?: readonly any[], b?: readonly any[]) {
   return !(a && b && arrayEqual(a, b, simpleEqual))
+}
+
+export function arrayNotEqual(a: readonly any[], b: readonly any[]) {
+  return !arrayEqual(a, b, simpleEqual)
+}
+
+/**
+ * 两个单值相同,不变更,
+ * 两个数组相同,不变更
+ * 其它情况,变更
+ * @param a 
+ * @param b 
+ * @returns 
+ */
+export function arrayNotEqualOrOne<T>(a: T, b: T) {
+  if (a == b) {
+    return false
+  }
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (arrayEqual(a, b, simpleEqual)) {
+      return false
+    }
+  }
+  return true
 }
 
 export function buildRemoveWhere<T, M>(equal: (m: M, a: T, idx: number) => any) {
