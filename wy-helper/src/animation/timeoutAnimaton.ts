@@ -76,7 +76,7 @@ export class TimeoutAnimate<T, F> implements ReadValueCenter<TimeoutAnimateData<
   get() {
     return this.center.get()
   }
-  subscribe(callback: (v: TimeoutAnimateData<T, F>) => void) {
+  subscribe(callback: (v: TimeoutAnimateData<T, F>, oldV: TimeoutAnimateData<T, F>) => void) {
     return this.center.subscribe(callback)
   }
 }

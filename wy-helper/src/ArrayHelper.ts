@@ -95,6 +95,7 @@ export function arrayFindFrom<T>(
 }
 
 export function arrayToMove<T>(list: T[], startIndex: number, endIndex: number) {
+  'worklet';
   list = list.slice()
   const [item] = list.splice(startIndex, 1)
   list.splice(endIndex, 0, item)

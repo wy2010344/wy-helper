@@ -1,6 +1,5 @@
-import { mixNumber } from "./NumberHelper"
 import { removeWhere } from "./equal"
-import { Axis, Box, Point, PointKey, axisEqual, boxEqual, pointEqual, pointZero } from "./geometry"
+import { Box, Point, PointKey, boxEqual, pointEqual, pointZero } from "./geometry"
 import { EmptyFun } from "./util"
 
 export interface ReorderItemData {
@@ -8,30 +7,40 @@ export interface ReorderItemData {
   layout: Box
 }
 
-function checkReorder(
-  order: ReorderItemData[],
-  direction: PointKey,
-  value: any,
-  offsetP: Point,
-  velocityP: Point,
+function reorderItemDataGetKey(n: ReorderItemData) {
+  return n.value
+}
+
+/**
+ * 
+ * @param order 
+ * @param getKey 
+ * @param getHeight 
+ * @param key 
+ * @param offset 偏移量
+ * @param speed 速度决定判断的方向
+ * @returns 
+ */
+export function reorderCheckTarget<T>(
+  order: T[],
+  getKey: (n: T) => any,
+  getHeight: (n: T) => number,
+  key: any,
+  offset: number,
+  speed: number
 ) {
-  const velocity = velocityP[direction]
-  const offset = offsetP[direction]
+  'worklet';
   //速度为0时,不调整
-  if (!velocity) {
+  if (!speed) {
     return
   }
-  const index = order.findIndex(item => item.value == value)
+  const index = order.findIndex(item => getKey(item) == key)
   if (index < 0) {
     return
   }
-  const nextOffset = velocity > 0 ? 1 : -1
+  const nextOffset = speed > 0 ? 1 : -1
 
-
-  const item = order[index]
-  const layout = item.layout[direction]
-
-
+  let nextHeightOffset = 0
   let flagIndex = index
   while (flagIndex > -1 && flagIndex < order.length) {
     const nextIndex = flagIndex + nextOffset
@@ -39,13 +48,15 @@ function checkReorder(
     if (!nextItem) {
       break
     }
-    const nextLayout = nextItem.layout[direction]
-    const nextItemCenter = mixNumber(nextLayout.min, nextLayout.max, 0.5)
+
+    const nextHeight = getHeight(nextItem)
+    const nextHeightCenter = nextHeight / 2
     if (
-      (nextOffset == 1 && layout.max + offset > nextItemCenter) ||
-      (nextOffset == -1 && layout.min + offset < nextItemCenter)
+      (nextOffset > 0 && offset > nextHeightOffset + nextHeightCenter) ||
+      (nextOffset < 0 && offset < nextHeightOffset - nextHeightCenter)
     ) {
       flagIndex = nextIndex
+      nextHeightOffset += (nextHeight * nextOffset)
     } else {
       break
     }
@@ -55,15 +66,40 @@ function checkReorder(
   }
 }
 
+
 type MoveV = {
   lastValue: Point
   currentItem: ReorderChild
   onFinish(): void
 }
 
+function getDirection(dir: PointKey) {
+  return function (n: ReorderItemData) {
+    return n.layout[dir].max - n.layout[dir].min
+  }
+}
+const getSize: Point<(n: ReorderItemData) => number> = {
+  x: getDirection("x"),
+  y: getDirection("y"),
+}
+function buildSortDir(dir: PointKey) {
+  return function (a: ReorderItemData, b: ReorderItemData) {
+    return a.layout[dir].min - b.layout[dir].min
+  }
+}
+const sortDir: Point<(a: ReorderItemData, b: ReorderItemData) => number> = {
+  x: buildSortDir("x"),
+  y: buildSortDir("y")
+}
 export class Reorder {
   checkToMove(key: any, offset: Point, diff: Point) {
-    const item = checkReorder(this.layoutList, this.direction, key, offset, diff)
+    const item = reorderCheckTarget(
+      this.layoutList,
+      reorderItemDataGetKey,
+      getSize[this.direction],
+      key,
+      offset[this.direction],
+      diff[this.direction])
     if (item) {
       this.moveItem(key, item.value)
       return true
@@ -75,7 +111,6 @@ export class Reorder {
   private layoutList: ReorderItemData[] = []
   private direction: PointKey = 'y'
   updateLayoutList(direction: PointKey, shouldRemove: (key: any) => boolean) {
-    this.direction = direction
     removeWhere(this.layoutList, function (value) {
       return shouldRemove(value.value)
     })
@@ -84,6 +119,14 @@ export class Reorder {
         this.moveV = undefined
       }
     }
+    if (this.direction != direction) {
+      this.direction = direction
+      this.sortOrderList()
+    }
+  }
+
+  private sortOrderList() {
+    this.layoutList.sort(sortDir[this.direction])
   }
   getCurrent() {
     return this.moveV?.currentItem
@@ -100,10 +143,7 @@ export class Reorder {
         layout: axis
       })
     }
-    const dir = this.direction
-    order.sort(function (a, b) {
-      return a.layout[dir].min - b.layout[dir].min
-    })
+    this.sortOrderList()
   }
   private moveV: MoveV | undefined = undefined
   setMoveV(v: MoveV) {

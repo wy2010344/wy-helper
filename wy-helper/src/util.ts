@@ -49,7 +49,9 @@ export function iterableToList<T>(entity: IterableIterator<T>) {
 export function alawaysTrue() {
   return true
 }
-
+export function alawaysFalse() {
+  return false
+}
 export function defaultToGetTrue(value: any) {
   if (value) {
     if (typeof value == 'function') {
