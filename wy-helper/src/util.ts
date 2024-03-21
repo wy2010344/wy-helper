@@ -82,6 +82,23 @@ export function delay(n: number) {
   })
 }
 
+export const supportMicrotask = !!globalThis.queueMicrotask
+export const supportMessageChannel = typeof MessageChannel !== 'undefined'
+
+
+export function messageChannelCallback(callback: EmptyFun) {
+  if (supportMessageChannel) {
+    const { port1, port2 } = new MessageChannel()
+    if ('on' in port1) {
+      port1.on("message", callback)
+    } else {
+      (port1 as any).onmessage = callback
+    }
+    return port2.postMessage(null)
+  } else {
+    setTimeout(callback)
+  }
+}
 
 export function asLazy<T>(v: T) {
   return function () {

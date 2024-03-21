@@ -1,5 +1,5 @@
 import { ReduceState, SetValue } from "./setStateHelper"
-import { EmptyFun, FalseType, emptyFun, objectFreeze, run } from "./util"
+import { EmptyFun, FalseType, emptyFun, messageChannelCallback, objectFreeze, run, supportMicrotask } from "./util"
 
 export type PromiseResult<T> = {
   type: "success",
@@ -113,20 +113,10 @@ export function timeOutThrottle(callback: EmptyFun, time: number = 0) {
     setTimeout(fun, time)
   }, callback)
 }
-export const supportMicrotask = !!globalThis.queueMicrotask
-export const supportMessageChannel = typeof MessageChannel !== 'undefined'
 export function messageChannelThrottle(callback: EmptyFun): EmptyFun
 export function messageChannelThrottle<T>(callback: SetValue<T>): SetValue<T>
 export function messageChannelThrottle(callback: EmptyFun) {
-  if (supportMessageChannel) {
-    return buildThrottle(function (fun) {
-      const { port1, port2 } = new MessageChannel()
-      port1.on("message", fun)
-      return port2.postMessage(null)
-    }, callback)
-  } else {
-    return timeOutThrottle(callback)
-  }
+  return buildThrottle(messageChannelCallback, callback)
 }
 
 export function microTaskThrottle(callback: EmptyFun): EmptyFun
