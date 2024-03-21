@@ -1,4 +1,6 @@
-import { EmptyFun } from "./util"
+import { EmptyFun, alawaysTrue } from "./util"
+import { Compare, simpleNotEqual } from "./equal"
+import { AskNextTimeWork, NextTimeWork, SetValue, storeRef } from "."
 const m = globalThis as any
 const DepKey = 'wy-helper-dep-cache'
 if (!m[DepKey]) {
@@ -24,32 +26,13 @@ if (!m[DepKey]) {
   m[DepKey] = Dep
 }
 const Dep = m[DepKey]
-export type ShouldChange<T> = (a: T, b: T) => any
-/**
- * 必须默认true，因为引用类似修改无法通过相等判断
- * @param a 
- * @param b 
- * @returns 
- */
-export const alawaysChange: ShouldChange<any> = function (a, b) {
-  return true
-}
-/**
- * 不相同的时候
- * @param a 
- * @param b 
- * @returns 
- */
-export const notEqualChange: ShouldChange<any> = function (a, b) {
-  return a != b
-}
 /**存储器 */
 export interface Value<T> {
   (v: T): void
   (): T
 }
 /**新存储器*/
-export function valueOf<T>(v: T, shouldChange = alawaysChange): Value<T> {
+export function valueOf<T>(v: T, shouldChange: (a: T, b: T) => any = alawaysTrue): Value<T> {
   const dep = new Dep()
   return function () {
     if (arguments.length == 0) {
@@ -74,25 +57,65 @@ export function valueOf<T>(v: T, shouldChange = alawaysChange): Value<T> {
  * @param shouldChange 
  * @returns 
  */
-export function atomValueOf<T>(v: T, shouldChange = notEqualChange): Value<T> {
+export function atomValueOf<T>(v: T, shouldChange = simpleNotEqual): Value<T> {
   return valueOf(v, shouldChange)
 }
-interface LifeModel {
-  Watch(exp: () => void): void
-  WatchExp<A, B>(before: () => A, exp: (a: A) => B, after: (b: B) => void): void
-  WatchBefore<A>(before: () => A, exp: (a: A) => void): void
-  WatchAfter<B>(exp: () => B, after: (b: B) => void): void
-  Cache<T>(fun: () => T, shouldChange?: ShouldChange<T>): () => T
-  AtomCache<T>(fun: () => T, shouldChange?: ShouldChange<T>): () => T
-  destroyList: (() => void)[]
+
+class Watcher {
+  constructor(
+    private addTask: (fun: EmptyFun) => void,
+    private realUpdate: (it: Watcher) => void
+  ) {
+    Dep.watcherCount++
+    this.update()
+    this.disable = this.disable.bind(this)
+    this.didUpdate = this.didUpdate.bind(this)
+  }
+  static uid = 0
+  id = Watcher.uid++
+  private enable = true
+
+
+  private inTaskList = false
+  update() {
+    if (this.onWork) {
+      throw new Error("update when self is on work")
+    }
+    if (this.inTaskList) {
+      return
+    }
+    if (this.enable) {
+      this.inTaskList = true
+      this.addTask(this.didUpdate)
+    }
+  }
+
+  private onWork = false
+  private didUpdate() {
+    if (this.enable) {
+      this.onWork = true
+      this.realUpdate(this)
+      this.onWork = false
+    }
+    this.inTaskList = false
+  }
+  disable() {
+    this.enable = false
+    Dep.watcherCount--
+  }
 }
 
-
-
-export function cacheOf<T>(fun: () => T, shouldChange: ShouldChange<T> = alawaysChange) {
+export function watch(addTask: SetValue<EmptyFun>, exp: () => void) {
+  return new Watcher(addTask, function (it) {
+    Dep.target = it
+    exp()
+    Dep.target = null
+  }).disable
+}
+export function cacheOf<T>(addTask: SetValue<EmptyFun>, fun: () => T, shouldChange: Compare<T> = alawaysTrue) {
   const dep = new Dep()
   let cache: T
-  const destroy = watch(function () {
+  const destroy = watch(addTask, function () {
     const nv = fun()
     if (shouldChange(cache, nv)) {
       cache = nv
@@ -105,40 +128,9 @@ export function cacheOf<T>(fun: () => T, shouldChange: ShouldChange<T> = alaways
   }, destroy] as const
 }
 
-export function atomCacheOf<T>(fun: () => T, shouldChange: ShouldChange<T> = notEqualChange) {
-  return cacheOf(fun, shouldChange)
-}
-class Watcher {
-  constructor(
-    private realUpdate: (it: Watcher) => void
-  ) {
-    Dep.watcherCount++
-    this.update()
-    this.disable = this.disable.bind(this)
-  }
-  static uid = 0
-  id = Watcher.uid++
-  private enable = true
-  update() {
-    if (this.enable) {
-      this.realUpdate(this)
-    }
-  }
-  disable() {
-    this.enable = false
-    Dep.watcherCount--
-  }
-}
 
-export function watch(exp: () => void) {
-  return new Watcher(function (it) {
-    Dep.target = it
-    exp()
-    Dep.target = null
-  }).disable
-}
-export function watchExp<A, B>(before: () => A, exp: (a: A) => B, after: (b: B) => void) {
-  return new Watcher(function (it) {
+export function watchExp<A, B>(addTask: SetValue<EmptyFun>, before: () => A, exp: (a: A) => B, after: (b: B) => void) {
+  return new Watcher(addTask, function (it) {
     const a = before()
     Dep.target = it
     const b = exp(a)
@@ -146,19 +138,54 @@ export function watchExp<A, B>(before: () => A, exp: (a: A) => B, after: (b: B) 
     after(b)
   }).disable
 }
-export function watchBefore<A>(before: () => A, exp: (a: A) => void) {
-  return new Watcher(function (it) {
+export function watchBefore<A>(addTask: SetValue<EmptyFun>, before: () => A, exp: (a: A) => void) {
+  return new Watcher(addTask, function (it) {
     const a = before()
     Dep.target = it
     exp(a)
     Dep.target = null
   }).disable
 }
-export function watchAfter<B>(exp: () => B, after: (b: B) => void) {
-  return new Watcher(function (it) {
+export function watchAfter<B>(addTask: SetValue<EmptyFun>, exp: () => B, after: (b: B) => void) {
+  return new Watcher(addTask, function (it) {
     Dep.target = it
     const b = exp()
     Dep.target = null
     after(b)
   }).disable
+}
+
+export function atomCacheOf<T>(addTask: SetValue<EmptyFun>, fun: () => T, shouldChange: Compare<T> = simpleNotEqual) {
+  return cacheOf(addTask, fun, shouldChange)
+}
+/**
+ * 如果Watch可以在react的fiber里面,添加到对应的列表里
+ * 比如添加到effect的列表里
+ * 添加到普通render的列表里
+ * @param askNextTimeWork 
+ * @returns 
+ */
+
+export function createVueInstance(
+  askNextTimeWork: AskNextTimeWork,
+  getMoreWork: () => void | NextTimeWork
+) {
+  const realTime = storeRef(false)
+  const taskList: EmptyFun[] = []
+  function runNextTask() {
+    taskList.shift()?.()
+  }
+  const askWork = askNextTimeWork({
+    realTime,
+    askNextWork() {
+      if (taskList.length) {
+        return runNextTask
+      }
+      return getMoreWork()
+    },
+  })
+  return function (fun: EmptyFun) {
+    taskList.push(fun)
+    askWork()
+  }
 }
