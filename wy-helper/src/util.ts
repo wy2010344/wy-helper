@@ -141,3 +141,18 @@ export type ReadArray<T> = {
 export class WrapperValue<T>{
   constructor(public readonly value: T) { }
 }
+
+
+export function numberIntFillWithN0(n: number, x: number) {
+  const nx = n + ''
+
+  let intLen = nx.indexOf('.')
+  if (intLen < 0) {
+    intLen = nx.length
+  }
+  const diff = x - intLen
+  if (diff > 0) {
+    return '0'.repeat(diff) + nx
+  }
+  return nx
+}

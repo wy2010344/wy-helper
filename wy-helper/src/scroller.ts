@@ -193,6 +193,7 @@ type MoveCache = {
   latestValue: number
 }
 export function buildScroll({
+  edgeSlow = 3,
   upperScrollDiff = 0,
   lowerScrollDiff = 0,
   wrapperSize,
@@ -201,6 +202,8 @@ export function buildScroll({
   changeTo,
   momentum,
 }: {
+  /**到达边缘时拖拽减速 */
+  edgeSlow?: number
   upperScrollDiff?: number
   lowerScrollDiff?: number
   wrapperSize(): number
@@ -218,6 +221,17 @@ export function buildScroll({
   function getMaxScroll() {
     return wrapperSize() - containerSize()
   }
+  function getMargin() {
+
+    const maxScroll = getMaxScroll()
+    const upperMargin = upperScrollDiff
+    const lowerMargin = maxScroll + lowerScrollDiff
+    return {
+      upperMargin,
+      lowerMargin,
+      maxScroll
+    }
+  }
   function resetLocation(newY: number, maxScrollY: number) {
     const toY = newY > upperScrollDiff
       ? upperScrollDiff
@@ -231,11 +245,20 @@ export function buildScroll({
     }
   }
   function setMove(last: MoveCache, n: number) {
-    const diff = n - last.latestValue
-    const newValue = getCurrentValue() + diff
-    changeTo(newValue)
-    last.latestValue = n
-    return newValue
+    let diff = n - last.latestValue
+    const cv = getCurrentValue()
+    if (diff) {
+      const { lowerMargin, upperMargin } = getMargin()
+      if (!(cv < upperMargin && cv > lowerMargin)) {
+        diff = diff / edgeSlow
+      }
+      const newValue = cv + diff
+      changeTo(newValue)
+      last.latestValue = n
+      return newValue
+    } else {
+      return cv
+    }
   }
   return {
     start(n: number) {
@@ -259,10 +282,7 @@ export function buildScroll({
       if (last) {
         const newY = setMove(last, n)
         moveM = undefined
-        const maxScroll = getMaxScroll()
-
-        const upperMargin = upperScrollDiff
-        const lowerMargin = maxScroll + lowerScrollDiff
+        const { lowerMargin, upperMargin, maxScroll } = getMargin()
         if (newY < upperMargin && newY > lowerMargin) {
           const { destination, duration } = momentum(
             newY,
