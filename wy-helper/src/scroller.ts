@@ -80,13 +80,36 @@ export interface MomentumCall {
 }
 
 export const momentum = {
-  iScroll({
+  iScrollWithMargin({
     deceleration = 0.0006
   }: {
     //表示 momentum 动画的减速度。
     deceleration?: number,
-  } = emptyObject): MomentumCall {
+  } = emptyObject) {
     deceleration = Math.abs(deceleration)
+    return function (speed: number) {
+      const absSpeed = Math.abs(speed)
+      //速度除以减速度,得变成0的时间
+      let duration = absSpeed / deceleration;
+      //时间*((初速度+0)/2)=位移,即均匀减速运动,需要使用二次方quadratic,easeOut
+      let distance = duration * (absSpeed / 2) * (speed < 0 ? -1 : 1);
+
+      return {
+        absSpeed,
+        distance,
+        duration
+      }
+    }
+  },
+  iScroll(arg: {
+    //表示 momentum 动画的减速度。
+    deceleration?: number,
+  } = emptyObject): MomentumCall {
+    /**
+     * @param speed 速度
+     * @returns  位移 + 时间
+     */
+    const withoutMargin = momentum.iScrollWithMargin(arg)
     function withSpeed(
       current: number,
       /**速度,可能为负数*/
@@ -95,11 +118,9 @@ export const momentum = {
       lowerMargin: number,
       upperMargin: number
     ) {
-      const absSpeed = Math.abs(speed)
-      //速度除以减速度,得变成0的时间
-      let duration = absSpeed / deceleration;
+      let { absSpeed, duration, distance } = withoutMargin(speed)
       //时间*((初速度+0)/2)=位移,即均匀减速运动,需要使用二次方quadratic,easeOut
-      let destination = current + duration * (absSpeed / 2) * (speed < 0 ? -1 : 1);
+      let destination = current + distance
       //超出边界的时间,减少位移
       if (destination < lowerMargin) {
         destination = wrapperSize ? lowerMargin - (wrapperSize / 2.5 * (absSpeed / 8)) : lowerMargin;
@@ -185,6 +206,63 @@ export const momentum = {
 
 
 
+export function buildNoEdgeScroll({
+  getCurrentValue,
+  momentum,
+  changeTo
+}: {
+  getCurrentValue(): number
+  momentum(speed: number): {
+    distance: number
+    duration: number
+  }
+  changeTo(
+    value: number,
+    duration?: number): void
+}) {
+  let moveM: MoveCache | undefined = undefined
+
+  function setMove(last: MoveCache, n: number) {
+    let diff = n - last.latestValue
+    const cv = getCurrentValue()
+    if (diff) {
+      const newValue = cv + diff
+      changeTo(newValue)
+      last.latestValue = n
+      return newValue
+    } else {
+      return cv
+    }
+  }
+  return {
+    start(n: number, beginTime = performance.now()) {
+      const v = getCurrentValue()
+      moveM = {
+        beginValue: v,
+        //不必精确时间,只是用于计算动量
+        beginTime,
+        value: v,
+        latestValue: n
+      }
+      changeTo(v)
+    },
+    move(n: number) {
+      if (moveM) {
+        setMove(moveM, n)
+      }
+    },
+    end(n: number) {
+      const last = moveM
+      if (last) {
+        const newY = setMove(last, n)
+        moveM = undefined
+        const speed = (newY - last.beginValue) / (performance.now() - last.beginTime)
+        const { distance, duration } = momentum(speed)
+        changeTo(newY + distance, duration)
+      }
+    }
+  }
+}
 
 type MoveCache = {
   value: number
@@ -206,7 +284,9 @@ export function buildScroll({
   edgeSlow?: number
   upperScrollDiff?: number
   lowerScrollDiff?: number
+  //滚动容器
   wrapperSize(): number
+  //滚动内容
   containerSize(): number
   getCurrentValue(): number
   changeTo(value: number, config?: {
@@ -261,12 +341,12 @@ export function buildScroll({
     }
   }
   return {
-    start(n: number) {
+    start(n: number, beginTime = performance.now()) {
       const v = getCurrentValue()
       moveM = {
         beginValue: v,
         //不必精确时间,只是用于计算动量
-        beginTime: performance.now(),
+        beginTime,
         value: v,
         latestValue: n
       }
