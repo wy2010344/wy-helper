@@ -3,7 +3,9 @@
 /**
  * https://easings.net/#
  */
+export const easeCssEase = `cubic-bezier(.42,0,1,1)`
 export const easeCssFn = {
+  //普通ease,跟sine很接近
   sine: {
     in: 'cubic-bezier(0.12, 0, 0.39, 0)',
     out: 'cubic-bezier(0.61, 1, 0.88, 1)',
@@ -47,6 +49,19 @@ export const easeCssFn = {
 }
 
 
+export function expandCubicBezierCssToRow(css: string) {
+  const list = css.trim().slice('cubic-bezier'.length + 1, -1).split(',').map(v => Number(v))
+  return [
+    {
+      x: list[0],
+      y: list[1]
+    },
+    {
+      x: list[2],
+      y: list[3]
+    }
+  ] as const
+}
 /**
  * 
  * 不太靠谱!!

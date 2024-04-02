@@ -61,10 +61,7 @@ export interface MomentumCall {
   (
     /** < 0 当前位移 */
     current: number,
-    /** < 0 初始位移 */
-    start: number,
-    /** 移动用时 */
-    time: number,
+    velocity: number,
     /** 容器尺寸,如wrapperHeight  */
     wrapperSize: number,
     /**最下滚动,一般为wrapperHeight-clientHeight,即maxScroll,为负数 */
@@ -79,81 +76,212 @@ export interface MomentumCall {
   }
 }
 
-export const momentum = {
-  iScrollWithMargin({
-    deceleration = 0.0006
-  }: {
+
+export interface MomentumCallIdeal {
+  (velocity: number): {
+    distance: number
+    duration: number
+  }
+}
+
+
+export class MomentumIScroll {
+  private constructor(
+    public readonly deceleration = 0.0006
+  ) {
+    this.deceleration = Math.abs(deceleration)
+  }
+  /**
+   * 通过速度获得理想的信息
+   * @param velocity 
+   * @returns 
+   */
+  getWithSpeedIdeal(velocity: number) {
+    const absSpeed = Math.abs(velocity)
+    //速度除以减速度,得变成0的时间
+    const duration = absSpeed / this.deceleration;
+    //时间*((初速度+0)/2)=位移,即均匀减速运动,需要使用二次方quadratic,easeOut
+    const distance = duration * (absSpeed / 2) * (velocity < 0 ? -1 : 1);
+
+    return {
+      absSpeed,
+      distance,
+      duration
+    }
+  }
+
+  /**
+   * 通过位移倒推速度和时间
+   * @param distance 
+   * @returns 
+   */
+  getWithDistanceIdeal(distance: number) {
+    const speed = Math.cbrt(distance * 2 * this.deceleration)
+    const duration = Math.abs(speed / this.deceleration)
+    return {
+      speed,
+      duration
+    }
+  }
+
+  /**
+   * 有边界的情况
+   * @param current 
+   * @param velocity 
+   * @param wrapperSize 
+   * @param lowerMargin 
+   * @param upperMargin 
+   * @returns 
+   */
+  getDestinationWithMargin(
+    current: number,
+    /**速度,可能为负数*/
+    velocity: number,
+    wrapperSize: number,
+    lowerMargin: number,
+    upperMargin: number
+  ) {
+    let { absSpeed, duration, distance } = this.getWithSpeedIdeal(velocity)
+    //时间*((初速度+0)/2)=位移,即均匀减速运动,需要使用二次方quadratic,easeOut
+    let destination = current + distance
+    //超出边界的时间,减少位移
+    if (destination < lowerMargin) {
+      destination = wrapperSize ? lowerMargin - (wrapperSize / 2.5 * (absSpeed / 8)) : lowerMargin;
+      let distance = Math.abs(destination - current);
+      duration = distance / absSpeed;
+    } else if (destination > upperMargin) {
+      destination = wrapperSize ? wrapperSize / 2.5 * (absSpeed / 8) : upperMargin;
+      let distance = Math.abs(current) + destination;
+      duration = distance / absSpeed;
+    }
+
+    return {
+      destination: Math.round(destination),
+      duration: duration
+    };
+  }
+  static readonly default = new MomentumIScroll()
+  static get(deceleration?: number) {
+    let iScroll: MomentumIScroll
+    if (!deceleration || deceleration == MomentumIScroll.default.deceleration) {
+      iScroll = MomentumIScroll.default
+    } else {
+      iScroll = new MomentumIScroll(deceleration)
+    }
+    return iScroll
+  }
+}
+
+
+
+export class MomentumBScoll {
+
+  constructor(
+    //表示 momentum 动画的减速度。
+    public readonly deceleration = 0.0015,
+    //设置当运行 momentum 动画时，超过边缘后的回弹整个动画时间。
+    public readonly swipeBounceTime = 500,
+    //设置 momentum 动画的动画时长。
+    public readonly swipeTime = 2500
+  ) { }
+  getWithSpeedIdeal(velocity: number) {
+
+    const duration = Math.min(this.swipeTime, (velocity * 2) / this.deceleration)
+    return {
+      distance: ((velocity * velocity) / this.deceleration) * (velocity < 0 ? -1 : 1),
+      duration
+    }
+  }
+
+  getDestinationWithMargin(
+    current: number,
+    /**速度,可能为负数*/
+    velocity: number,
+    wrapperSize: number,
+    lowerMargin: number,
+    upperMargin: number
+  ) {
+
+    let { distance, duration } = this.getWithSpeedIdeal(velocity)
+    let destination = current + distance
+    let rate = 15
+    if (destination < lowerMargin) {
+      destination = wrapperSize
+        ? Math.max(
+          lowerMargin - wrapperSize / 4,
+          lowerMargin - (wrapperSize / rate) * velocity
+        )
+        : lowerMargin
+      duration = this.swipeBounceTime
+    } else if (destination > upperMargin) {
+      destination = wrapperSize
+        ? Math.min(
+          upperMargin + wrapperSize / 4,
+          upperMargin + (wrapperSize / rate) * velocity
+        )
+        : upperMargin
+      duration = this.swipeBounceTime
+    }
+    return {
+      destination: Math.round(destination),
+      duration: duration
+    }
+  }
+
+  static readonly default = new MomentumBScoll()
+  static get(arg: {
     //表示 momentum 动画的减速度。
     deceleration?: number,
+    //设置当运行 momentum 动画时，超过边缘后的回弹整个动画时间。
+    swipeBounceTime?: number,
+    //设置 momentum 动画的动画时长。
+    swipeTime?: number
   } = emptyObject) {
-    deceleration = Math.abs(deceleration)
-    return function (speed: number) {
-      const absSpeed = Math.abs(speed)
-      //速度除以减速度,得变成0的时间
-      let duration = absSpeed / deceleration;
-      //时间*((初速度+0)/2)=位移,即均匀减速运动,需要使用二次方quadratic,easeOut
-      let distance = duration * (absSpeed / 2) * (speed < 0 ? -1 : 1);
-
-      return {
-        absSpeed,
-        distance,
-        duration
-      }
+    if (!arg) {
+      return MomentumBScoll.default
     }
-  },
+    const d = MomentumBScoll.default
+    if ((!arg.deceleration || arg.deceleration == d.deceleration)
+      || (!arg.swipeBounceTime || arg.swipeBounceTime == d.swipeBounceTime)
+      || (!arg.swipeTime || arg.swipeTime == d.swipeTime)
+    ) {
+      return d
+    }
+    return new MomentumBScoll(arg.deceleration, arg.swipeBounceTime, arg.swipeTime)
+  }
+}
+
+
+
+export const momentum = {
   iScroll(arg: {
     //表示 momentum 动画的减速度。
     deceleration?: number,
   } = emptyObject): MomentumCall {
-    /**
-     * @param speed 速度
-     * @returns  位移 + 时间
-     */
-    const withoutMargin = momentum.iScrollWithMargin(arg)
-    function withSpeed(
-      current: number,
-      /**速度,可能为负数*/
-      speed: number,
-      wrapperSize: number,
-      lowerMargin: number,
-      upperMargin: number
-    ) {
-      let { absSpeed, duration, distance } = withoutMargin(speed)
-      //时间*((初速度+0)/2)=位移,即均匀减速运动,需要使用二次方quadratic,easeOut
-      let destination = current + distance
-      //超出边界的时间,减少位移
-      if (destination < lowerMargin) {
-        destination = wrapperSize ? lowerMargin - (wrapperSize / 2.5 * (absSpeed / 8)) : lowerMargin;
-        let distance = Math.abs(destination - current);
-        duration = distance / absSpeed;
-      } else if (destination > upperMargin) {
-        destination = wrapperSize ? wrapperSize / 2.5 * (absSpeed / 8) : upperMargin;
-        let distance = Math.abs(current) + destination;
-        duration = distance / absSpeed;
-      }
-
-      return {
-        destination: Math.round(destination),
-        duration: duration
-      };
-    }
+    const iScroll = MomentumIScroll
+      .get(arg.deceleration)
     return function (
       current,
-      start,
-      time,
+      velocity,
       wrapperSize,
       lowerMargin,
       upperMargin
     ) {
-      return withSpeed(current, (current - start) / time, wrapperSize, lowerMargin, upperMargin)
+      return iScroll.getDestinationWithMargin(current, velocity, wrapperSize, lowerMargin, upperMargin)
+    }
+  },
+  iScrollIdeal(arg: {
+    //表示 momentum 动画的减速度。
+    deceleration?: number,
+  } = emptyObject): MomentumCallIdeal {
+    const iScroll = MomentumIScroll
+      .get(arg.deceleration)
+    return function (speed) {
+      return iScroll.getWithSpeedIdeal(speed)
     }
   },
   bScroll(
-    {
-      deceleration = 0.0015,
-      swipeBounceTime = 500,
-      swipeTime = 2500
-    }: {
+    arg: {
       //表示 momentum 动画的减速度。
       deceleration?: number,
       //设置当运行 momentum 动画时，超过边缘后的回弹整个动画时间。
@@ -162,110 +290,90 @@ export const momentum = {
       swipeTime?: number
     } = emptyObject
   ): MomentumCall {
+    const iScroll = MomentumBScoll
+      .get(arg)
     return function (
       current,
-      start,
-      time,
+      velocity,
       wrapperSize,
       lowerMargin,
       upperMargin
     ) {
-      const distance = current - start
-      const speed = Math.abs(distance) / time
-      const duration = Math.min(swipeTime, (speed * 2) / deceleration)
-      const momentumData = {
-        destination:
-          current + ((speed * speed) / deceleration) * (distance < 0 ? -1 : 1),
-        duration,
-        rate: 15
-      }
-
-      if (momentumData.destination < lowerMargin) {
-        momentumData.destination = wrapperSize
-          ? Math.max(
-            lowerMargin - wrapperSize / 4,
-            lowerMargin - (wrapperSize / momentumData.rate) * speed
-          )
-          : lowerMargin
-        momentumData.duration = swipeBounceTime
-      } else if (momentumData.destination > upperMargin) {
-        momentumData.destination = wrapperSize
-          ? Math.min(
-            upperMargin + wrapperSize / 4,
-            upperMargin + (wrapperSize / momentumData.rate) * speed
-          )
-          : upperMargin
-        momentumData.duration = swipeBounceTime
-      }
-      momentumData.destination = Math.round(momentumData.destination)
-
-      return momentumData
+      return iScroll.getDestinationWithMargin(current, velocity, wrapperSize, lowerMargin, upperMargin)
     }
-  }
+  },
+  bScrollIdeal(
+    arg: {
+      //表示 momentum 动画的减速度。
+      deceleration?: number,
+      //设置当运行 momentum 动画时，超过边缘后的回弹整个动画时间。
+      swipeBounceTime?: number
+      //设置 momentum 动画的动画时长。
+      swipeTime?: number
+    } = emptyObject): MomentumCallIdeal {
+    const iScroll = MomentumBScoll
+      .get(arg)
+    return function (speed) {
+      return iScroll.getWithSpeedIdeal(speed)
+    }
+  },
 }
 
 
 
 export function buildNoEdgeScroll({
-  getCurrentValue,
   momentum,
-  changeTo
+  changeDiff
 }: {
-  getCurrentValue(): number
-  momentum(speed: number): {
-    distance: number
-    duration: number
-  }
-  changeTo(
-    value: number,
+  momentum: MomentumCallIdeal
+  changeDiff(
+    diff: number,
     duration?: number): void
 }) {
   let moveM: MoveCache | undefined = undefined
 
   function setMove(last: MoveCache, n: number) {
     let diff = n - last.latestValue
-    const cv = getCurrentValue()
     if (diff) {
-      const newValue = cv + diff
-      changeTo(newValue)
+      changeDiff(diff)
       last.latestValue = n
-      return newValue
-    } else {
-      return cv
     }
   }
   return {
     start(n: number, beginTime = performance.now()) {
-      const v = getCurrentValue()
       moveM = {
-        beginValue: v,
+        beginValue: n,
         //不必精确时间,只是用于计算动量
         beginTime,
-        value: v,
         latestValue: n
       }
-      changeTo(v)
     },
     move(n: number) {
       if (moveM) {
         setMove(moveM, n)
       }
     },
-    end(n: number) {
+    end(n?: number, velocity?: number) {
       const last = moveM
       if (last) {
-        const newY = setMove(last, n)
+        if (typeof n != 'number') {
+          n = last.latestValue
+        }
+        setMove(last, n)
         moveM = undefined
-        const speed = (newY - last.beginValue) / (performance.now() - last.beginTime)
-        const { distance, duration } = momentum(speed)
-        changeTo(newY + distance, duration)
+        let currentTime = performance.now()
+        if (typeof velocity != 'number') {
+          velocity = (n - last.beginValue) / (currentTime - last.beginTime) //默认使用平均速度,因为最后的瞬间速度可能为0?
+        }
+        const { distance, duration } = momentum(velocity)
+        changeDiff(distance, duration)
       }
     }
   }
 }
 
 type MoveCache = {
-  value: number
+  // value: number
   beginValue: number
   beginTime: number
   latestValue: number
@@ -342,32 +450,34 @@ export function buildScroll({
   }
   return {
     start(n: number, beginTime = performance.now()) {
-      const v = getCurrentValue()
       moveM = {
-        beginValue: v,
+        beginValue: n,
         //不必精确时间,只是用于计算动量
         beginTime,
-        value: v,
         latestValue: n
       }
-      changeTo(v)
     },
     move(n: number) {
       if (moveM) {
         setMove(moveM, n)
       }
     },
-    end(n: number) {
+    end(n?: number, velocity?: number) {
       const last = moveM
       if (last) {
+        if (typeof n != 'number') {
+          n = last.latestValue
+        }
         const newY = setMove(last, n)
         moveM = undefined
         const { lowerMargin, upperMargin, maxScroll } = getMargin()
         if (newY < upperMargin && newY > lowerMargin) {
+          if (typeof velocity != 'number') {
+            velocity = (n - last.beginValue) / (performance.now() - last.beginTime) //默认使用平均速度,因为最后的瞬间速度可能为0?
+          }
           const { destination, duration } = momentum(
             newY,
-            last.beginValue,
-            performance.now() - last.beginTime,
+            velocity,
             wrapperSize(),
             lowerMargin,
             upperMargin
@@ -394,3 +504,32 @@ export function buildScroll({
 }
 
 
+
+/**
+ * 
+ * @param velocityX 速度
+ * @param deltaX 位移
+ * @param width 宽度
+ * @param VELOCITY_THRESHOLD 容错
+ * @returns 
+ */
+export function scrollJudgeDirection(
+  velocityX: number,
+  deltaX: number,
+  width: number,
+  VELOCITY_THRESHOLD = 0.1) {
+  let directionX = 0;
+  // Used in SwipeView.handlePanStart for hasty swipes
+  if (Math.abs(velocityX) > VELOCITY_THRESHOLD) {
+    directionX = velocityX > 0 ? 1 : -1;
+    // If drag started towards one end (directionX determined by velocityX at dragEnd)
+    // but ends towards the opposite (deltaX determined by the diff between dragStart and dragEnd),
+    // we shall ignore the swipe intention.
+    if ((directionX > 0 && deltaX < 0) || (directionX < 0 && deltaX > 0)) {
+      directionX = 0;
+    }
+  } else if (Math.abs(deltaX) >= width / 2) {
+    directionX = deltaX > 0 ? 1 : -1;
+  }
+  return directionX
+}

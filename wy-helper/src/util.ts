@@ -136,6 +136,34 @@ export type ReadArray<T> = {
 };
 
 
+export function readArraySlice<T>(list: ReadArray<T>, from: number = 0, to: number = list.length) {
+  const out: T[] = []
+  for (let i = from; i < to; i++) {
+    out.push(list[i])
+  }
+  return out
+}
+
+export function readArraySliceCircle<T>(list: ReadArray<T>, from: number = 0, end: number = list.length) {
+  if (from > end) {
+    throw new Error("from 必须小于 end")
+  }
+  if (from < 0) {
+    from = list.length + from
+    if (end < 0) {
+      return readArraySlice(list, from, end + list.length)
+    }
+    return readArraySlice(list, from, list.length).concat(readArraySlice(list, 0, end))
+  } else if (end >= list.length) {
+    end = end - list.length
+    if (from >= list.length) {
+      return readArraySlice(list, from - list.length, end)
+    }
+    return readArraySlice(list, from, list.length).concat(readArraySlice(list, 0, end))
+  }
+  return readArraySlice(list, from, end)
+}
+
 
 
 export class WrapperValue<T>{

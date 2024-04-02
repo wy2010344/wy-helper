@@ -234,11 +234,7 @@ export class PromiseAutoLoadMore<T, K>{
     objectFreeze(this)
   }
   reload(
-    getFun: (k: K, abort?: AbortSignal) => Promise<{
-      list: T[]
-      nextKey: K
-      hasMore: boolean
-    }>,
+    getFun: (k: K, abort?: AbortSignal) => Promise<AutoLoadMoreCore<T, K>>,
     first: K,
     dispatch: (v: VersionPromiseResult<AutoLoadMoreCore<T, K>>) => void
   ) {
@@ -329,5 +325,20 @@ export class PromiseAutoLoadMore<T, K>{
       false,
       emptyFun
     )
+  }
+
+  update(callback: (list: T[]) => T[]) {
+    if (this.data.data?.type == 'success') {
+      const newData = this.data.setData(old => {
+        return {
+          ...old,
+          list: callback(old.list)
+        }
+      })
+      if (newData != this.data) {
+        return new PromiseAutoLoadMore(newData, this.getFun, this.isLoadingMore, this.loadMoreCancel)
+      }
+    }
+    return this
   }
 }

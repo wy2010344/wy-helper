@@ -33,9 +33,11 @@ export function createRunSyncTasks() {
  * @returns 
  */
 export function getScheduleAskTime({
+  lastJobDelay,
   taskTimeThreadhold = 5,
   limitFlush
 }: {
+  lastJobDelay?: boolean
   taskTimeThreadhold?: number
   limitFlush?(fun: EmptyFun): void
 } = emptyObject): AskNextTimeWork {
@@ -58,7 +60,7 @@ export function getScheduleAskTime({
           callback()
           callback = askNextWork()
         } else {
-          if (callback.lastJob) {
+          if (lastJobDelay && callback.lastJob) {
             //延时检查
             setTimeout(flush, deadline - getCurrentTimePerformance())
             break
@@ -84,7 +86,7 @@ export function getScheduleAskTime({
         let work = askNextWork()
         while (work) {
           work()
-          if (work.lastJob && !realTime.get()) {
+          if (lastJobDelay && work.lastJob && !realTime.get()) {
             if (askNextWork()) {
               beginAsyncWork()
             } else {
