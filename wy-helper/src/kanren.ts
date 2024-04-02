@@ -1,12 +1,26 @@
 
-export class KPair<L, R>{
-  private constructor(
-    public readonly left: L,
-    public readonly right: R
-  ) { }
-  public static of<L, R>(left: L, right: R) {
-    return new KPair(left, right)
-  }
+// export class KPair<L, R>{
+//   private constructor(
+//     public readonly left: L,
+//     public readonly right: R
+//   ) { }
+//   public static of<L, R>(left: L, right: R) {
+//     return new KPair(left, right)
+//   }
+// }
+
+export type KPair<L, R> = [L, R]
+export function getKPairLeft<L, R>(p: KPair<L, R>) {
+  return p[0]
+}
+export function getKPairRight<L, R>(p: KPair<L, R>) {
+  return p[1]
+}
+export function createKPair<L, R>(l: L, r: R): KPair<L, R> {
+  return [l, r]
+}
+export function isKPair(v: KType): v is KPair<KType, KType> {
+  return Array.isArray(v) && v.length == 2
 }
 /**
  * 平行可能行->所有作用域
@@ -27,8 +41,8 @@ export function streamAppendStream<V>(a: Stream<V>, b: DelayStream<V>): Stream<V
     return b()
   } else {
     //如果a有后继，追加到后继之后
-    return KPair.of(a.left, function () {
-      return streamAppendStream(a.right(), b)
+    return createKPair(getKPairLeft(a), function () {
+      return streamAppendStream(getKPairRight(a)(), b)
     })
   }
 }
@@ -49,8 +63,8 @@ export function streamBindGoal<V>(a: Stream<V>, b: Goal<V>): Stream<V> {
     return null
   } else {
     //如果a有后继流，则递归处理
-    return streamAppendStream(b(a.left), function () {
-      return streamBindGoal(a.right(), b)
+    return streamAppendStream(b(getKPairLeft(a)), function () {
+      return streamBindGoal(getKPairRight(a)(), b)
     })
   }
 }
@@ -65,19 +79,12 @@ export class KVar {
   }
 }
 
-export class KSymbol {
-  private constructor(
-    public readonly name: string
-  ) { }
-  toString() {
-    return `$${this.name}`
-  }
-  static term = new KSymbol('term')
-  static nat = new KSymbol("nat")
+export interface KEqual {
+  equals(v: any): any
 }
 /**所有类型 */
-export type KType = KVar | KPair<KType, KType> | string | number | null | KSymbol
-export type List<T> = KPair<T, List<T>> | null
+export type KType = KVar | [KType, KType] | string | number | null | KEqual
+export type List<T> = [T, List<T>] | null
 type KVPair = KPair<KVar, KType>
 /**
  * 作用域链表,key为KVar,value变具体类型,或仍为KVar
@@ -90,12 +97,12 @@ export type KSubsitution = List<KVPair>
  */
 export function findVarDefine(v: KVar, sub: KSubsitution): KVPair | null {
   while (sub != null) {
-    const kv = sub.left
-    const theV = kv.left
+    const kv = getKPairLeft(sub)
+    const theV = getKPairLeft(kv)
     if (theV == v || v.equals(theV)) {
       return kv
     }
-    sub = sub.right
+    sub = getKPairRight(sub)
   }
   return null
 }
@@ -105,11 +112,11 @@ export function walk(v: KType, sub: KSubsitution): KType {
     const val = findVarDefine(v, sub)
     if (val) {
       //如果找到定义,对定义递归寻找
-      return walk(val.right, sub)
+      return walk(getKPairRight(val), sub)
     }
     return v
-  } else if (v instanceof KPair) {
-    return KPair.of(walk(v.left, sub), walk(v.right, sub))
+  } else if (isKPair(v)) {
+    return createKPair(walk(getKPairLeft(v), sub), walk(getKPairRight(v), sub))
   } else {
     return v
   }
@@ -119,7 +126,7 @@ export function extendSubsitution<K, V>(
   value: V,
   parent: List<KPair<K, V>>
 ) {
-  return KPair.of(KPair.of(key, value), parent)
+  return createKPair(createKPair(key, value), parent)
 }
 export function unify(a: KType, b: KType, sub: KSubsitution): [boolean, KSubsitution] {
   a = walk(a, sub)
@@ -139,10 +146,28 @@ export function unify(a: KType, b: KType, sub: KSubsitution): [boolean, KSubsitu
     }
     return [true, extendSubsitution(b, a, sub)]
   }
-  if (a instanceof KPair && b instanceof KPair) {
-    const [success, leftSub] = unify(a.left, b.left, sub)
-    if (success) {
-      return unify(a.right, b.right, leftSub)
+  if (Array.isArray(a) && Array.isArray(b) && a.length == b.length) {
+    let i = 0
+    let beforeSub = sub
+    while (i < a.length) {
+      const [success, leftSub] = unify(a[i], b[i], beforeSub)
+      if (success) {
+        beforeSub = leftSub
+        i++
+      } else {
+        return [false, null]
+      }
+    }
+    return [true, beforeSub]
+  }
+  if (a && typeof a == 'object' && 'equals' in a) {
+    if (a.equals(b)) {
+      return [true, sub]
+    }
+  }
+  if (b && typeof b == 'object' && 'equals' in b) {
+    if (b.equals(a)) {
+      return [true, sub]
     }
   }
   return [false, null]
@@ -157,7 +182,7 @@ export const kanren = {
     return null
   },
   success: <Goal<any>>function (sub) {
-    return KPair.of(sub, emptyDelayStream)
+    return createKPair(sub, emptyDelayStream)
   },
   toUnify(sub: KSubsitution, a: KType, b: KType): Stream<KSubsitution> {
     const [success, sub1] = unify(a, b, sub)
@@ -175,7 +200,12 @@ export const kanren = {
     return streamBindGoal(a(sub), b)
   },
   toCut<T>(sub: T, a: Goal<T>, b: Goal<T>) {
-    return a(sub) || b(sub)
+    const subs = a(sub)
+    if (subs) {
+      //舍弃别的世界线
+      return b(getKPairLeft(subs))
+    }
+    return subs
   },
   or<T>(a: Goal<T>, b: Goal<T>): Goal<T> {
     return function (sub) {
@@ -205,10 +235,10 @@ export function toList<T>(vs: T[]) {
 
 export function toPairs<T, F>(vs: T[], end: F) {
   const lastIndex = vs.length - 1
-  type RetType = F | T | KPair<T, RetType>
+  type RetType = F | T | [T, RetType]
   let ret: RetType = end
   for (let i = lastIndex; i > -1; i--) {
-    ret = KPair.of(vs[i], ret)
+    ret = createKPair(vs[i], ret)
   }
   return ret
 }

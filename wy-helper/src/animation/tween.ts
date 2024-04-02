@@ -95,10 +95,11 @@ export const easeFns = {
   /**
    * 弹跳动画
    * 模拟小球落地，最简单模拟东西落地的弹性效果，虽然也假了点，贵在简单易用。
+   * 再用out包装一下,就能得到in
    * @param t 
    * @returns 
    */
-  bounce(t: number) {
+  bounceOut(t: number) {
     if (t < 1 / 2.75) {
       return 7.5625 * t * t;
     }
@@ -117,31 +118,6 @@ export const easeFns = {
     return 7.5625 * t2 * t2 + 0.984375;
   }
 }
-
-/**
- * 
- * @param p1x 初始点,0
- * @param p1y 控制点1
- * @param p2x 控制点2
- * @param p2y 结束点,1
- * @returns 
- */
-export function cubicBezier(p1x: number, p1y: number, p2x: number, p2y: number) {
-  return function (t: number) {
-    const t2 = t * t;
-    const t3 = t2 * t;
-    const inverseT = 1 - t;
-    const inverseT2 = inverseT * inverseT;
-    const inverseT3 = inverseT2 * inverseT;
-    return (
-      inverseT3 * p1x +
-      3 * inverseT2 * t * p1y +
-      3 * inverseT * t2 * p2x +
-      t3 * p2y
-    );
-  }
-}
-
 
 const { sqrt, exp, sin, cos } = Math;
 /**

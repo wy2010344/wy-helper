@@ -1,4 +1,4 @@
-import { ReadValueCenter, SetValue, ValueCenter, colorEqual, emptyFun, mixColor, mixNumber, simpleEqual, valueCenterOf } from "wy-helper"
+import { ReadValueCenter, SetValue, ValueCenter, colorEqual, emptyFun, emptyObject, mixColor, mixNumber, simpleEqual, valueCenterOf } from "wy-helper"
 import { AnimationConfig } from "wy-helper"
 
 
@@ -17,6 +17,30 @@ export function subscribeRequestAnimationFrame(callback: (time: number, isInit: 
   requestAnimationFrame(request)
   return function () {
     canceled = true
+  }
+}
+
+
+class AnimateTo<T>{
+  constructor(
+    public from: T,
+    public target: T,
+    public config: AnimationConfig,
+    public readonly mixValue: (a: T, b: T, c: number) => T,
+    private callback: (n: T) => void,
+  ) {
+
+  }
+
+  private step = 0
+  update(diffTime: number) {
+    this.step = diffTime
+    const mix = this.mixValue(this.from, this.target, this.config.fn(diffTime / this.config.duration))
+    this.callback(mix)
+  }
+
+  reDo() {
+    this.update(this.step)
   }
 }
 /**
@@ -41,10 +65,7 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T>{
   /**
    * 如果正在发生动画,这个值存在
    */
-  private animateTo: {
-    value: T
-    config: AnimationConfig
-  } | undefined = undefined
+  private animateTo: AnimateTo<T> | undefined = undefined
   getAnimateTo() {
     return this.animateTo
   }
@@ -54,33 +75,59 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T>{
     this.lastCancel = emptyFun
     this.animateTo = undefined
   }
-  changeTo(target: T, config?: AnimationConfig, onFinish: (v: boolean) => void = emptyFun) {
+  slientChange(target: T, from: T = target) {
+    if (this.animateTo) {
+      this.animateTo.from = from
+      this.animateTo.target = target
+      this.animateTo.reDo()
+    } else {
+      this.value.set(target)
+    }
+  }
+  changeTo(target: T, config?: AnimationConfig, {
+    onTrigger = emptyFun,
+    onFinish = emptyFun
+  }: {
+    onTrigger?(v: T): void
+    onFinish?(v: boolean): void
+  } = emptyObject) {
     if (!config) {
       //中止动画
       this.lastCancel()
       this.value.set(target)
       return 'immediately'
     }
-    const baseValue = this.animateTo ? this.animateTo.value : this.value.get()
+    const baseValue = this.animateTo ? this.animateTo.target : this.value.get()
     if (this.equal(target, baseValue)) {
       //不会发生任何改变.
       return
     }
     this.lastCancel()
-    this.animateTo = {
-      value: target,
-      config
-    }
     const from = this.value.get()
-    const timePeriod = performance.now()
     const that = this
-    const c = config!
+    const animateTo = new AnimateTo(
+      from,
+      target,
+      config,
+      this.mixValue,
+      function (mix) {
+        that.value.set(mix)
+        onTrigger(mix)
+      })
+    this.animateTo = animateTo
+    const timePeriod = performance.now()
     const cancel = subscribeRequestAnimationFrame(function (date) {
       const diffTime = date - timePeriod
+      const toValue = animateTo.target
+      const c = animateTo.config
       if (diffTime < c.duration) {
-        that.value.set(that.mixValue(from, target, c.fn(diffTime / c.duration)))
+        if (diffTime > 0) {
+          //不明白为什么,但确实会出现diffTime小于0
+          animateTo.update(diffTime)
+        }
       } else {
-        that.value.set(target)
+        that.value.set(toValue)
+        onTrigger(toValue)
         onFinish(true)
         cancel()
         that.clear()
@@ -118,4 +165,24 @@ export function buildAnimateFrame<T>(
 }
 
 export const animateNumberFrame = buildAnimateFrame(simpleEqual, mixNumber)
+
+export function animateNumberSilientChangeDiff(n: AnimateFrameValue<number>, diff: number) {
+  const ato = n.getAnimateTo()
+  if (ato) {
+    n.slientChange(ato.target + diff, ato.from + diff)
+  } else {
+    n.changeTo(n.get() + diff)
+  }
+}
+export function animateNumberSilientChangeTo(n: AnimateFrameValue<number>, value: number) {
+  const ato = n.getAnimateTo()
+  if (ato) {
+    n.slientChange(value, ato.from + value - ato.target)
+  } else {
+    n.changeTo(value)
+  }
+}
+
+
+
 export const animateColorFrame = buildAnimateFrame(colorEqual, mixColor)

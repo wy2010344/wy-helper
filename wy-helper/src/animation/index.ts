@@ -1,7 +1,7 @@
 export * from './timeoutAnimaton'
 export * from './animateValue'
 export * from './tween'
-
+export * from './bezier'
 export type AnimationConfig = {
   duration: number
   /**
