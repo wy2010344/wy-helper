@@ -20,28 +20,33 @@ export function subscribeRequestAnimationFrame(callback: (time: number, isInit: 
   }
 }
 
-
 class AnimateTo<T>{
   constructor(
+
     public from: T,
     public target: T,
     public config: AnimationConfig,
-    public readonly mixValue: (a: T, b: T, c: number) => T,
-    private callback: (n: T) => void,
-  ) {
+    private mixValue: (a: T, b: T, c: number) => T
+  ) { }
 
-  }
-
-  private step = 0
+  private time: number = 0
+  public value: T = this.from
   update(diffTime: number) {
-    this.step = diffTime
-    const mix = this.mixValue(this.from, this.target, this.config.fn(diffTime / this.config.duration))
-    this.callback(mix)
+    this.time = diffTime
+    const c = this.config
+    const value = this.mixValue(this.from, this.target, c.fn(diffTime / c.duration))
+    this.value = value
+    return value
   }
 
   reDo() {
-    this.update(this.step)
+    this.update(this.time)
   }
+}
+
+export type AnimateFrameEvent<T> = {
+  onProcess?(v: T): void
+  onFinish?(v: boolean): void
 }
 /**
  * 使用react的render,可能不平滑,因为react是异步的,生成值到渲染到视图上,可能有时间间隔
@@ -85,12 +90,9 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T>{
     }
   }
   changeTo(target: T, config?: AnimationConfig, {
-    onTrigger = emptyFun,
+    onProcess = emptyFun,
     onFinish = emptyFun
-  }: {
-    onTrigger?(v: T): void
-    onFinish?(v: boolean): void
-  } = emptyObject) {
+  }: AnimateFrameEvent<T> = emptyObject) {
     if (!config) {
       //中止动画
       this.lastCancel()
@@ -105,15 +107,7 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T>{
     this.lastCancel()
     const from = this.value.get()
     const that = this
-    const animateTo = new AnimateTo(
-      from,
-      target,
-      config,
-      this.mixValue,
-      function (mix) {
-        that.value.set(mix)
-        onTrigger(mix)
-      })
+    const animateTo = new AnimateTo(from, target, config, this.mixValue)
     this.animateTo = animateTo
     const timePeriod = performance.now()
     const cancel = subscribeRequestAnimationFrame(function (date) {
@@ -123,24 +117,30 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T>{
       if (diffTime < c.duration) {
         if (diffTime > 0) {
           //不明白为什么,但确实会出现diffTime小于0
-          animateTo.update(diffTime)
+          const mix = animateTo.update(diffTime)
+          that.value.set(mix)
+          onProcess(mix)
         }
       } else {
         that.value.set(toValue)
-        onTrigger(toValue)
-        onFinish(true)
         cancel()
         that.clear()
+        //在trigger里访问到animateTo已经结束
+        onFinish(true)
       }
     })
     this.lastCancel = function () {
-      onFinish(false)
       cancel()
       that.clear()
+      //在trigger里访问到animateTo已经结束
+      onFinish(false)
     }
     return 'animate'
   }
   get(): T {
+    if (this.animateTo) {
+      return this.animateTo.value
+    }
     return this.value.get()
   }
   subscribe(fun: SetValue<T>) {

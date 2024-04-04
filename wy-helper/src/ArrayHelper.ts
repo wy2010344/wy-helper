@@ -110,3 +110,15 @@ export function arrayCountCreateWith<T>(n: number, create: (i: number) => T) {
   }
   return list
 }
+
+
+
+export function arrayPush<T>(vs: T[], ...vs1: T[]) {
+  return arrayPushAll(vs, vs1)
+}
+export function arrayPushAll<T>(vs: T[], vs1: T[]) {
+  for (let i = 0; i < vs1.length; i++) {
+    vs.push(vs1[i])
+  }
+  return vs
+}

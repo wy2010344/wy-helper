@@ -136,8 +136,12 @@ export type ReadArray<T> = {
 };
 
 
-export function readArraySlice<T>(list: ReadArray<T>, from: number = 0, to: number = list.length) {
-  const out: T[] = []
+export function readArraySlice<T>(
+  list: ReadArray<T>,
+  from: number = 0,
+  to: number = list.length,
+  out: T[] = []
+) {
   for (let i = from; i < to; i++) {
     out.push(list[i])
   }
@@ -153,13 +157,19 @@ export function readArraySliceCircle<T>(list: ReadArray<T>, from: number = 0, en
     if (end < 0) {
       return readArraySlice(list, from, end + list.length)
     }
-    return readArraySlice(list, from, list.length).concat(readArraySlice(list, 0, end))
+    const out: T[] = []
+    readArraySlice(list, from, list.length, out)
+    readArraySlice(list, 0, end, out)
+    return out
   } else if (end >= list.length) {
     end = end - list.length
     if (from >= list.length) {
       return readArraySlice(list, from - list.length, end)
     }
-    return readArraySlice(list, from, list.length).concat(readArraySlice(list, 0, end))
+    const out: T[] = []
+    readArraySlice(list, from, list.length, out)
+    readArraySlice(list, 0, end, out)
+    return out
   }
   return readArraySlice(list, from, end)
 }
