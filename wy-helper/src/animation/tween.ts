@@ -71,10 +71,34 @@ export const easeFns = {
    * @param bounciness 弹性
    * @returns 
    */
-  elastic(bounciness = 1) {
+  elasticOut(bounciness = 1) {
     const p = bounciness * Math.PI;
     return function (t: number) {
       return 1 - Math.pow(Math.cos((t * Math.PI) / 2), 3) * Math.cos(t * p)
+    }
+  },
+  /**
+   * 从https://github.com/zhangxinxu/Tween/blob/master/tween.js 简化
+   * @param a 振幅
+   * @param p 频率(越小周期越多)
+   * @returns 
+   */
+  getElastic(
+    a: number,
+    p: number = 0.3) {
+    return function (
+      t: number) {
+      var s: number;
+      if (t == 0) return 0;
+      if (t == 1) return 1;
+      if (!a || a < Math.abs(1)) {
+        s = p / 4;
+        a = 1;
+      } else {
+        s = p / (2 * Math.PI) * Math.asin(1 / a);
+      }
+      return -(a * Math.pow(2, 10 * (t -= 1)) *
+        Math.sin((t - s) * (2 * Math.PI) / p));
     }
   },
   /**
