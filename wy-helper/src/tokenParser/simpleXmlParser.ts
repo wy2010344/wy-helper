@@ -8,16 +8,16 @@
 
 import { ruleStrBetweenGet } from ".";
 import { quote } from "..";
-import { ParseFunGet, Que, alawaysGet, andMatch, andRuleGet, isParseSuccess, manyMatch, manyRuleGet, match, matchBetween, matchEnd, matchToEnd, notMathChar, orMatch, orRuleGet, reduceRuleGet, ruleGet, ruleGetString, ruleGetTranslate, whiteSpaceRuleZero } from "./tokenParser";
+import { CharRange, ParseFunGet, Que, alawaysGet, andMatch, andRuleGet, isParseSuccess, manyMatch, manyRuleGet, match, matchToEnd, notMathChar, orMatch, orRuleGet, reduceRuleGet, ruleGet, ruleGetString, ruleGetTranslate, whiteSpaceRuleZero } from "./tokenParser";
 
 function getCharCode(n: string) {
   return n.charCodeAt(0)
 }
 
-export const isLowerEnglish = matchBetween<Que>(getCharCode('a'), getCharCode('z'))
-export const isUpperEnglish = matchBetween<Que>(getCharCode('A'), getCharCode('Z'))
-export const isChinese = matchBetween<Que>(getCharCode('\u4e00'), getCharCode('\u9fa5'))
-export const isNumber = matchBetween<Que>(getCharCode('0'), getCharCode('9'))
+export const isLowerEnglish = CharRange.of(getCharCode('a'), getCharCode('z'))
+export const isUpperEnglish = CharRange.of(getCharCode('A'), getCharCode('Z'))
+export const isChinese = CharRange.of(getCharCode('\u4e00'), getCharCode('\u9fa5'))
+export const isNumber = CharRange.of(getCharCode('0'), getCharCode('9'))
 
 
 /**
@@ -25,14 +25,14 @@ export const isNumber = matchBetween<Que>(getCharCode('0'), getCharCode('9'))
  */
 const isPureWord = andMatch(
   orMatch(
-    isUpperEnglish,
-    isLowerEnglish
+    isUpperEnglish.getMatchBetween(),
+    isLowerEnglish.getMatchBetween()
   ),
   manyMatch(
     orMatch(
-      isUpperEnglish,
-      isLowerEnglish,
-      isNumber
+      isUpperEnglish.getMatchBetween(),
+      isLowerEnglish.getMatchBetween(),
+      isNumber.getMatchBetween()
     )
   )
 )
