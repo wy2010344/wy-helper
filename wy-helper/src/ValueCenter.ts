@@ -131,17 +131,18 @@ export function syncMergeCenterArray<VS extends readonly ReadValueCenter<any>[]>
  * @returns 
  */
 export function createReduceValueCenter<T, A>(
-  reducer: (v: T, a: A) => T,
+  reducer: (v: T, a: A, dispatch: (v: A) => void) => T,
   init: T,
   shouldChange: (a: T, b: T) => any = alawaysTrue
 ) {
   const center = valueCenterOf(init)
-  return [center.readonly(), function (action: A) {
+  function set(action: A) {
     const oldValue = center.get()
-    const newValue = reducer(oldValue, action)
+    const newValue = reducer(oldValue, action, set)
     if (shouldChange(newValue, oldValue)) {
       center.set(newValue)
     }
     return newValue
-  }] as const
+  }
+  return [center.readonly(), set] as const
 }

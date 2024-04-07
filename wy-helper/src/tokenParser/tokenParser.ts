@@ -162,12 +162,65 @@ export function matchStep<Q extends Que>(step: (n: number) => boolean): ParseFun
     return que.step1Code(step) as Q | undefined
   }
 }
+export class CharRange {
+  private constructor(
+    public readonly begin: number,
+    public readonly end: number,
+    public readonly excludes: number[]
+  ) {
+    if (begin > end) {
+      throw new Error(`begin:${begin} > end${end} `)
+    }
+    for (let i = 0; i < excludes.length; i++) {
+      const exclude = excludes[i]
+      if (exclude < begin || end < exclude) {
+        throw new Error(`exclude:${exclude} not in [${begin},${end}]`)
+      }
+    }
+  }
+  static of(begin: number, end: number, ...excludes: number[]) {
+    return new CharRange(begin, end, excludes)
+  }
 
-export function matchBetween<Q extends Que>(begin: number, end: number): ParseFun<Q> {
-  return function (que) {
-    return que.step1Code(v => begin <= v && v <= end) as Q | undefined
+  replaceExcludes(...excludes: number[]) {
+    return new CharRange(this.begin, this.end, excludes)
+  }
+
+
+  private matchBetween: any = undefined
+  getMatchBetween<Q extends Que>() {
+    if (!this.matchBetween) {
+      const that = this
+      this.matchBetween = function (que: Q) {
+        return que.step1Code(v => {
+          if (that.excludes.includes(v)) {
+            return false
+          }
+          return that.begin <= v && v <= that.end
+        }) as Q | undefined
+      }
+    }
+    return this.matchBetween as unknown as ParseFun<Q>
+  }
+
+  private notMatchBetween: any = undefined
+  getNotMatchBetween<Q extends Que>() {
+    if (!this.notMatchBetween) {
+      const that = this
+      this.notMatchBetween = function (que: Q) {
+        return que.step1Code(v => {
+          if (that.excludes.includes(v)) {
+            return true
+          }
+          return !(that.begin <= v && v <= that.end)
+        }) as Q | undefined
+      }
+    }
+    return this.notMatchBetween as unknown as ParseFun<Q>
   }
 }
+
+
 
 export function andMatch(...rules: ParseFun<any>[]) {
   return function <Q extends BaseQue<any, any>>(que: Q) {
@@ -598,7 +651,6 @@ export function arraySplitInto<T>(vs: T[], fun: (v: T) => any) {
   }
 }
 export function arraySplit<T>(vs: T[], fun: (v: T) => any) {
-  let lastSplit: T | undefined = undefined
   let lastIdx = 0
   const list: T[][] = []
   for (let i = 0; i < vs.length; i++) {
@@ -606,7 +658,6 @@ export function arraySplit<T>(vs: T[], fun: (v: T) => any) {
     if (fun(v)) {
       const before = vs.slice(lastIdx, i)
       lastIdx = i + 1
-      lastSplit = v
       list.push(before)
     }
   }
