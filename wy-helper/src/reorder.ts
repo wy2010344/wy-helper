@@ -106,10 +106,13 @@ export class Reorder {
     }
   }
   constructor(
+    //如果这里是实时的,就会有问题
     private moveItem: (itemKey: any, baseKey: any) => void
   ) { }
   private layoutList: ReorderItemData[] = []
   private direction: PointKey = 'y'
+
+  /**每次进来更新 */
   updateLayoutList(direction: PointKey, shouldRemove: (key: any) => boolean) {
     removeWhere(this.layoutList, function (value) {
       return shouldRemove(value.value)
@@ -131,6 +134,8 @@ export class Reorder {
   getCurrent() {
     return this.moveV?.currentItem
   }
+
+  /**注册 */
   registerItem(value: any, axis: Box) {
     const order = this.layoutList
     const idx = order.findIndex((entry) => value === entry.value)
@@ -203,14 +208,14 @@ export class ReorderChild {
       const diffX = oldB.x.min - newB.x.min
       const diffY = oldB.y.min - newB.y.min
       if (diffX || diffY) {
-        const trans = this.getTrans()
-        if (pointEqual(trans, pointZero)) {
+        if (this.parent.getCurrent() != this) {
           //应该执行布局动画
           onLayout({
             x: diffX,
             y: diffY
           })
         } else {
+          const trans = this.getTrans()
           //位置改变
           this.changeTo({
             x: trans.x + diffX,

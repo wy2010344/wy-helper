@@ -1,4 +1,4 @@
-import { ReadValueCenter, SetValue, ValueCenter, colorEqual, emptyFun, emptyObject, mixColor, mixNumber, simpleEqual, valueCenterOf } from "wy-helper"
+import { AnimateFrameChangeTo, AnimateFrameModel, AnimateLatestConfig, EmptyFun, ReadValueCenter, Reducer, SetValue, ValueCenter, animateFrameReducer, colorEqual, emptyFun, emptyObject, mixColor, mixNumber, simpleEqual, valueCenterOf } from "wy-helper"
 import { AnimationConfig } from "wy-helper"
 
 
@@ -20,23 +20,22 @@ export function subscribeRequestAnimationFrame(callback: (time: number, isInit: 
   }
 }
 
-class AnimateTo<T>{
+class AnimateTo<T> {
   constructor(
 
     public from: T,
     public target: T,
     public config: AnimationConfig,
-    private mixValue: (a: T, b: T, c: number) => T
+    private mixValue: (a: T, b: T, c: number) => T,
+    private setValue: (v: T, onProcess?: boolean) => void
   ) { }
 
   private time: number = 0
-  public value: T = this.from
-  update(diffTime: number) {
+  update(diffTime: number, onProcess?: boolean) {
     this.time = diffTime
     const c = this.config
     const value = this.mixValue(this.from, this.target, c.fn(diffTime / c.duration))
-    this.value = value
-    return value
+    this.setValue(value, onProcess)
   }
 
   reDo() {
@@ -45,6 +44,7 @@ class AnimateTo<T>{
 }
 
 export type AnimateFrameEvent<T> = {
+  from?: T
   onProcess?(v: T): void
   onFinish?(v: boolean): void
 }
@@ -52,7 +52,7 @@ export type AnimateFrameEvent<T> = {
  * 使用react的render,可能不平滑,因为react是异步的,生成值到渲染到视图上,可能有时间间隔
  * 或者总是使用flushSync.
  */
-export class AnimateFrameValue<T> implements ReadValueCenter<T>{
+export class AnimateFrameValue<T> implements ReadValueCenter<T> {
   private value: ValueCenter<T>
   constructor(
     /**
@@ -90,6 +90,7 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T>{
     }
   }
   changeTo(target: T, config?: AnimationConfig, {
+    from,
     onProcess = emptyFun,
     onFinish = emptyFun
   }: AnimateFrameEvent<T> = emptyObject) {
@@ -99,15 +100,27 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T>{
       this.value.set(target)
       return 'immediately'
     }
-    const baseValue = this.animateTo ? this.animateTo.target : this.value.get()
+    const baseValue =
+      typeof from != 'undefined'
+        ? from : this.animateTo
+          ? this.animateTo.target : this.value.get()
     if (this.equal(target, baseValue)) {
       //不会发生任何改变.
       return
     }
     this.lastCancel()
-    const from = this.value.get()
     const that = this
-    const animateTo = new AnimateTo(from, target, config, this.mixValue)
+    const animateTo = new AnimateTo(
+      baseValue,
+      target,
+      config,
+      this.mixValue,
+      (v, o) => {
+        that.value.set(v)
+        if (o) {
+          onProcess(v)
+        }
+      })
     this.animateTo = animateTo
     const timePeriod = performance.now()
     const cancel = subscribeRequestAnimationFrame(function (date) {
@@ -117,9 +130,7 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T>{
       if (diffTime < c.duration) {
         if (diffTime > 0) {
           //不明白为什么,但确实会出现diffTime小于0
-          const mix = animateTo.update(diffTime)
-          that.value.set(mix)
-          onProcess(mix)
+          animateTo.update(diffTime, true)
         }
       } else {
         that.value.set(toValue)
@@ -138,9 +149,6 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T>{
     return 'animate'
   }
   get(): T {
-    if (this.animateTo) {
-      return this.animateTo.value
-    }
     return this.value.get()
   }
   subscribe(fun: SetValue<T>) {
@@ -186,3 +194,38 @@ export function animateNumberSilientChangeTo(n: AnimateFrameValue<number>, value
 
 
 export const animateColorFrame = buildAnimateFrame(colorEqual, mixColor)
+
+
+
+const numberReducer = animateFrameReducer(simpleEqual, mixNumber, requestAnimationFrame)
+export const animateNumberFrameReducer: Reducer<AnimateFrameModel<number>, AnimateFrameChangeTo<number> | {
+  type: "silentDiff",
+  value: number
+}> = function (old, act, dispatch) {
+  if (act.type == "silentDiff") {
+    const diff = act.value
+    if (diff != 0) {
+      const value = old.value + diff
+      if (old.animateTo) {
+        return {
+          ...old,
+          value,
+          animateTo: {
+            ...old.animateTo,
+            from: old.animateTo.from + diff,
+            target: old.animateTo.target + diff
+          }
+        }
+      }
+      return {
+        ...old,
+        value
+      }
+    }
+  } else {
+    return numberReducer(old, act, dispatch)
+  }
+  return old
+}
+export const animateColorFrameReducer = animateFrameReducer(colorEqual, mixColor, requestAnimationFrame)
+

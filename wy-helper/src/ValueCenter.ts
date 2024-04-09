@@ -131,7 +131,7 @@ export function syncMergeCenterArray<VS extends readonly ReadValueCenter<any>[]>
  * @returns 
  */
 export function createReduceValueCenter<T, A>(
-  reducer: (v: T, a: A, dispatch: (v: A) => void) => T,
+  reducer: Reducer<T, A>,
   init: T,
   shouldChange: (a: T, b: T) => any = alawaysTrue
 ) {
@@ -146,3 +146,7 @@ export function createReduceValueCenter<T, A>(
   }
   return [center.readonly(), set] as const
 }
+
+
+
+export type Reducer<T, A> = (v: T, a: A, dispatch: (v: A) => void) => T
