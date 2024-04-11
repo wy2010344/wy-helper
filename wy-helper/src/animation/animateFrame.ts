@@ -1,10 +1,4 @@
-import { AnimationConfig, Reducer, SetValue, emptyFun } from ".."
-class Tick {
-  constructor(
-    public readonly version: number,
-    public readonly time: number
-  ) { }
-}
+import { AnimationConfig, Reducer, SetValue } from ".."
 
 export type AnimateFrameModel<T> = {
   version: number
@@ -14,12 +8,10 @@ export type AnimateFrameModel<T> = {
     target: T
     config: AnimationConfig
     startTime: number
-    /**感觉不是很必要!!!!*/
-    onFinish(v: boolean): void
-    onProcess(v: T): void
   }
 }
 
+export type AnimateFrameTickNextTick = SetValue<SetValue<SetValue<Omit<FrameTick, 'nextTick'>>>>
 export type AnimateFrameChangeTo<T> = {
   type: "changeTo"
   target: T
@@ -29,9 +21,16 @@ export type AnimateFrameChangeTo<T> = {
   target: T
   from?: T
   config: AnimationConfig
-  onFinish?(v: boolean): void
-  onProcess?(v: T): void
+  nextTick: AnimateFrameTickNextTick
 }
+
+export type FrameTick = {
+  type: "tick"
+  version: number
+  time: number
+  nextTick: AnimateFrameTickNextTick
+}
+
 export function animateFrameReducer<T>(
   equal: (a: T, b: T) => any,
   /**
@@ -39,21 +38,26 @@ export function animateFrameReducer<T>(
    */
   mixValue: (a: T, b: T, c: number) => T,
   requestAnimationFrame: (v: SetValue<number>) => void
-): Reducer<AnimateFrameModel<T>, AnimateFrameChangeTo<T>> {
-  type Act = AnimateFrameChangeTo<T> | Tick
+): Reducer<AnimateFrameModel<T>, AnimateFrameChangeTo<T> | FrameTick> {
+  type Act = AnimateFrameChangeTo<T> | FrameTick
   return function (
     old: AnimateFrameModel<T>,
-    act: Act,
-    dispatch: SetValue<Act>
+    act: Act
   ): AnimateFrameModel<T> {
-    if (act instanceof Tick) {
+    if (act.type == "tick") {
       if (old.animateTo && old.version == act.version) {
         const diffTime = act.time - old.animateTo.startTime
         const c = old.animateTo.config
         if (diffTime < c.duration) {
           //正常触发动画
-          requestAnimationFrame(time => {
-            dispatch(new Tick(act.version, time))
+          act.nextTick(function (dispatch) {
+            requestAnimationFrame(time => {
+              dispatch({
+                type: "tick",
+                version: act.version,
+                time
+              })
+            })
           })
           if (diffTime > 0) {
             const value = mixValue(
@@ -61,7 +65,6 @@ export function animateFrameReducer<T>(
               old.animateTo.target,
               c.fn(diffTime / c.duration)
             )
-            old.animateTo.onProcess(value)
             return {
               ...old,
               value
@@ -69,7 +72,6 @@ export function animateFrameReducer<T>(
           }
         } else {
           //结束
-          old.animateTo.onFinish(true)
           return {
             version: old.version,
             value: old.animateTo.target
@@ -83,7 +85,6 @@ export function animateFrameReducer<T>(
           return old
         }
         //替换
-        old.animateTo?.onFinish(false)
         return {
           version: old.version,
           value: act.target
@@ -98,10 +99,15 @@ export function animateFrameReducer<T>(
         return old
       }
       const version = old.version + 1
-      requestAnimationFrame(time => {
-        dispatch(new Tick(version, time))
+      act.nextTick(function (dispatch) {
+        requestAnimationFrame(time => {
+          dispatch({
+            type: "tick",
+            version,
+            time
+          })
+        })
       })
-      old.animateTo?.onFinish(false)
       return {
         version,
         value: oldValue,
@@ -109,13 +115,12 @@ export function animateFrameReducer<T>(
           from: oldValue,
           target: act.target,
           config: act.config,
-          startTime: performance.now(),
-          onFinish: act.onFinish || emptyFun,
-          onProcess: act.onProcess || emptyFun
+          startTime: performance.now()
         }
       }
     }
     return old
-  } as any
+  }
+
 }
 

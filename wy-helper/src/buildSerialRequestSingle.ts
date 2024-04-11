@@ -149,7 +149,7 @@ export function buildPromiseResultSetData<F extends PromiseResult<any>>(
  * 如果使用valueCenter的reducer,将其集中到一个更大的状态
  * valueCenter的好处,有些值不必触发更新
  */
-export class PromiseStopCall<T>{
+export class PromiseStopCall<T> {
   constructor(
     public readonly requestVersion: number = 0,
     private readonly lastCancel: EmptyFun = emptyFun,
@@ -172,22 +172,24 @@ export class PromiseStopCall<T>{
   }
   reload(
     getFun: (abortSignal?: AbortSignal) => Promise<T>,
-    dispatch: (value: VersionPromiseResult<T>) => void
+    nextTick: SetValue<SetValue<SetValue<VersionPromiseResult<T>>>>
   ) {
     this.lastCancel()
     const version = this.requestVersion + 1
     const c = createAbortController()
-    getFun(c.signal).then(value => {
-      dispatch({
-        type: "success",
-        value,
-        version
-      })
-    }).catch(err => {
-      dispatch({
-        type: "error",
-        value: err,
-        version
+    nextTick(function (dispatch) {
+      getFun(c.signal).then(value => {
+        dispatch({
+          type: "success",
+          value,
+          version
+        })
+      }).catch(err => {
+        dispatch({
+          type: "error",
+          value: err,
+          version
+        })
       })
     })
     return new PromiseStopCall(
@@ -219,7 +221,7 @@ export type AutoLoadMoreCore<T, K> = {
   list: T[]
   hasMore: boolean
 }
-export class PromiseAutoLoadMore<T, K>{
+export class PromiseAutoLoadMore<T, K> {
   constructor(
     public readonly data = new PromiseStopCall<{
       nextKey: K,
@@ -236,13 +238,16 @@ export class PromiseAutoLoadMore<T, K>{
   reload(
     getFun: (k: K, abort?: AbortSignal) => Promise<AutoLoadMoreCore<T, K>>,
     first: K,
-    dispatch: (v: VersionPromiseResult<AutoLoadMoreCore<T, K>>) => void
+    nextTick: SetValue<SetValue<SetValue<VersionPromiseResult<AutoLoadMoreCore<T, K>>>>>
   ) {
-    this.loadMoreCancel()
+    const that = this
+    nextTick(function () {
+      that.loadMoreCancel()
+    })
     return new PromiseAutoLoadMore(
       this.data.reload(function (signal) {
         return getFun(first, signal)
-      }, dispatch),
+      }, nextTick),
       getFun,
       false,
       emptyFun
@@ -263,7 +268,7 @@ export class PromiseAutoLoadMore<T, K>{
 
   loadMore(
     version: number,
-    dispatch: SetValue<VersionPromiseResult<AutoLoadMoreCore<T, K>>>
+    nextTick: SetValue<SetValue<SetValue<VersionPromiseResult<AutoLoadMoreCore<T, K>>>>>
   ) {
     if (!this.getFun) {
       return this
@@ -281,17 +286,20 @@ export class PromiseAutoLoadMore<T, K>{
       return this
     }
     const c = createAbortController()
-    this.getFun(this.data.data.value.nextKey, c.signal).then(value => {
-      dispatch({
-        value,
-        version,
-        type: "success"
-      })
-    }).catch(err => {
-      dispatch({
-        value: err,
-        version,
-        type: "error"
+    const that = this
+    nextTick((dispatch) => {
+      that.getFun!(that.data.data!.value.nextKey, c.signal).then(value => {
+        dispatch({
+          value,
+          version,
+          type: "success"
+        })
+      }).catch(err => {
+        dispatch({
+          value: err,
+          version,
+          type: "error"
+        })
       })
     })
     return new PromiseAutoLoadMore(
