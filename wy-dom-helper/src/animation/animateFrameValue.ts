@@ -1,4 +1,4 @@
-import { AnimateFrameChangeTo, AnimateFrameModel, AnimateLatestConfig, EmptyFun, ReadValueCenter, Reducer, SetValue, ValueCenter, animateFrameReducer, colorEqual, emptyFun, emptyObject, mixColor, mixNumber, simpleEqual, valueCenterOf } from "wy-helper"
+import { AnimateFrameChangeTo, AnimateFrameModel, AnimateLatestConfig, EmptyFun, FrameTick, ReadValueCenter, Reducer, SetValue, ValueCenter, animateFrameReducer, colorEqual, emptyFun, emptyObject, mixColor, mixNumber, simpleEqual, valueCenterOf } from "wy-helper"
 import { AnimationConfig } from "wy-helper"
 
 
@@ -198,10 +198,12 @@ export const animateColorFrame = buildAnimateFrame(colorEqual, mixColor)
 
 
 const numberReducer = animateFrameReducer(simpleEqual, mixNumber, requestAnimationFrame)
-export const animateNumberFrameReducer: Reducer<AnimateFrameModel<number>, AnimateFrameChangeTo<number> | {
+
+export type AnimateNumberFrameAction = AnimateFrameChangeTo<number> | {
   type: "silentDiff",
   value: number
-}> = function (old, act, dispatch) {
+} | FrameTick
+export const animateNumberFrameReducer: Reducer<AnimateFrameModel<number>, AnimateNumberFrameAction> = function (old, act) {
   if (act.type == "silentDiff") {
     const diff = act.value
     if (diff != 0) {
@@ -223,7 +225,7 @@ export const animateNumberFrameReducer: Reducer<AnimateFrameModel<number>, Anima
       }
     }
   } else {
-    return numberReducer(old, act, dispatch)
+    return numberReducer(old, act)
   }
   return old
 }

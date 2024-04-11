@@ -1,3 +1,4 @@
+import { SetValue } from "./setStateHelper"
 import { EmptyFun, alawaysTrue, emptyFun, run } from "./util"
 
 type EventHandler<T> = (v: T) => void
@@ -5,7 +6,7 @@ type EventChangeHandler<T> = (v: T, old: T) => void
 export interface VirtualEventCenter<T> {
   subscribe(notify: EventChangeHandler<T>): EmptyFun
 }
-export class EventCenter<T>{
+export class EventCenter<T> {
   private pool = new Set<EventChangeHandler<T>>()
   poolSize() {
     return this.pool.size
@@ -43,7 +44,7 @@ export interface ValueCenter<T> extends ReadValueCenter<T> {
   poolSize(): number
 }
 
-export class ReadValueCenterProxyImpl<T> implements ReadValueCenter<T>{
+export class ReadValueCenterProxyImpl<T> implements ReadValueCenter<T> {
   constructor(
     private center: ValueCenter<T>
   ) { }
@@ -54,7 +55,7 @@ export class ReadValueCenterProxyImpl<T> implements ReadValueCenter<T>{
     return this.center.subscribe(ev)
   }
 }
-export class ValueCenterDefaultImpl<T> implements ValueCenter<T>{
+export class ValueCenterDefaultImpl<T> implements ValueCenter<T> {
   constructor(
     private value: T
   ) { }
@@ -131,17 +132,23 @@ export function syncMergeCenterArray<VS extends readonly ReadValueCenter<any>[]>
  * @returns 
  */
 export function createReduceValueCenter<T, A>(
-  reducer: Reducer<T, A>,
+  reducer: ReducerWithDispatch<T, A>,
   init: T,
   shouldChange: (a: T, b: T) => any = alawaysTrue
 ) {
   const center = valueCenterOf(init)
   function set(action: A) {
     const oldValue = center.get()
-    const newValue = reducer(oldValue, action, set)
+    const list: SetValue<SetValue<A>>[] = []
+    const newValue = reducer(oldValue, action, function (callback) {
+      list.push(callback)
+    })
     if (shouldChange(newValue, oldValue)) {
       center.set(newValue)
     }
+    list.forEach(value => {
+      value(set)
+    })
     return newValue
   }
   return [center.readonly(), set] as const
@@ -149,4 +156,5 @@ export function createReduceValueCenter<T, A>(
 
 
 
-export type Reducer<T, A> = (v: T, a: A, dispatch: (v: A) => void) => T
+export type Reducer<T, A> = (v: T, a: A) => T
+export type ReducerWithDispatch<T, A> = (v: T, a: A, setDispatch: SetValue<SetValue<SetValue<A>>>) => T
