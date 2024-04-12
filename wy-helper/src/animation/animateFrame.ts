@@ -1,4 +1,4 @@
-import { AnimationConfig, Reducer, SetValue } from ".."
+import { AnimationConfig, Reducer, ReducerDispatch, ReducerWithDispatch, SetValue } from ".."
 
 export type AnimateFrameModel<T> = {
   version: number
@@ -11,7 +11,6 @@ export type AnimateFrameModel<T> = {
   }
 }
 
-export type AnimateFrameTickNextTick = SetValue<SetValue<SetValue<Omit<FrameTick, 'nextTick'>>>>
 export type AnimateFrameChangeTo<T> = {
   type: "changeTo"
   target: T
@@ -21,14 +20,12 @@ export type AnimateFrameChangeTo<T> = {
   target: T
   from?: T
   config: AnimationConfig
-  nextTick: AnimateFrameTickNextTick
 }
 
 export type FrameTick = {
   type: "tick"
   version: number
   time: number
-  nextTick: AnimateFrameTickNextTick
 }
 
 export function animateFrameReducer<T>(
@@ -38,11 +35,12 @@ export function animateFrameReducer<T>(
    */
   mixValue: (a: T, b: T, c: number) => T,
   requestAnimationFrame: (v: SetValue<number>) => void
-): Reducer<AnimateFrameModel<T>, AnimateFrameChangeTo<T> | FrameTick> {
+): ReducerWithDispatch<AnimateFrameModel<T>, AnimateFrameChangeTo<T> | FrameTick> {
   type Act = AnimateFrameChangeTo<T> | FrameTick
-  return function (
+  function inside(
     old: AnimateFrameModel<T>,
-    act: Act
+    act: Act,
+    list: ReducerDispatch<FrameTick>[]
   ): AnimateFrameModel<T> {
     if (act.type == "tick") {
       if (old.animateTo && old.version == act.version) {
@@ -50,7 +48,7 @@ export function animateFrameReducer<T>(
         const c = old.animateTo.config
         if (diffTime < c.duration) {
           //正常触发动画
-          act.nextTick(function (dispatch) {
+          list.push(function (dispatch) {
             requestAnimationFrame(time => {
               dispatch({
                 type: "tick",
@@ -99,7 +97,7 @@ export function animateFrameReducer<T>(
         return old
       }
       const version = old.version + 1
-      act.nextTick(function (dispatch) {
+      list.push(function (dispatch) {
         requestAnimationFrame(time => {
           dispatch({
             type: "tick",
@@ -121,6 +119,10 @@ export function animateFrameReducer<T>(
     }
     return old
   }
-
+  return function (old, act) {
+    const list: ReducerDispatch<FrameTick>[] = []
+    const value = inside(old, act, list)
+    return [value, list] as const
+  }
 }
 

@@ -1,4 +1,4 @@
-import { AnimateFrameModel, AnimateFrameTickNextTick, AnimationConfig, EaseFn, EmptyFun, FrameTick, MomentumCallIdeal, Reducer, SetValue, buildNoEdgeScroll } from "wy-helper";
+import { AnimateFrameModel, AnimationConfig, EaseFn, EmptyFun, FrameTick, MomentumCallIdeal, Reducer, ReducerDispatch, ReducerWithDispatch, ReducerWithDispatchResult, SetValue, buildNoEdgeScroll, emptyArray, emptyFun, mapReducerDispatchList } from "wy-helper";
 import { AnimateFrameEvent, AnimateNumberFrameAction, animateNumberFrame, animateNumberFrameReducer, animateNumberSilientChangeDiff } from "./animation";
 
 
@@ -62,6 +62,19 @@ export function recicleScrollViewView(
       },
       momentum
     }),
+    stopScroll(toCurrent?: boolean) {
+      const ato = transY.getAnimateTo()
+      if (ato) {
+        let nValue = ato.target
+        if (toCurrent) {
+          const v = transY.get() - initScrollHeight
+          const idx = Math.round(v / rowHeight)
+          nValue = idx * rowHeight + initScrollHeight
+        }
+        transY.changeTo(nValue)
+        aUpdate(nValue)
+      }
+    },
     wrapperAdd(n: number, config?: AnimationConfig, event?: AnimateFrameEvent<number>) {
       if (n) {
         if (transY.getAnimateTo() || !config) {
@@ -103,8 +116,17 @@ export const initRecycleListModel: RecycleListModel = {
   index: 0
 }
 
+type RecycleResult = ReducerWithDispatchResult<RecycleListModel, Action>
 
-function updateDiff(diff: number, model: RecycleListModel) {
+
+function transNumberToScrollView(value: AnimateNumberFrameAction): Action {
+  return {
+    type: "changeTransY",
+    value
+  }
+}
+
+function updateDiff(diff: number, model: RecycleListModel): RecycleResult {
   let idx = 0
   if (diff >= model.cellHeight) {
     idx = -Math.floor(diff / model.cellHeight)
@@ -112,16 +134,18 @@ function updateDiff(diff: number, model: RecycleListModel) {
     idx = -Math.ceil(diff / model.cellHeight)
   }
   if (idx) {
-    return {
+    const [transY, list] = animateNumberFrameReducer(model.transY, {
+      type: "silentDiff",
+      value: idx * model.cellHeight
+    })
+    return [{
       ...model,
       index: formatIndex(model.index + idx, model.size),
-      transY: animateNumberFrameReducer(model.transY, {
-        type: "silentDiff",
-        value: idx * model.cellHeight
-      })
-    }
+      transY
+    },
+    mapReducerDispatchList(list, transNumberToScrollView)]
   }
-  return model
+  return [model, emptyArray]
 }
 
 
@@ -135,17 +159,17 @@ function formatIndex(newIndex: number, size: number) {
   return newIndex
 }
 
-function updateIndex(model: RecycleListModel, idx: number, config: AnimationConfig, nextTick: AnimateFrameTickNextTick) {
+function updateIndex(model: RecycleListModel, idx: number, config: AnimationConfig): RecycleResult {
   let nValue = model.initTransY + idx * model.cellHeight
-  return {
+  const [transY, list] = animateNumberFrameReducer(model.transY, {
+    type: "changeTo",
+    target: nValue,
+    config
+  })
+  return [{
     ...model,
-    transY: animateNumberFrameReducer(model.transY, {
-      type: "changeTo",
-      target: nValue,
-      config,
-      nextTick
-    })
-  }
+    transY
+  }, mapReducerDispatchList(list, transNumberToScrollView)]
 }
 /**
  (value) {
@@ -169,19 +193,17 @@ type Action = {
   value: number
   type: "addIndex"
   config: AnimationConfig
-  nextTick: AnimateFrameTickNextTick
 } | {
   type: "changeDiff"
   diff: number
   config?: AnimationConfig
-  nextTick: AnimateFrameTickNextTick
 } | {
   type: "changeTransY"
   value: AnimateNumberFrameAction
 }
-export const recycleScrollListReducer: Reducer<RecycleListModel, Action> = (model, action) => {
+export const recycleScrollListReducer: ReducerWithDispatch<RecycleListModel, Action> = (model, action) => {
   if (action.type == 'init') {
-    return {
+    return [{
       ...model,
       initTransY: action.transY,
       transY: {
@@ -190,20 +212,20 @@ export const recycleScrollListReducer: Reducer<RecycleListModel, Action> = (mode
       },
       cellHeight: action.cellHeight,
       size: action.size
-    }
+    }, emptyArray]
   } else if (action.type == "addIndex") {
     if (action.config) {
-      return updateIndex(model, -action.value, action.config, action.nextTick)
+      return updateIndex(model, -action.value, action.config)
     }
-    return {
+    return [{
       ...model,
       index: formatIndex(action.value + model.index, model.size)
-    }
+    }, emptyArray]
   } else if (action.type == "changeDiff") {
     const diff = action.diff + model.transY.value - model.initTransY
     if (action.config) {
       const idx = Math.round(diff / model.cellHeight)
-      return updateIndex(model, idx, action.config, action.nextTick)
+      return updateIndex(model, idx, action.config)
     } else {
       return updateDiff(diff, {
         ...model,
@@ -215,16 +237,21 @@ export const recycleScrollListReducer: Reducer<RecycleListModel, Action> = (mode
     }
   } else if (action.type == "changeTransY") {
     const value = action.value
-    const newTransY = animateNumberFrameReducer(model.transY, value)
+    const [newTransY, list] = animateNumberFrameReducer(model.transY, value)
     const newModel = {
       ...model,
       transY: newTransY
     }
+    const theList = mapReducerDispatchList(list, transNumberToScrollView)
     if (value.type == "tick" && newTransY.value != model.transY.value) {
       const diff = newTransY.value - model.initTransY
-      return updateDiff(diff, newModel)
+      const [value, nlist] = updateDiff(diff, newModel)
+      return [value, [
+        ...theList,
+        ...nlist
+      ]]
     }
-    return newModel
+    return [newModel, theList]
   }
-  return model
+  return [model, emptyArray]
 }

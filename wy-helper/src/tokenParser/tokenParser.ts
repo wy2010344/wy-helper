@@ -32,7 +32,7 @@ export class BQue<V, VS extends QueArray<V>> implements BaseQue<V, VS> {
   }
 }
 
-export class Que extends BQue<string, string>{
+export class Que extends BQue<string, string> {
   match(vs: string[]) {
     for (const v of vs) {
       if (this.content.startsWith(v, this.i)) {
@@ -279,7 +279,7 @@ export function manyMatch(
   }
 }
 
-export class ParserSuccess<Q extends BaseQue<any, any>, T>{
+export class ParserSuccess<Q extends BaseQue<any, any>, T> {
   constructor(
     public readonly value: T,
     public readonly end: Q
@@ -333,7 +333,8 @@ export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2>(
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
   ],
-  merge: (...vs: [T1, T2]) => T
+  merge: (...vs: [T1, T2]) => T,
+  message?: string
 ): ParseFunGet<Q, T>
 export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3>(
   args: [
@@ -341,7 +342,8 @@ export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3>(
     ParseFunGet<Q, T2>,
     ParseFunGet<Q, T3>,
   ],
-  merge: (...vs: [T1, T2, T3]) => T
+  merge: (...vs: [T1, T2, T3]) => T,
+  message?: string
 ): ParseFunGet<Q, T>
 export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4>(
   args: [
@@ -350,7 +352,8 @@ export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4>(
     ParseFunGet<Q, T3>,
     ParseFunGet<Q, T4>,
   ],
-  merge: (...vs: [T1, T2, T3, T4]) => T
+  merge: (...vs: [T1, T2, T3, T4]) => T,
+  message?: string
 ): ParseFunGet<Q, T>
 export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4, T5>(
   args: [
@@ -360,7 +363,8 @@ export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4, T5>(
     ParseFunGet<Q, T4>,
     ParseFunGet<Q, T5>,
   ],
-  merge: (...vs: [T1, T2, T3, T4, T5]) => T
+  merge: (...vs: [T1, T2, T3, T4, T5]) => T,
+  message?: string
 ): ParseFunGet<Q, T>
 export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4, T5, T6>(
   args: [
@@ -371,11 +375,13 @@ export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4, T5, T
     ParseFunGet<Q, T5>,
     ParseFunGet<Q, T6>,
   ],
-  merge: (...vs: [T1, T2, T3, T4, T5, T6]) => T
+  merge: (...vs: [T1, T2, T3, T4, T5, T6]) => T,
+  message?: string
 ): ParseFunGet<Q, T>
 export function andRuleGet<Q extends BaseQue<any, any>, T>(
   args: ParseFunGet<Q, any>[],
-  merge: (...vs: any) => T
+  merge: (...vs: any) => T,
+  message?: string
 ): ParseFunGet<Q, T> {
   return function (que) {
     const values: any[] = []
@@ -385,6 +391,7 @@ export function andRuleGet<Q extends BaseQue<any, any>, T>(
         que = end.end
         values.push(end.value)
       } else {
+        console.log("解析失败", message)
         return end
       }
     }

@@ -137,19 +137,22 @@ export function createReduceValueCenter<T, A>(
   shouldChange: (a: T, b: T) => any = alawaysTrue
 ) {
   const center = valueCenterOf(init)
+  const taskList: A[] = []
   function set(action: A) {
-    const oldValue = center.get()
-    const list: SetValue<SetValue<A>>[] = []
-    const newValue = reducer(oldValue, action, function (callback) {
-      list.push(callback)
-    })
-    if (shouldChange(newValue, oldValue)) {
-      center.set(newValue)
+    taskList.push(action)
+    if (taskList.length == 1) {
+      while (taskList.length) {
+        const task = taskList.pop()!
+        const oldValue = center.get()
+        const [newValue, list] = reducer(oldValue, task)
+        if (shouldChange(newValue, oldValue)) {
+          center.set(newValue)
+        }
+        list.forEach(fun => {
+          fun(set)
+        })
+      }
     }
-    list.forEach(value => {
-      value(set)
-    })
-    return newValue
   }
   return [center.readonly(), set] as const
 }
@@ -157,4 +160,20 @@ export function createReduceValueCenter<T, A>(
 
 
 export type Reducer<T, A> = (v: T, a: A) => T
-export type ReducerWithDispatch<T, A> = (v: T, a: A, setDispatch: SetValue<SetValue<SetValue<A>>>) => T
+export type ReducerWithDispatch<T, A> = (v: T, a: A) => ReducerWithDispatchResult<T, A>
+export type ReducerDispatch<A> = SetValue<SetValue<A>>
+export type ReducerWithDispatchResult<T, A> = [T, readonly ReducerDispatch<A>[]]
+
+
+export function mapReducerDispatchList<A, B>(
+  acts: readonly ReducerDispatch<A>[],
+  map: (a: A) => B
+): readonly ReducerDispatch<B>[] {
+  return acts.map(act => {
+    return function (dispatch) {
+      act(function (value) {
+        dispatch(map(value))
+      })
+    }
+  })
+}
