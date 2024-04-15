@@ -144,13 +144,11 @@ export function createReduceValueCenter<T, A>(
       while (taskList.length) {
         const task = taskList.pop()!
         const oldValue = center.get()
-        const [newValue, list] = reducer(oldValue, task)
+        const [newValue, act] = reducer(oldValue, task)
         if (shouldChange(newValue, oldValue)) {
           center.set(newValue)
         }
-        list.forEach(fun => {
-          fun(set)
-        })
+        act?.(set)
       }
     }
   }
@@ -161,19 +159,19 @@ export function createReduceValueCenter<T, A>(
 
 export type Reducer<T, A> = (v: T, a: A) => T
 export type ReducerWithDispatch<T, A> = (v: T, a: A) => ReducerWithDispatchResult<T, A>
-export type ReducerDispatch<A> = SetValue<SetValue<A>>
-export type ReducerWithDispatchResult<T, A> = [T, readonly ReducerDispatch<A>[]]
+export type ReducerDispatch<A> = SetValue<SetValue<A>> | undefined
+export type ReducerWithDispatchResult<T, A> = [T, ReducerDispatch<A>]
 
 
 export function mapReducerDispatchList<A, B>(
-  acts: readonly ReducerDispatch<A>[],
+  act: ReducerDispatch<A>,
   map: (a: A) => B
-): readonly ReducerDispatch<B>[] {
-  return acts.map(act => {
+): ReducerDispatch<B> {
+  if (act) {
     return function (dispatch) {
       act(function (value) {
         dispatch(map(value))
       })
     }
-  })
+  }
 }

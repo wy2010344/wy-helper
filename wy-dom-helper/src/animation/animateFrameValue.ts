@@ -217,17 +217,17 @@ export const animateNumberFrameReducer: ReducerWithDispatch<AnimateFrameModel<nu
             from: old.animateTo.from + diff,
             target: old.animateTo.target + diff
           }
-        }, emptyArray]
+        }, undefined]
       }
       return [{
         ...old,
         value
-      }, emptyArray]
+      }, undefined]
     }
   } else {
     return numberReducer(old, act)
   }
-  return [old, emptyArray]
+  return [old, undefined]
 }
 export const animateColorFrameReducer = animateFrameReducer(colorEqual, mixColor, requestAnimationFrame)
 

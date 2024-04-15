@@ -1,7 +1,7 @@
 import { ReadArray, emptyArray, objectFreeze } from "./util"
 
 
-export class ArrayHelper<V>{
+export class ArrayHelper<V> {
   private dirty = false
   private array: V[]
   constructor(
@@ -121,4 +121,27 @@ export function arrayPushAll<T>(vs: T[], vs1: T[]) {
     vs.push(vs1[i])
   }
   return vs
+}
+export function arrayUnshiftAll<T>(vs: T[], vs1: T[]) {
+  for (let i = vs.length - 1; i > -1; i--) {
+    vs1.unshift(vs[i])
+  }
+  return vs1
+}
+
+
+export function arrayFunToOneOrEmpty<T extends (...vs: any[]) => void>(list: (T | undefined)[]): T | undefined {
+  if (list.length == 1) {
+    return list[0]
+  } else if (list.length) {
+    return function (...vs) {
+      list.forEach(row => row?.(...vs))
+    } as T
+  }
+}
+
+export function arrayFunRun<T extends (...vs: any[]) => void>(list: (T | undefined)[], ...vs: Parameters<T>) {
+  list.forEach(row => {
+    row?.(...vs)
+  })
 }

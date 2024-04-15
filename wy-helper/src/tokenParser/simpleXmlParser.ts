@@ -61,11 +61,11 @@ const matchTheEnd = matchToEnd('<')
  */
 const matchInlineContent = ruleGetTranslate(manyRuleGet(
   orRuleGet(
-    ruleGet(match('\\\\'), v => '\\'),
+    [ruleGet(match('\\\\'), v => '\\'),
     ruleGet(match(`\\<`), v => '<'),
     ruleGet(notMathChar(), function (que) {
       return que.content[que.i]
-    })
+    })]
   ),
   0,
   matchTheEnd,
@@ -88,16 +88,18 @@ const argRuleGet: ParseFunGet<Que, {
   [
     ruleGet(isPureWord, getStrValue),
     orRuleGet(
-      andRuleGet(
-        [
-          ruleGet(match('='), quote),
-          ruleStrBetweenGet('"')
-        ],
-        function (a, b) {
-          return b
-        }
-      ),
-      alawaysGet(() => true as const)
+      [
+        andRuleGet(
+          [
+            ruleGet(match('='), quote),
+            ruleStrBetweenGet('"')
+          ],
+          function (a, b) {
+            return b
+          }
+        ),
+        alawaysGet(() => true as const)
+      ]
     )
   ],
   function (a, b) {
@@ -161,8 +163,10 @@ const parseXml = reduceRuleGet(
   andRuleGet(
     [
       orRuleGet(
-        matchBracket,
-        matchBracketEnd
+        [
+          matchBracket,
+          matchBracketEnd
+        ]
       ),
       matchInlineContent
     ],

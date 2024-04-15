@@ -317,6 +317,7 @@ export function ruleGet<Q extends BaseQue<any, any>, T>(
         return new ParseError(err as string)
       }
     }
+    console.log("ruleGet失败", failMsg)
     return new ParseError(failMsg)
   }
 }
@@ -404,47 +405,52 @@ export function andRuleGet<Q extends BaseQue<any, any>, T>(
   }
 }
 export function orRuleGet<Q extends BaseQue<any, any>, T1, T2>(
-  ...rules: [
+  rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>
-  ]
+  ],
+  message?: string
 ): ParseFunGet<Q, T1 | T2>
 export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3>(
-  ...rules: [
+  rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
     ParseFunGet<Q, T3>
-  ]
+  ],
+  message?: string
 ): ParseFunGet<Q, T1 | T2 | T3>
 export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4>(
-  ...rules: [
+  rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
     ParseFunGet<Q, T3>,
     ParseFunGet<Q, T4>
-  ]
+  ],
+  message?: string
 ): ParseFunGet<Q, T1 | T2 | T3 | T4>
 export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5>(
-  ...rules: [
+  rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
     ParseFunGet<Q, T3>,
     ParseFunGet<Q, T4>,
     ParseFunGet<Q, T5>
-  ]
+  ],
+  message?: string
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T5>
 export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6>(
-  ...rules: [
+  rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
     ParseFunGet<Q, T3>,
     ParseFunGet<Q, T4>,
     ParseFunGet<Q, T5>,
     ParseFunGet<Q, T6>
-  ]
+  ],
+  message?: string
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6>
 export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T7>(
-  ...rules: [
+  rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
     ParseFunGet<Q, T3>,
@@ -452,10 +458,11 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T
     ParseFunGet<Q, T5>,
     ParseFunGet<Q, T6>,
     ParseFunGet<Q, T7>
-  ]
+  ],
+  message?: string
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6 | T7>
 export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T7, T8>(
-  ...rules: [
+  rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
     ParseFunGet<Q, T3>,
@@ -464,10 +471,11 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T
     ParseFunGet<Q, T6>,
     ParseFunGet<Q, T7>,
     ParseFunGet<Q, T8>
-  ]
+  ],
+  message?: string
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6 | T7 | T8>
 export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T7, T8, T9>(
-  ...rules: [
+  rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
     ParseFunGet<Q, T3>,
@@ -477,10 +485,11 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T
     ParseFunGet<Q, T7>,
     ParseFunGet<Q, T8>,
     ParseFunGet<Q, T9>
-  ]
+  ],
+  message?: string
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6 | T7 | T8 | T9>
 export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
-  ...rules: [
+  rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
     ParseFunGet<Q, T3>,
@@ -491,9 +500,13 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T
     ParseFunGet<Q, T8>,
     ParseFunGet<Q, T9>,
     ParseFunGet<Q, T10>
-  ]
+  ],
+  message?: string
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6 | T7 | T8 | T9 | T10>
-export function orRuleGet<Q extends BaseQue<any, any>>(...rules: ParseFunGet<Q, any>[]): ParseFunGet<Q, any> {
+export function orRuleGet<Q extends BaseQue<any, any>>(
+  rules: ParseFunGet<Q, any>[],
+  message?: string
+): ParseFunGet<Q, any> {
   return function (que) {
     let last: ParseError = null as any
     for (const rule of rules) {
@@ -503,6 +516,7 @@ export function orRuleGet<Q extends BaseQue<any, any>>(...rules: ParseFunGet<Q, 
       }
       last = v
     }
+    console.log("orRuleGet失败", message)
     return last
   }
 }

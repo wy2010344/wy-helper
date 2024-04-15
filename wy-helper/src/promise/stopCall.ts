@@ -1,3 +1,4 @@
+import { arrayFunRun, arrayFunToOneOrEmpty } from "../ArrayHelper"
 import { ReducerDispatch } from "../ValueCenter"
 import { SetValue } from "../setStateHelper"
 import { EmptyFun, emptyFun, objectFreeze } from "../util"
@@ -32,25 +33,23 @@ export class PromiseStopCall<T> {
     getFun: (abortSignal?: AbortSignal) => Promise<T>
   ) {
     const lc = this.lastCancel
-    const list: ReducerDispatch<VersionPromiseResult<T>>[] = [
-      function (dispatch) {
-        lc()
-        getFun(c.signal).then(value => {
-          dispatch({
-            type: "success",
-            value,
-            version
-          })
-        }).catch(err => {
-          dispatch({
-            type: "error",
-            value: err,
-            version
-          })
+    const act: ReducerDispatch<VersionPromiseResult<T>> = function (dispatch) {
+      lc()
+      getFun(c.signal).then(value => {
+        dispatch({
+          type: "success",
+          value,
+          version
         })
-      }
-    ]
-    this.lastCancel()
+      }).catch(err => {
+        dispatch({
+          type: "error",
+          value: err,
+          version
+        })
+      })
+    }
+
     const version = this.requestVersion + 1
     const c = createAbortController()
     return [
@@ -59,7 +58,7 @@ export class PromiseStopCall<T> {
         c.cancel,
         this.data
       ),
-      list
+      act
     ] as const
   }
 
@@ -104,7 +103,7 @@ export class PromiseAutoLoadMore<T, K> {
     first: K
   ) {
     const that = this
-    const [data, list] = this.data.reload(function (signal) {
+    const [data, act] = this.data.reload(function (signal) {
       return getFun(first, signal)
     })
     return [
@@ -114,12 +113,10 @@ export class PromiseAutoLoadMore<T, K> {
         false,
         emptyFun
       ),
-      [
-        function () {
-          that.loadMoreCancel()
-        },
-        ...list
-      ] as typeof list
+      function (dispatch) {
+        that.loadMoreCancel()
+        act(dispatch)
+      } as typeof act
     ] as const
   }
   reloadBack(v: VersionPromiseResult<AutoLoadMoreCore<T, K>>) {
@@ -184,7 +181,7 @@ export class PromiseAutoLoadMore<T, K> {
     const data = this.loadMoreList(version, list)
     return [
       data,
-      list
+      arrayFunToOneOrEmpty(list)
     ] as const
   }
 

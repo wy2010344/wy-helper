@@ -1,5 +1,5 @@
-import { AnimationConfig, Reducer, ReducerDispatch, ReducerWithDispatch, SetValue } from ".."
-
+import { AnimationConfig, ReducerDispatch, ReducerWithDispatch, SetValue } from ".."
+import { arrayFunToOneOrEmpty } from '../ArrayHelper'
 export type AnimateFrameModel<T> = {
   version: number
   value: T
@@ -122,7 +122,7 @@ export function animateFrameReducer<T>(
   return function (old, act) {
     const list: ReducerDispatch<FrameTick>[] = []
     const value = inside(old, act, list)
-    return [value, list] as const
+    return [value, arrayFunToOneOrEmpty(list)] as const
   }
 }
 

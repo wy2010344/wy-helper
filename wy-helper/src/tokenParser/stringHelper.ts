@@ -34,15 +34,17 @@ export function ruleStrBetweenGet(
       ruleGet<Que, Que>(match(begin), quote),
       manyRuleGet(
         orRuleGet(
-          ruleGet(match('\\\\'), function (que) {
-            return '\\'
-          }),
-          ruleGet(match(`\\${end[0]}`), function (que) {
-            return end[0]
-          }),
-          ruleGet(notMathChar(), function (que) {
-            return que.content[que.i]
-          })
+          [
+            ruleGet(match('\\\\'), function (que) {
+              return '\\'
+            }),
+            ruleGet(match(`\\${end[0]}`), function (que) {
+              return end[0]
+            }),
+            ruleGet(notMathChar(), function (que) {
+              return que.content[que.i]
+            })
+          ]
         ),
         0,
         matchTheEnd,
@@ -114,12 +116,14 @@ export function ruleStrBetweenPartGet(
       ),
       manyRuleGet(
         orRuleGet(
-          ruleGet(match('\\\\'), v => '\\'),
-          ruleGet(match(`\\${end[0]}`), v => end[0]),
-          ruleGet(match(`\\${inBegin[0]}`), v => inBegin[0]),
-          ruleGet(notMathChar(), function (que) {
-            return que.content[que.i]
-          })
+          [
+            ruleGet(match('\\\\'), v => '\\'),
+            ruleGet(match(`\\${end[0]}`), v => end[0]),
+            ruleGet(match(`\\${inBegin[0]}`), v => inBegin[0]),
+            ruleGet(notMathChar(), function (que) {
+              return que.content[que.i]
+            })
+          ]
         ),
         0,
         matchTheEnd,
