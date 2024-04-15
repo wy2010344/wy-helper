@@ -1,5 +1,5 @@
 
-export class KPair<L, R>{
+export class KPair<L, R> {
   private constructor(
     public readonly left: L,
     public readonly right: R
@@ -79,7 +79,7 @@ export type KSubsitution = List<KVPair>
  * @param v 变量
  * @param sub 作用域
  */
-export function findVarDefine(v: KVar, sub: KSubsitution): KVPair | null {
+export function findVarDefine<V>(v: KVar, sub: List<KPair<KVar, V>>): KPair<KVar, V> | null {
   while (sub != null) {
     const kv = sub.left
     const theV = kv.left
@@ -134,6 +134,8 @@ export function unify(a: KType, b: KType, sub: KSubsitution): [boolean, KSubsitu
     const [success, leftSub] = unify(a.left, b.left, sub)
     if (success) {
       return unify(a.right, b.right, leftSub)
+    } else {
+      console.log("合一失败", a.left, b.left)
     }
   }
   return [false, null]
