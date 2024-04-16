@@ -2,7 +2,7 @@
   "version": "v1",
   "packages": {
     "wy-helper": {
-      "signature": "f6caf3f7b74c91f59a14dc74c533dde7",
+      "signature": "50c85eafcaa2ce9df32b9654ef7c2197",
       "file": true,
       "replaced": "^0.1.2"
     }

@@ -108,7 +108,9 @@ export class Reorder {
   constructor(
     //如果这里是实时的,就会有问题
     private moveItem: (itemKey: any, baseKey: any) => void
-  ) { }
+  ) {
+    this.setMoveDiff = this.setMoveDiff.bind(this)
+  }
   private layoutList: ReorderItemData[] = []
   private direction: PointKey = 'y'
 
