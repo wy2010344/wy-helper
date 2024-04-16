@@ -1,5 +1,5 @@
 import { SetValue } from "./setStateHelper"
-import { EmptyFun, alawaysTrue, emptyFun, run } from "./util"
+import { EmptyFun, alawaysTrue, emptyFun, quote, run } from "./util"
 
 type EventHandler<T> = (v: T) => void
 type EventChangeHandler<T> = (v: T, old: T) => void
@@ -163,7 +163,7 @@ export type ReducerDispatch<A> = SetValue<SetValue<A>> | undefined
 export type ReducerWithDispatchResult<T, A> = [T, ReducerDispatch<A>]
 
 
-export function mapReducerDispatchList<A, B>(
+export function mapReducerDispatch<A, B>(
   act: ReducerDispatch<A>,
   map: (a: A) => B
 ): ReducerDispatch<B> {
@@ -171,6 +171,23 @@ export function mapReducerDispatchList<A, B>(
     return function (dispatch) {
       act(function (value) {
         dispatch(map(value))
+      })
+    }
+  }
+}
+
+export function mapReducerDispatchList<A, B>(
+  acts: ReducerDispatch<A>[],
+  map: (a: A) => B
+): ReducerDispatch<B> {
+  if (acts.length && acts.some(quote)) {
+    return function (dispatch) {
+      acts.forEach(function (act) {
+        if (act) {
+          act(function (value) {
+            dispatch(map(value))
+          })
+        }
       })
     }
   }
