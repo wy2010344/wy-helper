@@ -23,8 +23,8 @@ function reorderItemDataGetKey(n: ReorderItemData) {
  */
 export function reorderCheckTarget<T>(
   order: T[],
-  getKey: (n: T) => any,
-  getHeight: (n: T) => number,
+  getKey: (n: T, i: number) => any,
+  getHeight: (n: T, i: number) => number,
   key: any,
   offset: number,
   speed: number
@@ -34,7 +34,7 @@ export function reorderCheckTarget<T>(
   if (!speed) {
     return
   }
-  const index = order.findIndex(item => getKey(item) == key)
+  const index = order.findIndex((item, i) => getKey(item, i) == key)
   if (index < 0) {
     return
   }
@@ -49,7 +49,7 @@ export function reorderCheckTarget<T>(
       break
     }
 
-    const nextHeight = getHeight(nextItem)
+    const nextHeight = getHeight(nextItem, nextIndex)
     const nextHeightCenter = nextHeight / 2
     if (
       (nextOffset > 0 && offset > nextHeightOffset + nextHeightCenter) ||

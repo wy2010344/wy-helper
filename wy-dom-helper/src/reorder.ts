@@ -64,7 +64,7 @@ export function getPageLayoutData(div: HTMLElement) {
 
 
 
-type ReorderModelRow<T> = {
+export type ReorderModelRow<T> = {
   transY: AnimateFrameModel<number>
   value: T
 }
@@ -80,7 +80,7 @@ export type ReorderModel<T, K> = {
 }
 
 
-type ReorderAction<K> = {
+export type ReorderAction<K> = {
   type: "moveBegin"
   key: K
   point: Point
