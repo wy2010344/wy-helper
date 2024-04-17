@@ -175,6 +175,15 @@ export const kanren = {
     }
     return subs
   },
+  asCut<T>(a: Goal<T>): Goal<T> {
+    return function (sub) {
+      const first = a(sub)?.left
+      if (first) {
+        return kanren.success(first)
+      }
+      return null
+    }
+  },
   or<T>(a: Goal<T>, b: Goal<T>): Goal<T> {
     return function (sub) {
       return kanren.toOr(sub, a, b)
