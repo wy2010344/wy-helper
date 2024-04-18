@@ -7,6 +7,7 @@ export type QueArray<T> = ReadArray<T> & {
 export type Match<V> = (v: V) => boolean
 
 export type BaseQue<V, VS extends QueArray<V>> = {
+  readonly allowLog?: boolean
   readonly i: number
   readonly content: VS
   step1(callback: Match<V>): BaseQue<V, VS> | void
@@ -317,7 +318,9 @@ export function ruleGet<Q extends BaseQue<any, any>, T>(
         return new ParseError(err as string)
       }
     }
-    console.log("ruleGet失败", failMsg)
+    if (que.allowLog) {
+      console.log("ruleGet失败", failMsg)
+    }
     return new ParseError(failMsg)
   }
 }
@@ -392,7 +395,9 @@ export function andRuleGet<Q extends BaseQue<any, any>, T>(
         que = end.end
         values.push(end.value)
       } else {
-        console.log("解析失败", message)
+        if (que.allowLog) {
+          console.log("解析失败", message)
+        }
         return end
       }
     }
@@ -516,7 +521,9 @@ export function orRuleGet<Q extends BaseQue<any, any>>(
       }
       last = v
     }
-    console.log("orRuleGet失败", message)
+    if (que.allowLog) {
+      console.log("orRuleGet失败", message)
+    }
     return last
   }
 }
