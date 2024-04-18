@@ -66,8 +66,11 @@ export class KVar {
   }
 }
 
+export abstract class KEqual {
+  abstract equals(b: any): any
+}
 /**所有类型 */
-export type KType = KVar | KPair<KType, KType> | string | number | null
+export type KType = KVar | KPair<KType, KType> | string | number | null | KEqual
 export type List<T> = KPair<T, List<T>> | null
 type KVPair = KPair<KVar, KType>
 /**
@@ -117,6 +120,16 @@ export function unify(a: KType, b: KType, sub: KSubsitution): [boolean, KSubsitu
   b = walk(b, sub)
   if (a == b) {
     return [true, sub]
+  }
+  if (a instanceof KEqual) {
+    if (a.equals(b)) {
+      return [true, sub]
+    }
+  }
+  if (b instanceof KEqual) {
+    if (b.equals(a)) {
+      return [true, sub]
+    }
   }
   if (a instanceof KVar) {
     if (a.equals(b)) {

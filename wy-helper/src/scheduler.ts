@@ -33,10 +33,12 @@ export function createRunSyncTasks() {
  * @returns 
  */
 export function getScheduleAskTime({
+  minRenderGap = 5,
   lastJobDelay,
   taskTimeThreadhold = 5,
   limitFlush
 }: {
+  minRenderGap?: number
   lastJobDelay?: boolean
   taskTimeThreadhold?: number
   limitFlush?(fun: EmptyFun): void
@@ -47,6 +49,11 @@ export function getScheduleAskTime({
     realTime
   }) {
     let onWork = false
+    let lastRenderFinishTime = 0
+    function finishWork() {
+      onWork = false
+      lastRenderFinishTime = performance.now()
+    }
     /**
      * 执行queue中的任务
      * 本次没执行完,下次执行.
@@ -76,7 +83,7 @@ export function getScheduleAskTime({
         }
       }
       if (!callback) {
-        onWork = false
+        finishWork()
       }
     }
 
@@ -90,7 +97,7 @@ export function getScheduleAskTime({
             if (askNextWork()) {
               beginAsyncWork()
             } else {
-              onWork = false
+              finishWork()
             }
             break
           }
@@ -109,7 +116,12 @@ export function getScheduleAskTime({
         if (realTime.get()) {
           runTaskSync(flush)
         } else {
-          beginAsyncWork()
+          const delay = minRenderGap - (performance.now() - lastRenderFinishTime)
+          if (delay > 0) {
+            setTimeout(beginAsyncWork, delay)
+          } else {
+            beginAsyncWork()
+          }
         }
       }
     }
