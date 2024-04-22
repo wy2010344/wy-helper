@@ -136,6 +136,14 @@ export type ReadArray<T> = {
 };
 
 
+export function readArrayMap<T, V>(vs: ReadArray<T>, fun: (v: T, i: number) => V) {
+  const ls: V[] = []
+  for (let i = 0; i < vs.length; i++) {
+    ls.push(fun(vs[i], i))
+  }
+  return ls
+}
+
 export function readArraySlice<T>(
   list: ReadArray<T>,
   from: number = 0,
@@ -176,7 +184,7 @@ export function readArraySliceCircle<T>(list: ReadArray<T>, from: number = 0, en
 
 
 
-export class WrapperValue<T>{
+export class WrapperValue<T> {
   constructor(public readonly value: T) { }
 }
 

@@ -54,16 +54,21 @@ export function arrayNotEqualOrOne<T>(a: T, b: T) {
   return true
 }
 
+export function arrayReduceRight<T>(vs: T[], fun: (m: T, i: number, vs: T[]) => void) {
+  for (let i = vs.length - 1; i > -1; i--) {
+    const row = vs[i]
+    fun(row, i, vs)
+  }
+}
 export function buildRemoveWhere<T, M>(equal: (m: M, a: T, idx: number) => any) {
   return function (vs: T[], m: M) {
     let count = 0
-    for (let i = vs.length - 1; i > -1; i--) {
-      const row = vs[i]
+    arrayReduceRight(vs, function (row, i) {
       if (equal(m, row, i)) {
         vs.splice(i, 1)
         count++
       }
-    }
+    })
     return count
   }
 }
