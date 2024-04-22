@@ -1,8 +1,10 @@
-import { removeWhere } from "./equal"
-import { Box, Point, PointKey, boxEqual, pointEqual, pointZero } from "./geometry"
-import { EmptyFun } from "./util"
+import { arrayFindIndexFrom } from "./ArrayHelper"
+import { arrayReduceRight } from "./equal"
+import { Box, Point, PointKey, boxEqual } from "./geometry"
+import { EmptyFun, ReadArray } from "./util"
 
 export interface ReorderItemData {
+  index: number
   value: any
   layout: Box
 }
@@ -67,9 +69,9 @@ export function reorderCheckTarget<T>(
 }
 
 
-type MoveV = {
+type MoveV<K> = {
   lastValue: Point
-  currentItem: ReorderChild
+  currentItem: ReorderChild<K>
   onFinish(): void
 }
 
@@ -82,17 +84,12 @@ const getSize: Point<(n: ReorderItemData) => number> = {
   x: getDirection("x"),
   y: getDirection("y"),
 }
-function buildSortDir(dir: PointKey) {
-  return function (a: ReorderItemData, b: ReorderItemData) {
-    return a.layout[dir].min - b.layout[dir].min
-  }
+
+function sortIndex(a: ReorderItemData, b: ReorderItemData) {
+  return a.index - b.index
 }
-const sortDir: Point<(a: ReorderItemData, b: ReorderItemData) => number> = {
-  x: buildSortDir("x"),
-  y: buildSortDir("y")
-}
-export class Reorder {
-  checkToMove(key: any, offset: Point, diff: Point) {
+export class Reorder<K = any> {
+  checkToMove(key: K, offset: Point, diff: Point) {
     const item = reorderCheckTarget(
       this.layoutList,
       reorderItemDataGetKey,
@@ -102,23 +99,40 @@ export class Reorder {
       diff[this.direction])
     if (item) {
       this.moveItem(key, item.value)
-      return true
     }
   }
   constructor(
     //如果这里是实时的,就会有问题
-    private moveItem: (itemKey: any, baseKey: any) => void
+    private moveItem: (itemKey: K, baseKey: K) => void
   ) {
     this.setMoveDiff = this.setMoveDiff.bind(this)
   }
   private layoutList: ReorderItemData[] = []
   private direction: PointKey = 'y'
-
   /**每次进来更新 */
-  updateLayoutList(direction: PointKey, shouldRemove: (key: any) => boolean) {
-    removeWhere(this.layoutList, function (value) {
-      return shouldRemove(value.value)
+  updateLayoutList<T>(
+    direction: PointKey,
+    list: ReadArray<T>,
+    getKey: (v: T) => K
+  ) {
+    arrayReduceRight(this.layoutList, (row, i) => {
+      const idx = arrayFindIndexFrom(list, 0, v => getKey(v) == row.value)
+      if (idx < 0) {
+        this.layoutList.splice(i, 1)
+      } else {
+        row.index = idx
+      }
     })
+    for (let i = 0; i < list.length; i++) {
+      const key = getKey(list[i])
+      if (!this.layoutList.find(v => v.value == key)) {
+        this.layoutList.push({
+          index: i,
+          value: key,
+          layout: undefined as any
+        })
+      }
+    }
     if (this.moveV) {
       if (!this.layoutList.find(v => v.value == this.moveV?.currentItem.key)) {
         this.moveV = undefined
@@ -126,19 +140,14 @@ export class Reorder {
     }
     if (this.direction != direction) {
       this.direction = direction
-      this.sortOrderList()
     }
-  }
-
-  private sortOrderList() {
-    this.layoutList.sort(sortDir[this.direction])
+    this.layoutList.sort(sortIndex)
   }
   getCurrent() {
     return this.moveV?.currentItem
   }
-
   /**注册 */
-  registerItem(value: any, axis: Box) {
+  registerItem(value: K, axis: Box) {
     const order = this.layoutList
     const idx = order.findIndex((entry) => value === entry.value)
     if (idx !== -1) {
@@ -146,20 +155,20 @@ export class Reorder {
       ox.layout = axis
     } else {
       order.push({
+        index: 0,
         value: value,
         layout: axis
       })
     }
-    this.sortOrderList()
   }
-  private moveV: MoveV | undefined = undefined
-  setMoveV(v: MoveV) {
+  private moveV: MoveV<K> | undefined = undefined
+  setMoveV(v: MoveV<K>) {
     this.moveV = v
   }
   setMoveDiff(v: Point) {
     this.moveV?.currentItem.setMoveDiff(v)
   }
-  private didMove(mv: MoveV, loc: Point) {
+  private didMove(mv: MoveV<K>, loc: Point) {
     mv.currentItem.setMoveDiff({
       x: loc.x - mv.lastValue.x,
       y: loc.y - mv.lastValue.y
@@ -185,11 +194,10 @@ export class Reorder {
 }
 
 
-export class ReorderChild {
+export class ReorderChild<K> {
   private cb: Box | undefined = undefined
-  private lockWaitSort = false
   constructor(
-    private parent: Reorder,
+    private parent: Reorder<K>,
     public readonly key: any,
     private getTrans: () => Point,
     private changeTo: (value: Point) => void
@@ -227,9 +235,6 @@ export class ReorderChild {
       }
     }
   }
-  releaseLock() {
-    this.lockWaitSort = false
-  }
   setMoveDiff(diff: Point) {
     const trans = this.getTrans()
     const offset = {
@@ -237,13 +242,7 @@ export class ReorderChild {
       y: trans.y + diff.y
     }
     this.changeTo(offset)
-    if (this.lockWaitSort) {
-      return
-    }
-    const whichToPlace = this.parent.checkToMove(this.key, offset, diff)
-    if (whichToPlace) {
-      this.lockWaitSort = true
-    }
+    this.parent.checkToMove(this.key, offset, diff)
   }
   start(loc: Point, onFinish: EmptyFun) {
     this.parent.setMoveV({

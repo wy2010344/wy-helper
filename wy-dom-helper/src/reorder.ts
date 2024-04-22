@@ -23,8 +23,8 @@ export function getDiffOnScroll(change: (p: Point) => void) {
   }
 }
 
-export function reorderChildChangeIndex(
-  child: ReorderChild,
+export function reorderChildChangeIndex<K>(
+  child: ReorderChild<K>,
   div: HTMLElement,
   onLayout: (diff: Point) => void,
   updateBox: (box: Box) => void = emptyFun
@@ -35,7 +35,6 @@ export function reorderChildChangeIndex(
     child.animateFrame(axisV, onLayout)
   }
   animateFrmae()
-  child.releaseLock()
   return subscribeRequestAnimationFrame(animateFrmae)
 }
 
