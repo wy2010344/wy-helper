@@ -202,3 +202,13 @@ export function numberIntFillWithN0(n: number, x: number) {
   }
   return nx
 }
+
+
+
+
+export function timeoutDelayCall(time: number, fun: EmptyFun) {
+  const inv = setTimeout(fun, time)
+  return function () {
+    clearTimeout(inv)
+  }
+}
