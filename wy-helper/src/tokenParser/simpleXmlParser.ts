@@ -8,16 +8,8 @@
 
 import { ruleStrBetweenGet } from ".";
 import { quote } from "..";
-import { CharRange, ParseFunGet, Que, alawaysGet, andMatch, andRuleGet, isParseSuccess, manyMatch, manyRuleGet, match, matchToEnd, notMathChar, orMatch, orRuleGet, reduceRuleGet, ruleGet, ruleGetString, ruleGetTranslate, whiteSpaceRuleZero } from "./tokenParser";
-
-function getCharCode(n: string) {
-  return n.charCodeAt(0)
-}
-
-export const isLowerEnglish = CharRange.of(getCharCode('a'), getCharCode('z'))
-export const isUpperEnglish = CharRange.of(getCharCode('A'), getCharCode('Z'))
-export const isChinese = CharRange.of(getCharCode('\u4e00'), getCharCode('\u9fa5'))
-export const isNumber = CharRange.of(getCharCode('0'), getCharCode('9'))
+import { ParseFunGet, Que, alawaysGet, andMatch, andRuleGet, isParseSuccess, manyMatch, manyRuleGet, matchAnyString, matchCharNotIn, matchToEnd, orMatch, orRuleGet, reduceRuleGet, ruleGet, ruleGetString, ruleGetTranslate, ruleSkip, whiteSpaceRuleZero } from "./tokenParser";
+import { isLowerEnglish, isNumber, isUpperEnglish } from "./util";
 
 
 /**
@@ -25,14 +17,14 @@ export const isNumber = CharRange.of(getCharCode('0'), getCharCode('9'))
  */
 const isPureWord = andMatch(
   orMatch(
-    isUpperEnglish.getMatchBetween(),
-    isLowerEnglish.getMatchBetween()
+    isUpperEnglish.matchCharBetween(),
+    isLowerEnglish.matchCharBetween()
   ),
   manyMatch(
     orMatch(
-      isUpperEnglish.getMatchBetween(),
-      isLowerEnglish.getMatchBetween(),
-      isNumber.getMatchBetween()
+      isUpperEnglish.matchCharBetween(),
+      isLowerEnglish.matchCharBetween(),
+      isNumber.matchCharBetween()
     )
   )
 )
@@ -61,11 +53,9 @@ const matchTheEnd = matchToEnd('<')
  */
 const matchInlineContent = ruleGetTranslate(manyRuleGet(
   orRuleGet(
-    [ruleGet(match('\\\\'), v => '\\'),
-    ruleGet(match(`\\<`), v => '<'),
-    ruleGet(notMathChar(), function (que) {
-      return que.content[que.i]
-    })]
+    [ruleGet(matchAnyString('\\\\'), v => '\\'),
+    ruleGet(matchAnyString(`\\<`), v => '<'),
+    ruleGet(matchCharNotIn(), que => que.current())]
   ),
   0,
   matchTheEnd,
@@ -91,7 +81,7 @@ const argRuleGet: ParseFunGet<Que, {
       [
         andRuleGet(
           [
-            ruleGet(match('='), quote),
+            ruleGet(matchAnyString('='), quote),
             ruleStrBetweenGet('"')
           ],
           function (a, b) {
@@ -112,7 +102,7 @@ const argRuleGet: ParseFunGet<Que, {
 
 const matchBracket: ParseFunGet<Que, XmlBeginNode> = andRuleGet(
   [
-    ruleGet(match('<'), quote),
+    ruleGet(matchAnyString('<'), quote),
     ruleGet(isPureWord, ruleGetString),
     ruleGet(whiteSpaceRuleZero, quote),
     manyRuleGet(
@@ -122,7 +112,7 @@ const matchBracket: ParseFunGet<Que, XmlBeginNode> = andRuleGet(
     ),
     ruleGet(whiteSpaceRuleZero, quote),
     ruleGet(
-      match(">", "/>"),
+      matchAnyString(">", "/>"),
       ruleGetString
     )
   ],
@@ -142,9 +132,9 @@ const matchBracket: ParseFunGet<Que, XmlBeginNode> = andRuleGet(
 
 const matchBracketEnd = andRuleGet(
   [
-    ruleGet(match('</'), quote),
+    ruleSkip(matchAnyString('</')),
     ruleGet(isPureWord, ruleGetString),
-    ruleGet(match('>'), quote),
+    ruleSkip(matchAnyString('>')),
   ],
   function (a, b, c) {
     return new XmlEndNode(b)

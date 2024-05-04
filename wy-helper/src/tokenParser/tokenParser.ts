@@ -1,119 +1,140 @@
-import { ReadArray, quote } from "../util";
+import { emptyFun, quote } from "../util";
 
-export type QueArray<T> = ReadArray<T> & {
-  slice(begin?: number, end?: number): QueArray<T>
-}
 
 export type Match<V> = (v: V) => boolean
 
-export type BaseQue<V, VS extends QueArray<V>> = {
-  readonly allowLog?: boolean
-  readonly i: number
-  readonly content: VS
-  step1(callback: Match<V>): BaseQue<V, VS> | void
-}
-export class BQue<V, VS extends QueArray<V>> implements BaseQue<V, VS> {
+export abstract class BaseQue<V> {
   constructor(
-    public readonly content: VS,
-    //下标
-    public readonly i = 0,
+    public readonly i: number
   ) { }
-  step1(callback: Match<V>) {
-    if (this.i < this.content.length) {
-      if (callback(this.content[this.i])) {
-        return this.stepQue(this.i + 1)
+  allowLog?: boolean
+  abstract current(): V | void
+  abstract notEnd(): boolean
+  abstract copyTo(i: number): this
+  step1(match: Match<V>): this | void {
+    if (this.notEnd()) {
+      if (match(this.current()!)) {
+        return this.copyTo(this.i + 1)
       }
     }
-  }
-  protected stepQue(step: number) {
-    return new BQue<V, VS>(this.content, step)
-  }
-  toString() {
-    return JSON.stringify(this)
   }
 }
 
-export class Que extends BQue<string, string> {
-  match(vs: string[]) {
-    for (const v of vs) {
-      if (this.content.startsWith(v, this.i)) {
-        return this.stepQue(this.i + v.length)
-      }
+export class Que extends BaseQue<string> {
+  constructor(
+    public readonly content: string,
+    i: number = 0
+  ) {
+    super(i)
+  }
+  current(): string | void {
+    const c = this.content.charAt(this.i)
+    if (c.length) {
+      return c
     }
   }
+  notEnd(): boolean {
+    return this.content.length > this.i
+  }
+  /**
+   * 如果
+   * @returns 
+   */
+  currentCode() {
+    return this.content.charCodeAt(this.i)
+  }
 
+  copyTo(i: number) {
+    return new Que(this.content, i) as this
+  }
   /**
    * 匹配到这些字眼,提前进入结束
    * @param vs 
    * @returns 
    */
   matchToEnd(vs: string[]) {
-    if (this.i == this.content.length) {
-      return this
-    }
-    for (const v of vs) {
-      if (this.content.startsWith(v, this.i)) {
-        return void 0;
+    if (this.notEnd()) {
+      for (const v of vs) {
+        if (this.content.startsWith(v, this.i)) {
+          return void 0;
+        }
       }
     }
     return this
   }
-
-  protected stepQue(step: number): Que {
-    return new Que(this.content, step)
-  }
   step1Code(callback: (v: number) => boolean) {
-    return this.step1(function (v) {
+    return this.step1(v => {
       return callback(v.charCodeAt(0))
     })
-  }
-}
-export class LineCharQue extends Que {
-  constructor(
-    content: string, i: number = 0,
-    //行号,从0开始
-    public readonly line = 0,
-    //列号,从0开始
-    public readonly character = 0
-  ) {
-    super(content, i)
-  }
-
-  protected stepQue(step: number) {
-    let line = this.line
-    let character = this.character
-    for (let x = this.i; x < step; x++) {
-      if (this.content[x] == '\n') {
-        ++line
-        character = 0
-      } else {
-        ++character
-      }
-    }
-    return new LineCharQue(this.content, step, line, character)
   }
 }
 /**
  * 解析,如果解析成功,返回正数.解析失败,返回负数
  * 这里不处理错误.
  */
-export type ParseFun<Q extends BaseQue<any, any>> = (que: Q) => (Q | void)
-export function matchVS<V, F extends BaseQue<V, any>>(...vs: Match<V>[]): ParseFun<F> {
-  return function (que) {
-    for (const v of vs) {
-      const next = que.step1(v) as F
-      if (next) {
-        que = next
-      } else {
-        return
+export type ParseFun<Q extends BaseQue<any>> = (que: Q) => (Q | void)
+export function matchAnyString<Q extends Que>(...vs: string[]): ParseFun<Q> {
+  if (vs.length == 0) {
+    throw new Error("没有任何参数")
+  }
+  for (let x = 0; x < vs.length; x++) {
+    const v = vs[x]
+    for (let y = 0; y < x; y++) {
+      const bv = vs[y]
+      if (v.startsWith(bv)) {
+        console.warn("后文包含前文,绝不会被匹配到", v, bv)
       }
     }
-    return que
+  }
+  return function (que) {
+    for (const v of vs) {
+      if (que.content.indexOf(v, que.i) == que.i) {
+        return que.copyTo(que.i + v.length) as Q
+      }
+    }
   }
 }
-export function match<Q extends Que>(...vs: string[]): ParseFun<Q> {
-  return function (que) {
-    return que.match(vs) as Q | undefined
+
+export function stringToCharCode(v: string) {
+  const vs: number[] = []
+  for (let i = 0; i < v.length; i++) {
+    vs.push(v.charCodeAt(i))
+  }
+  return vs
+}
+export function matchCharIn(...vs: number[]) {
+  const set = new Set(vs)
+  if (set.size == 0) {
+    throw new Error("没有任何参数")
+  }
+  if (set.size != vs.length) {
+    console.warn("参数中有重复", vs)
+  }
+  return (que: Que) => {
+    return que.step1Code(c => {
+      for (const v of set) {
+        if (c == v) {
+          return true
+        }
+      }
+      return false
+    })
+  }
+}
+export function matchCharNotIn(...vs: number[]): ParseFun<Que> {
+  const set = new Set(vs)
+  if (set.size != vs.length) {
+    console.warn("参数中有重复", vs)
+  }
+  return (que: Que) => {
+    return que.step1Code(c => {
+      for (const v of set) {
+        if (c == v) {
+          return false
+        }
+      }
+      return true
+    })
   }
 }
 
@@ -128,8 +149,8 @@ export function matchToEnd<Q extends Que>(...vs: string[]): ParseFun<Q> {
   }
 }
 
-export function matchEnd<Q extends BaseQue<any, any>>(que: Q) {
-  return que.i == que.content.length ? que : undefined
+export function matchEnd<Q extends BaseQue<any>>(que: Q) {
+  return que.notEnd() ? undefined : que
 }
 
 export function orMatch(...rules: ParseFun<any>[]) {
@@ -152,79 +173,75 @@ export function orMatchEmpty(...rules: ParseFun<any>[]) {
   return orMatch(...rules, quote)
 }
 
-export function notMathChar<Q extends Que>(...charCodes: number[]): ParseFun<Q> {
+export function matchStep1<Q extends BaseQue<any>>(
+  step: (n: Q extends BaseQue<infer M> ? M : never) => boolean
+): ParseFun<Q> {
   return function (que) {
-    return que.step1Code(code => !charCodes.includes(code)) as Q | undefined
-  }
-}
-
-export function matchStep<Q extends Que>(step: (n: number) => boolean): ParseFun<Q> {
-  return function (que) {
-    return que.step1Code(step) as Q | undefined
+    return que.step1(step) as Q | undefined
   }
 }
 export class CharRange {
   private constructor(
-    public readonly begin: number,
-    public readonly end: number,
-    public readonly excludes: number[]
+    public readonly a: number,
+    public readonly b: number,
   ) {
-    if (begin > end) {
-      throw new Error(`begin:${begin} > end${end} `)
+    if (a >= b) {
+      throw new Error(`结束${b}应该比开始${a}大`)
     }
-    for (let i = 0; i < excludes.length; i++) {
-      const exclude = excludes[i]
-      if (exclude < begin || end < exclude) {
-        throw new Error(`exclude:${exclude} not in [${begin},${end}]`)
+  }
+  static of(begin: number, end: number) {
+    return new CharRange(begin, end)
+  }
+  matchCharBetween(...excludes: number[]) {
+    const a = this.a, b = this.b
+    const set = new Set(excludes)
+    if (set.size != excludes.length) {
+      console.warn("不包含里有重复项")
+    }
+    set.forEach(v => {
+      if (v < a || v > b) {
+        throw new Error(`排除项中${v}不在${a}与${b}之间`)
       }
+    })
+    return (que: Que) => {
+      return que.step1Code(c => {
+        if (c < a || c > b) {
+          return false
+        }
+        if (set.has(c)) {
+          return false
+        }
+        return true
+      })
     }
   }
-  static of(begin: number, end: number, ...excludes: number[]) {
-    return new CharRange(begin, end, excludes)
-  }
-
-  replaceExcludes(...excludes: number[]) {
-    return new CharRange(this.begin, this.end, excludes)
-  }
-
-
-  private matchBetween: any = undefined
-  getMatchBetween<Q extends Que>() {
-    if (!this.matchBetween) {
-      const that = this
-      this.matchBetween = function (que: Q) {
-        return que.step1Code(v => {
-          if (that.excludes.includes(v)) {
-            return false
-          }
-          return that.begin <= v && v <= that.end
-        }) as Q | undefined
+  matchCharNotBetween(...includes: number[]) {
+    const a = this.a, b = this.b
+    const set = new Set(includes)
+    if (set.size != includes.length) {
+      console.warn("不包含里有重复项")
+    }
+    set.forEach(v => {
+      if (v >= a && v <= b) {
+        throw new Error(`包含项中${v}不在${a}与${b}之间`)
       }
-    }
-    return this.matchBetween as unknown as ParseFun<Q>
-  }
+    })
 
-  private notMatchBetween: any = undefined
-  getNotMatchBetween<Q extends Que>() {
-    if (!this.notMatchBetween) {
-      const that = this
-      this.notMatchBetween = function (que: Q) {
-        return que.step1Code(v => {
-          if (that.excludes.includes(v)) {
+    return (que: Que) => {
+      return que.step1Code(c => {
+        if (c < a || c > b) {
+          if (!set.has(c)) {
             return true
           }
-          return !(that.begin <= v && v <= that.end)
-        }) as Q | undefined
-      }
+        }
+        return false
+      })
     }
-    return this.notMatchBetween as unknown as ParseFun<Q>
   }
 }
 
-
-
 export function andMatch(...rules: ParseFun<any>[]) {
-  return function <Q extends BaseQue<any, any>>(que: Q) {
+  return function <Q extends BaseQue<any>>(que: Q) {
     let last = que
     for (const rule of rules) {
       const nlast = rule(last)
@@ -238,6 +255,7 @@ export function andMatch(...rules: ParseFun<any>[]) {
   }
 }
 
+
 export function manyMatch(
   rule: ParseFun<any>,
   min = 0,
@@ -250,7 +268,7 @@ export function manyMatch(
     }
     return last
   }
-  return function <Q extends BaseQue<any, any>>(que: Q) {
+  return function <Q extends BaseQue<any>>(que: Q) {
     let last = que
     let count = 0
     while (true) {
@@ -280,31 +298,38 @@ export function manyMatch(
   }
 }
 
-export class ParserSuccess<Q extends BaseQue<any, any>, T> {
+export class ParseError extends Error {
+  constructor(
+    public readonly message: string
+  ) {
+    super(message)
+  }
+}
+
+export function error(message: string) {
+  return new ParseError(message)
+}
+////////////////////////////////////////////////////////////////////////////////////////////////**************//////////////////////////////////////////////////////////////////////
+export class ParserSuccess<Q extends BaseQue<any>, T> {
   constructor(
     public readonly value: T,
     public readonly end: Q
   ) { }
 }
-export class ParseError {
-  constructor(
-    public readonly message: string
-  ) { }
-}
-function success<Q extends BaseQue<any, any>, T>(v: T, que: Q) {
+export function success<Q extends BaseQue<any>, T>(v: T, que: Q) {
   return new ParserSuccess(v, que)
 }
 
 /**
  * 使用try...catch来抛出错误...
  */
-export type ParseFunGet<Q extends BaseQue<any, any>, T> = (que: Q) => ParserSuccess<Q, T> | ParseError
+export type ParseFunGet<Q extends BaseQue<any>, T> = (que: Q) => ParserSuccess<Q, T> | ParseError
 export function isParseSuccess<T extends ParserSuccess<any, any>>(v: T | ParseError): v is T {
   return v instanceof ParserSuccess
 }
 
-type RuleCallback<Q extends BaseQue<any, any>, T> = (begin: Q, end: Q) => T
-export function ruleGet<Q extends BaseQue<any, any>, T>(
+type RuleCallback<Q extends BaseQue<any>, T> = (begin: Q, end: Q) => T
+export function ruleGet<Q extends BaseQue<any>, T>(
   rule: ParseFun<Q>,
   callback: RuleCallback<Q, T>,
   failMsg = ''
@@ -315,24 +340,23 @@ export function ruleGet<Q extends BaseQue<any, any>, T>(
       try {
         return success(callback(que, end), end)
       } catch (err) {
-        return new ParseError(err as string)
+        return error(err as string)
       }
     }
     if (que.allowLog) {
       console.log("ruleGet失败", failMsg)
     }
-    return new ParseError(failMsg)
+    return error(failMsg)
   }
 }
 
-
-
-export function ruleGetSelf<V>(fun: Match<V>) {
-  return ruleGet(matchVS(fun), function (begin, end) {
-    return begin.content.slice(begin.i, end.i)[0]
-  })
+export function ruleSkip<Q extends BaseQue<any>>(
+  rule: ParseFun<Q>,
+  failMsg = ''
+) {
+  return ruleGet(rule, emptyFun, failMsg)
 }
-export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2>(
+export function andRuleGet<Q extends BaseQue<any>, T, T1, T2>(
   args: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
@@ -340,7 +364,7 @@ export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2>(
   merge: (...vs: [T1, T2]) => T,
   message?: string
 ): ParseFunGet<Q, T>
-export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3>(
+export function andRuleGet<Q extends BaseQue<any>, T, T1, T2, T3>(
   args: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
@@ -349,7 +373,7 @@ export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3>(
   merge: (...vs: [T1, T2, T3]) => T,
   message?: string
 ): ParseFunGet<Q, T>
-export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4>(
+export function andRuleGet<Q extends BaseQue<any>, T, T1, T2, T3, T4>(
   args: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
@@ -359,7 +383,7 @@ export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4>(
   merge: (...vs: [T1, T2, T3, T4]) => T,
   message?: string
 ): ParseFunGet<Q, T>
-export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4, T5>(
+export function andRuleGet<Q extends BaseQue<any>, T, T1, T2, T3, T4, T5>(
   args: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
@@ -370,7 +394,7 @@ export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4, T5>(
   merge: (...vs: [T1, T2, T3, T4, T5]) => T,
   message?: string
 ): ParseFunGet<Q, T>
-export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4, T5, T6>(
+export function andRuleGet<Q extends BaseQue<any>, T, T1, T2, T3, T4, T5, T6>(
   args: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
@@ -382,7 +406,41 @@ export function andRuleGet<Q extends BaseQue<any, any>, T, T1, T2, T3, T4, T5, T
   merge: (...vs: [T1, T2, T3, T4, T5, T6]) => T,
   message?: string
 ): ParseFunGet<Q, T>
-export function andRuleGet<Q extends BaseQue<any, any>, T>(
+
+export function andRuleGet<Q extends BaseQue<any>, T, T1, T2, T3, T4, T5, T6, T7>(args: [
+  ParseFunGet<Q, T1>,
+  ParseFunGet<Q, T2>,
+  ParseFunGet<Q, T3>,
+  ParseFunGet<Q, T4>,
+  ParseFunGet<Q, T5>,
+  ParseFunGet<Q, T6>,
+  ParseFunGet<Q, T7>
+], merge: (...vs: [T1, T2, T3, T4, T5, T6, T7]) => T, message?: string): ParseFunGet<Q, T>;
+
+export function andRuleGet<Q extends BaseQue<any>, T, T1, T2, T3, T4, T5, T6, T7, T8>(args: [
+  ParseFunGet<Q, T1>,
+  ParseFunGet<Q, T2>,
+  ParseFunGet<Q, T3>,
+  ParseFunGet<Q, T4>,
+  ParseFunGet<Q, T5>,
+  ParseFunGet<Q, T6>,
+  ParseFunGet<Q, T7>,
+  ParseFunGet<Q, T8>
+], merge: (...vs: [T1, T2, T3, T4, T5, T6, T7, T8]) => T, message?: string): ParseFunGet<Q, T>;
+
+export function andRuleGet<Q extends BaseQue<any>, T, T1, T2, T3, T4, T5, T6, T7, T8, T9>(args: [
+  ParseFunGet<Q, T1>,
+  ParseFunGet<Q, T2>,
+  ParseFunGet<Q, T3>,
+  ParseFunGet<Q, T4>,
+  ParseFunGet<Q, T5>,
+  ParseFunGet<Q, T6>,
+  ParseFunGet<Q, T7>,
+  ParseFunGet<Q, T8>,
+  ParseFunGet<Q, T9>
+], merge: (...vs: [T1, T2, T3, T4, T5, T6, T7, T8, T9]) => T, message?: string): ParseFunGet<Q, T>;
+
+export function andRuleGet<Q extends BaseQue<any>, T>(
   args: ParseFunGet<Q, any>[],
   merge: (...vs: any) => T,
   message?: string
@@ -405,18 +463,18 @@ export function andRuleGet<Q extends BaseQue<any, any>, T>(
       const out = merge.apply(null, values)
       return success(out, que)
     } catch (err) {
-      return new ParseError(err as string)
+      return error(err as string)
     }
   }
 }
-export function orRuleGet<Q extends BaseQue<any, any>, T1, T2>(
+export function orRuleGet<Q extends BaseQue<any>, T1, T2>(
   rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>
   ],
   message?: string
 ): ParseFunGet<Q, T1 | T2>
-export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3>(
+export function orRuleGet<Q extends BaseQue<any>, T1, T2, T3>(
   rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
@@ -424,7 +482,7 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3>(
   ],
   message?: string
 ): ParseFunGet<Q, T1 | T2 | T3>
-export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4>(
+export function orRuleGet<Q extends BaseQue<any>, T1, T2, T3, T4>(
   rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
@@ -433,7 +491,7 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4>(
   ],
   message?: string
 ): ParseFunGet<Q, T1 | T2 | T3 | T4>
-export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5>(
+export function orRuleGet<Q extends BaseQue<any>, T1, T2, T3, T4, T5>(
   rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
@@ -443,7 +501,7 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5>(
   ],
   message?: string
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T5>
-export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6>(
+export function orRuleGet<Q extends BaseQue<any>, T1, T2, T3, T4, T5, T6>(
   rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
@@ -454,7 +512,7 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6>(
   ],
   message?: string
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6>
-export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T7>(
+export function orRuleGet<Q extends BaseQue<any>, T1, T2, T3, T4, T5, T6, T7>(
   rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
@@ -466,7 +524,7 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T
   ],
   message?: string
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6 | T7>
-export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T7, T8>(
+export function orRuleGet<Q extends BaseQue<any>, T1, T2, T3, T4, T5, T6, T7, T8>(
   rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
@@ -479,7 +537,7 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T
   ],
   message?: string
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6 | T7 | T8>
-export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T7, T8, T9>(
+export function orRuleGet<Q extends BaseQue<any>, T1, T2, T3, T4, T5, T6, T7, T8, T9>(
   rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
@@ -493,7 +551,7 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T
   ],
   message?: string
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6 | T7 | T8 | T9>
-export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
+export function orRuleGet<Q extends BaseQue<any>, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(
   rules: [
     ParseFunGet<Q, T1>,
     ParseFunGet<Q, T2>,
@@ -508,7 +566,7 @@ export function orRuleGet<Q extends BaseQue<any, any>, T1, T2, T3, T4, T5, T6, T
   ],
   message?: string
 ): ParseFunGet<Q, T1 | T2 | T3 | T4 | T6 | T7 | T8 | T9 | T10>
-export function orRuleGet<Q extends BaseQue<any, any>>(
+export function orRuleGet<Q extends BaseQue<any>>(
   rules: ParseFunGet<Q, any>[],
   message?: string
 ): ParseFunGet<Q, any> {
@@ -527,8 +585,8 @@ export function orRuleGet<Q extends BaseQue<any, any>>(
     return last
   }
 }
-export function alawaysGet<Q extends BaseQue<any, any>, T>(callback: (que: Q) => T): ParseFunGet<Q, T>
-export function alawaysGet<Q extends BaseQue<any, any>>(): ParseFunGet<Q, undefined>
+export function alawaysGet<Q extends BaseQue<any>, T>(callback: (que: Q) => T): ParseFunGet<Q, T>
+export function alawaysGet<Q extends BaseQue<any>>(): ParseFunGet<Q, undefined>
 export function alawaysGet() {
   const cb = arguments[0]
   return ruleGet(quote, function (que) {
@@ -542,7 +600,7 @@ export function alawaysGet() {
  * @param prefix:预判断 
  * @returns 
  */
-export function manyRuleGet<Q extends BaseQue<any, any>, T>(
+export function manyRuleGet<Q extends BaseQue<any>, T>(
   rule: ParseFunGet<Q, T>,
   min = 0,
   between: ParseFun<any> = quote,
@@ -550,7 +608,7 @@ export function manyRuleGet<Q extends BaseQue<any, any>, T>(
 ): ParseFunGet<Q, T[]> {
   function goLast(vs: T[], last: Q) {
     if (vs.length < min) {
-      return new ParseError(`need at min ${min} but get ${vs.length}`)
+      return error(`need at min ${min} but get ${vs.length}`)
     }
     return success(vs, last)
   }
@@ -592,7 +650,7 @@ export function manyRuleGet<Q extends BaseQue<any, any>, T>(
  * @param restRule
  * @param reduce 从左到右叠加
  */
-export function reduceRuleGet<Q extends BaseQue<any, any>, T, F>(
+export function reduceRuleGet<Q extends BaseQue<any>, T, F>(
   firstRule: ParseFunGet<Q, T>,
   restRule: ParseFunGet<Q, F>,
   reduce: (init: T, rest: F) => T | void | undefined | null
@@ -622,7 +680,7 @@ export function reduceRuleGet<Q extends BaseQue<any, any>, T, F>(
   }
 }
 
-export function ruleGetTranslate<A extends BaseQue<any, any>, T, F>(
+export function ruleGetTranslate<A extends BaseQue<any>, T, F>(
   parseFunGet: ParseFunGet<A, T>,
   translate: (t: T) => F
 ): ParseFunGet<A, F> {
@@ -633,7 +691,7 @@ export function ruleGetTranslate<A extends BaseQue<any, any>, T, F>(
         const v = translate(out.value)
         return success(v, out.end)
       } catch (err) {
-        return new ParseError(err as string)
+        return error(err as string)
       }
     }
     return out
@@ -646,7 +704,7 @@ export const ruleGetString: RuleCallback<Que, string> = function (begin, end) {
 
 export const whiteList = ' \r\n\t'.split('')
 const whiteSpaceMatch = orMatch(
-  ...whiteList.map(v => match(v))
+  ...whiteList.map(v => matchAnyString(v))
 )
 export const whiteSpaceRule = manyMatch(
   whiteSpaceMatch,

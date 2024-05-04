@@ -1,11 +1,11 @@
 
 
 
-import { Reorder, pointZero, ReorderChild, Box, Point, emptyFun, AnimateFrameModel, reorderCheckTarget, arrayToMove, ReducerWithDispatchResult, ReducerDispatch, easeFns, mapReducerDispatchList, AnimationConfig, PointKey } from "wy-helper"
+import { pointZero, ReorderChild, Box, Point, emptyFun, AnimateFrameModel, reorderCheckTarget, arrayToMove, ReducerWithDispatchResult, ReducerDispatch, mapReducerDispatchList, AnimationConfig, PointKey } from "wy-helper"
 import { getPageOffset } from "./util"
 import { AnimateNumberFrameAction, animateNumberFrameReducer, subscribeRequestAnimationFrame } from "./animation"
 
-export function getDiffOnScroll(change: (p: Point) => void) {
+export function getChangeOnScroll(change: (p: Point) => void) {
   let lastScroll = pointZero
   return function (container: HTMLElement) {
     const top = container.scrollTop

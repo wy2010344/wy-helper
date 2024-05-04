@@ -1,15 +1,17 @@
-import { quote } from "../util"
-import { Que, andMatch, andRuleGet, manyMatch, manyRuleGet, match, matchEnd, matchToEnd, notMathChar, orMatch, orRuleGet, ruleGet } from "./tokenParser"
+import { emptyArray, quote } from "../util"
+import { Que, andMatch, andRuleGet, manyMatch, manyRuleGet, matchAnyString, matchCharNotIn, matchEnd, matchToEnd, orMatch, orRuleGet, ruleGet } from "./tokenParser"
 
+
+export const anyChar = matchCharNotIn()
 export function ruleStrBetween(begin: string, end = begin) {
   const matchTheEnd = matchToEnd(end)
   return andMatch(
-    match(begin),
+    matchAnyString(begin),
     manyMatch(
       orMatch(
-        match('\\\\'),
-        match(`\\${end[0]}`),
-        notMathChar()
+        matchAnyString('\\\\'),
+        matchAnyString(`\\${end[0]}`),
+        anyChar
       ),
       0,
       matchTheEnd,
@@ -18,7 +20,7 @@ export function ruleStrBetween(begin: string, end = begin) {
     //可能结束了,但没有闭合
     orMatch(
       matchEnd,
-      match(end)
+      matchAnyString(end)
     )
   )
 }
@@ -31,17 +33,17 @@ export function ruleStrBetweenGet(
   const matchTheEnd = matchToEnd(end)
   return andRuleGet(
     [
-      ruleGet<Que, Que>(match(begin), quote),
+      ruleGet<Que, Que>(matchAnyString(begin), quote),
       manyRuleGet(
         orRuleGet(
           [
-            ruleGet(match('\\\\'), function (que) {
+            ruleGet(matchAnyString('\\\\'), function (que) {
               return '\\'
             }),
-            ruleGet(match(`\\${end[0]}`), function (que) {
+            ruleGet(matchAnyString(`\\${end[0]}`), function (que) {
               return end[0]
             }),
-            ruleGet(notMathChar(), function (que) {
+            ruleGet(anyChar, function (que) {
               return que.content[que.i]
             })
           ]
@@ -53,7 +55,7 @@ export function ruleStrBetweenGet(
       //可能结束了,但没有闭合
       ruleGet(orMatch(
         matchEnd,
-        match(end)
+        matchAnyString(end)
       ), quote)
     ],
     function (a, b, c) {
@@ -73,15 +75,15 @@ export function ruleStrBetweenPart(
   const matchTheEnd = matchToEnd(inBegin, end)
   return andMatch(
     orMatch(
-      match(begin),
-      match(inEnd),
+      matchAnyString(begin),
+      matchAnyString(inEnd),
     ),
     manyMatch(
       orMatch(
-        match('\\\\'),//+2
-        match(`\\${end[0]}`),//+1
-        match(`\\${inBegin[0]}`),//+1
-        notMathChar(),//每次加1
+        matchAnyString('\\\\'),//+2
+        matchAnyString(`\\${end[0]}`),//+1
+        matchAnyString(`\\${inBegin[0]}`),//+1
+        anyChar,//每次加1
       ),
       0,
       matchTheEnd,
@@ -90,8 +92,8 @@ export function ruleStrBetweenPart(
     //可能结束了,但没有闭合
     orMatch(
       matchEnd,
-      match(end),
-      match(inBegin)
+      matchAnyString(end),
+      matchAnyString(inBegin)
     )
   )
 }
@@ -109,18 +111,18 @@ export function ruleStrBetweenPartGet(
     [
       ruleGet(
         orMatch(
-          match(begin),
-          match(inEnd),
+          matchAnyString(begin),
+          matchAnyString(inEnd),
         ),
         quote
       ),
       manyRuleGet(
         orRuleGet(
           [
-            ruleGet(match('\\\\'), v => '\\'),
-            ruleGet(match(`\\${end[0]}`), v => end[0]),
-            ruleGet(match(`\\${inBegin[0]}`), v => inBegin[0]),
-            ruleGet(notMathChar(), function (que) {
+            ruleGet(matchAnyString('\\\\'), v => '\\'),
+            ruleGet(matchAnyString(`\\${end[0]}`), v => end[0]),
+            ruleGet(matchAnyString(`\\${inBegin[0]}`), v => inBegin[0]),
+            ruleGet(anyChar, function (que) {
               return que.content[que.i]
             })
           ]
@@ -132,8 +134,8 @@ export function ruleStrBetweenPartGet(
       ruleGet(
         orMatch(
           matchEnd,
-          match(end),
-          match(inBegin)
+          matchAnyString(end),
+          matchAnyString(inBegin)
         ),
         quote
       )

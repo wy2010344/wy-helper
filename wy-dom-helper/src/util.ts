@@ -37,31 +37,68 @@ function createFileInput(id?: string) {
   return input;
 }
 export function chooseFileThen({
+  multiple,
   accept,
   onChange,
 }: {
+  multiple?: boolean
   accept?: string;
-  onChange(file: File): Promise<any>;
+  onChange(...files: File[]): Promise<any>;
 }) {
   const input = createFileInput();
   if (accept) {
     input.setAttribute("accept", accept);
   }
+  if (multiple) {
+    input.multiple = true
+  }
   input.addEventListener("change", async function (e) {
-    const file = input.files?.[0];
-    if (file) {
-      await onChange(file);
+    if (input.files?.length) {
+      await onChange(...toList(input.files));
     }
     input.remove();
   });
   input.click();
 }
 
+function toList(files: FileList) {
+  const vs: File[] = []
+  for (let i = 0; i < files.length; i++) {
+    const v = files.item(i)
+    if (v) {
+      vs.push(v)
+    }
+  }
+  return vs
+}
+
+
 export function cns(...vs: (string | null | undefined | boolean)[]) {
   return vs.filter((v) => v).join(" ");
 }
 
 
+export function readFileAs(file: File, as: "dataUrl"): Promise<string>
+export function readFileAs(file: File, as: "arrayBuffer"): Promise<ArrayBuffer>
+export function readFileAs(file: File): Promise<string>
+export function readFileAs(file: File, as?: "dataUrl" | "arrayBuffer") {
+  return new Promise(function (resolve, reject) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      resolve(reader.result)
+    };
+    reader.onerror = function (e) {
+      reject(reader.error)
+    }
+    if (as == 'arrayBuffer') {
+      reader.readAsArrayBuffer(file)
+    } else if (as == 'dataUrl') {
+      reader.readAsDataURL(file)
+    } else {
+      reader.readAsText(file)
+    }
+  })
+}
 
 export function delayAnimationFrame() {
   return new Promise(resolve => {
