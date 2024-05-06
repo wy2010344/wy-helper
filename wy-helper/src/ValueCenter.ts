@@ -192,3 +192,21 @@ export function mapReducerDispatchList<A, B>(
     }
   }
 }
+export function mapReducerDispatchListA<A, B, D>(
+  data: A[],
+  getDispatch: (v: A) => ReducerDispatch<D>,
+  map: (d: D, a: A) => B,
+): ReducerDispatch<B> {
+  if (data.length) {
+    return function (dispatch) {
+      data.forEach(function (row) {
+        const act = getDispatch(row)
+        if (act) {
+          act(function (value) {
+            dispatch(map(value, row))
+          })
+        }
+      })
+    }
+  }
+}

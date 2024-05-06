@@ -1,3 +1,4 @@
+import { GetValue } from '../setStateHelper'
 import { emptyFun } from '../util'
 import { ParseFun, BaseQue, error, Que, matchCharIn, matchAnyString, matchCharNotIn, ParseFunGet, ParserSuccess, success } from './tokenParser'
 export function parseSkip<Q extends BaseQue<any>>(
@@ -11,25 +12,44 @@ export function parseGet<Q extends BaseQue<any>, T>(
   callback: (begin: Q, end: Q) => T,
   message = ''
 ) {
-  const lastQue = stacks[0] as Q
+  const lastQue = currentQue as Q
   const end = fun(lastQue)
   if (end) {
-    stacks.unshift(end)
+    currentQue = end
     return callback(lastQue, end)
   } else {
     throw error(message)
   }
 }
-const stacks: BaseQue<any>[] = []
-export function runParse<T>(value: string, fun: () => T) {
-  try {
-    stacks.unshift(new Que(value, 0))
-    return fun()
-  } finally {
-    stacks.length = 0
+
+export function parseTop<Fun extends (...vs: any[]) => any>(fun: Fun, message = '') {
+  return (...vs: Parameters<Fun>) => {
+    try {
+      return fun(...vs)
+    } catch (err) {
+      if (currentQue!.allowLog) {
+        console.log(message)
+      }
+      throw err
+    }
   }
 }
 
+let currentQue: BaseQue<any> | undefined = undefined
+export function runParse<T>(value: string, fun: () => T, debug?: boolean) {
+  try {
+    currentQue = new Que(value, 0)
+    if (debug) {
+      currentQue.allowLog = true
+    }
+    return fun()
+  } finally {
+    currentQue = undefined
+  }
+}
+export function getCurrentQue() {
+  return currentQue
+}
 
 export function or<T1, T2>(
   vs: [
@@ -80,14 +100,17 @@ export function or(
   vs: (() => any)[],
   message = ''
 ) {
-  const length = stacks.length
+  const keepQue = currentQue!
   for (const v of vs) {
     try {
       return v()
     } catch (err) {
       //忽略并回滚
-      stacks.length = length
+      currentQue = keepQue
     }
+  }
+  if (keepQue.allowLog) {
+    console.log(message)
   }
   throw error(message)
 }
@@ -95,36 +118,6 @@ export function or(
 
 
 
-
-export function ruleStrBetweenGet1(
-  begin: number,
-  end: number = begin
-) {
-  parseSkip(matchCharIn(begin))
-  const endChar = String.fromCharCode(end)
-  const list: string[] = []
-  while (true) {
-    const value = or([
-      () => {
-        return parseGet(matchAnyString('\\\\'), () => '\\')
-      },
-      () => {
-        return parseGet(matchAnyString(`\\${endChar}`), () => endChar)
-      },
-      () => {
-        return parseGet(matchCharNotIn(end), begin => begin.current())
-      },
-      emptyFun
-    ])
-    if (value) {
-      list.push(value)
-    } else {
-      break
-    }
-  }
-  parseSkip(matchCharIn(end))
-  return list.join('')
-}
 
 // Generator并不是很好标注类型
 // type ParseGet<Q extends BaseQue<any>, T> = (que: Q) => ParserSuccess<Q, T>

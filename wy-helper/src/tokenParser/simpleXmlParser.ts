@@ -82,7 +82,7 @@ const argRuleGet: ParseFunGet<Que, {
         andRuleGet(
           [
             ruleGet(matchAnyString('='), quote),
-            ruleStrBetweenGet('"')
+            ruleStrBetweenGet('"'.charCodeAt(0))
           ],
           function (a, b) {
             return b

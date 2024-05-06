@@ -72,6 +72,10 @@ export class KVar {
   }
 }
 
+/**
+ * 只需要扩展KEqual,列表都用Pair去模拟而不是js的Array,js的Array无递归友好性.
+ * 即只需要扩展原子
+ */
 export abstract class KEqual {
   abstract equals(b: any): any
 }
@@ -381,7 +385,7 @@ export function match(base: Record<string, any>, query: Record<string, any>): Go
 }
 
 
-/****在作用域上隐式add***************************/
+/*****************************在作用域上隐式add,感觉意义不太,并不太方便,特别是取反麻烦******************************/
 
 export function add(goal: Goal<KSubsitution>) {
   if (!globalStreams.length) {
