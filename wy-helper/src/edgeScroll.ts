@@ -37,53 +37,45 @@ export type EdgeScrollConfig = {
   x?: EdgeScrollBox
   y?: EdgeScrollBox
 }
-export class EdgeScroll {
-  currentPoint: Point | undefined = undefined
-  setPoint(point?: Point) {
-    this.currentPoint = point
+export function edgeScrollChange(
+  cp: Point,
+  getRect: () => {
+    top: number
+    left: number
+    right: number
+    bottom: number
+  },
+  config: EdgeScrollConfig,
+  set: (dir: 'top' | 'left', diff: number) => void
+) {
+  const rect = getRect()
+  const padding = config.padding || 0
+  const yMin = getCfg(padding, 'min', config.y)
+  if (yMin) {
+    const diffTop = rect.top + yMin.padding - cp.y
+    if (diffTop > 0) {
+      set('top', -diffTop)
+    }
   }
-  change(
-    getRect: () => {
-      top: number
-      left: number
-      right: number
-      bottom: number
-    },
-    config: EdgeScrollConfig,
-    set: (dir: 'top' | 'left', diff: number) => void
-  ) {
-    const cp = this.currentPoint
-    if (cp) {
-      const rect = getRect()
-      const padding = config.padding || 0
-      const yMin = getCfg(padding, 'min', config.y)
-      if (yMin) {
-        const diffTop = rect.top + yMin.padding - cp.y
-        if (diffTop > 0) {
-          set('top', -diffTop)
-        }
-      }
-      const yMax = getCfg(padding, 'max', config.y)
-      if (yMax) {
-        const diffBottom = rect.bottom - yMax.padding - cp.y
-        if (diffBottom < 0) {
-          set('top', -diffBottom)
-        }
-      }
-      const xMin = getCfg(padding, 'min', config.x)
-      if (xMin) {
-        const diffLeft = rect.left + xMin.padding - cp.x
-        if (diffLeft > 0) {
-          set('left', -diffLeft)
-        }
-      }
-      const xMax = getCfg(padding, 'max', config.x)
-      if (xMax) {
-        const diffRight = rect.right - xMax.padding - cp.x
-        if (diffRight < 0) {
-          set('left', -diffRight)
-        }
-      }
+  const yMax = getCfg(padding, 'max', config.y)
+  if (yMax) {
+    const diffBottom = rect.bottom - yMax.padding - cp.y
+    if (diffBottom < 0) {
+      set('top', -diffBottom)
+    }
+  }
+  const xMin = getCfg(padding, 'min', config.x)
+  if (xMin) {
+    const diffLeft = rect.left + xMin.padding - cp.x
+    if (diffLeft > 0) {
+      set('left', -diffLeft)
+    }
+  }
+  const xMax = getCfg(padding, 'max', config.x)
+  if (xMax) {
+    const diffRight = rect.right - xMax.padding - cp.x
+    if (diffRight < 0) {
+      set('left', -diffRight)
     }
   }
 }

@@ -1,16 +1,52 @@
-import { emptyArray, quote } from "../util"
-import { Que, andMatch, andRuleGet, manyMatch, manyRuleGet, matchAnyString, matchCharNotIn, matchEnd, matchToEnd, orMatch, orRuleGet, ruleGet } from "./tokenParser"
+import { emptyArray, emptyFun, quote } from "../util"
+import { getCurrentQue, or, parseGet, parseSkip } from "./parse"
+import { Que, andMatch, andRuleGet, manyMatch, manyRuleGet, matchAnyString, matchCharIn, matchCharNotIn, matchEnd, matchToEnd, orMatch, orRuleGet, ruleGet } from "./tokenParser"
 
 
 export const anyChar = matchCharNotIn()
-export function ruleStrBetween(begin: string, end = begin) {
-  const matchTheEnd = matchToEnd(end)
+
+
+export function ruleStrBetweenGet1(
+  begin: number,
+  end: number = begin
+) {
+  const beginQue = getCurrentQue() as Que
+  parseSkip(matchCharIn(begin))
+  const endChar = String.fromCharCode(end)
+  const list: string[] = []
+  while (true) {
+    const value = or([
+      () => {
+        return parseGet(matchAnyString('\\\\'), () => '\\')
+      },
+      () => {
+        return parseGet(matchAnyString(`\\${endChar}`), () => endChar)
+      },
+      () => {
+        return parseGet(matchCharNotIn(end), begin => begin.current())
+      },
+      emptyFun
+    ])
+    if (value) {
+      list.push(value)
+    } else {
+      break
+    }
+  }
+  parseSkip(matchCharIn(end))
+  const endQue = getCurrentQue() as Que
+  return [list.join(''), beginQue, endQue] as const
+}
+
+export function ruleStrBetween(begin: number, end = begin) {
+  const endChar = String.fromCharCode(end)
+  const matchTheEnd = matchToEnd(endChar)
   return andMatch(
-    matchAnyString(begin),
+    matchCharIn(begin),
     manyMatch(
       orMatch(
         matchAnyString('\\\\'),
-        matchAnyString(`\\${end[0]}`),
+        matchAnyString(`\\${endChar}`),
         anyChar
       ),
       0,
@@ -20,28 +56,28 @@ export function ruleStrBetween(begin: string, end = begin) {
     //可能结束了,但没有闭合
     orMatch(
       matchEnd,
-      matchAnyString(end)
+      matchCharIn(end)
     )
   )
 }
 
 export function ruleStrBetweenGet(
-  begin: string,
+  begin: number,
   end = begin,
 ) {
-
-  const matchTheEnd = matchToEnd(end)
+  const endChar = String.fromCharCode(end)
+  const matchTheEnd = matchToEnd(endChar)
   return andRuleGet(
     [
-      ruleGet<Que, Que>(matchAnyString(begin), quote),
+      ruleGet<Que, Que>(matchCharIn(begin), quote),
       manyRuleGet(
         orRuleGet(
           [
             ruleGet(matchAnyString('\\\\'), function (que) {
               return '\\'
             }),
-            ruleGet(matchAnyString(`\\${end[0]}`), function (que) {
-              return end[0]
+            ruleGet(matchAnyString(`\\${endChar}`), function (que) {
+              return endChar
             }),
             ruleGet(anyChar, function (que) {
               return que.content[que.i]
@@ -55,7 +91,7 @@ export function ruleStrBetweenGet(
       //可能结束了,但没有闭合
       ruleGet(orMatch(
         matchEnd,
-        matchAnyString(end)
+        matchCharIn(end)
       ), quote)
     ],
     function (a, b, c) {

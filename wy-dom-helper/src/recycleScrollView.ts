@@ -116,10 +116,10 @@ export const initRecycleListModel: RecycleListModel = {
   index: 0
 }
 
-type RecycleResult = ReducerWithDispatchResult<RecycleListModel, Action>
+type RecycleResult = ReducerWithDispatchResult<RecycleListModel, RecycleScrollAction>
 
 
-function transNumberToScrollView(value: AnimateNumberFrameAction): Action {
+function transNumberToScrollView(value: AnimateNumberFrameAction): RecycleScrollAction {
   return {
     type: "changeTransY",
     value
@@ -179,7 +179,7 @@ function updateIndex(model: RecycleListModel, idx: number, config: AnimationConf
         })
       }
  */
-type Action = {
+export type RecycleScrollAction = {
   type: "init"
   transY: number
   size: number
@@ -201,7 +201,7 @@ type Action = {
   type: "changeTransY"
   value: AnimateNumberFrameAction
 }
-export const recycleScrollListReducer: ReducerWithDispatch<RecycleListModel, Action> = (model, action) => {
+export const recycleScrollListReducer: ReducerWithDispatch<RecycleListModel, RecycleScrollAction> = (model, action) => {
   if (action.type == 'init') {
     return [{
       ...model,

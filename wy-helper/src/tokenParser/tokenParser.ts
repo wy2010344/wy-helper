@@ -309,6 +309,27 @@ export class ParseError extends Error {
 export function error(message: string) {
   return new ParseError(message)
 }
+
+
+
+
+export const ruleGetString: RuleCallback<Que, string> = function (begin, end) {
+  return begin.content.slice(begin.i, end.i)
+}
+
+export const whiteList = ' \r\n\t'.split('')
+const whiteSpaceMatch = orMatch(
+  ...whiteList.map(v => matchAnyString(v))
+)
+export const whiteSpaceRule = manyMatch(
+  whiteSpaceMatch,
+  1
+)
+
+export const whiteSpaceRuleZero = manyMatch(
+  whiteSpaceMatch
+)
+
 ////////////////////////////////////////////////////////////////////////////////////////////////**************//////////////////////////////////////////////////////////////////////
 export class ParserSuccess<Q extends BaseQue<any>, T> {
   constructor(
@@ -697,24 +718,6 @@ export function ruleGetTranslate<A extends BaseQue<any>, T, F>(
     return out
   }
 }
-
-export const ruleGetString: RuleCallback<Que, string> = function (begin, end) {
-  return begin.content.slice(begin.i, end.i)
-}
-
-export const whiteList = ' \r\n\t'.split('')
-const whiteSpaceMatch = orMatch(
-  ...whiteList.map(v => matchAnyString(v))
-)
-export const whiteSpaceRule = manyMatch(
-  whiteSpaceMatch,
-  1
-)
-
-export const whiteSpaceRuleZero = manyMatch(
-  whiteSpaceMatch
-)
-
 
 export function arraySplitInto<T>(vs: T[], fun: (v: T) => any) {
   let lastSplit: T | undefined = undefined
