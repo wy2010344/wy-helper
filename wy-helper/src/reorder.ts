@@ -1,4 +1,6 @@
-import { arrayFindIndexFrom } from "./ArrayHelper"
+import { arrayFindIndexFrom, arrayToMove } from "./ArrayHelper"
+import { ReducerDispatch, ReducerWithDispatch, ReducerWithDispatchResult, mapReducerDispatchListA } from "./ValueCenter"
+import { AnimateFrameModel, AnimateNumberFrameAction, AnimationConfig } from "./animation"
 import { arrayReduceRight } from "./equal"
 import { Box, Point, PointKey, boxEqual } from "./geometry"
 import { EmptyFun, ReadArray } from "./util"
@@ -64,7 +66,7 @@ export function reorderCheckTarget<T>(
     }
   }
   if (flagIndex != index) {
-    return order[flagIndex]
+    return [index, flagIndex] as const
   }
 }
 
@@ -98,7 +100,9 @@ export class Reorder<K = any> {
       offset[this.direction],
       diff[this.direction])
     if (item) {
-      this.moveItem(key, item.value)
+      const [index, targetIndex] = item
+      this.moveItem(key, this.layoutList[targetIndex].value)
+      return true
     }
   }
   constructor(
@@ -148,6 +152,7 @@ export class Reorder<K = any> {
   }
   /**注册 */
   registerItem(value: K, axis: Box) {
+    //依赖于requestAnimationFrame等去获得实时坐标,并不能完全对等
     const order = this.layoutList
     const idx = order.findIndex((entry) => value === entry.value)
     if (idx !== -1) {
@@ -235,6 +240,7 @@ export class ReorderChild<K> {
       }
     }
   }
+  private lock = false
   setMoveDiff(diff: Point) {
     const trans = this.getTrans()
     const offset = {
@@ -242,7 +248,15 @@ export class ReorderChild<K> {
       y: trans.y + diff.y
     }
     this.changeTo(offset)
-    this.parent.checkToMove(this.key, offset, diff)
+    if (this.lock) {
+      return
+    }
+    if (this.parent.checkToMove(this.key, offset, diff)) {
+      this.lock = true
+    }
+  }
+  releaseLock() {
+    this.lock = false
   }
   start(loc: Point, onFinish: EmptyFun) {
     this.parent.setMoveV({
@@ -250,5 +264,261 @@ export class ReorderChild<K> {
       currentItem: this,
       onFinish
     })
+  }
+}
+
+
+
+
+
+export type ReorderModelRow<T> = {
+  transY: AnimateFrameModel<number>
+  value: T
+}
+export type ReorderModel<T, K> = {
+  onMove?: {
+    key: K
+    info?: {
+      beginPoint: Point
+      lastPoint: Point
+    }
+  }
+  list: ReorderModelRow<T>[]
+}
+
+
+export type ReorderAction<K, E> = {
+  type: "moveBegin"
+  key: K
+  point: Point
+} | {
+  type: "didMove"
+  point: Point
+  elements: Element<K, E>[]
+  end?: AnimationConfig
+} | {
+  type: "changeY"
+  key: K
+  value: AnimateNumberFrameAction
+} | {
+  type: "changeDiff"
+  elements: Element<K, E>[]
+  diffY: number
+} | {
+  type: "layout",
+  key: K
+  offset: number
+  config: AnimationConfig
+}
+
+type Element<K, E> = {
+  key: K,
+  div: E
+}
+
+
+function rangeBetween(idx: number, idx1: number, callback: (i: number) => void) {
+  if (idx < idx1) {
+    for (let i = idx; i < idx1; i++) {
+      callback(i)
+    }
+  } else {
+    for (let i = idx; i > idx1; i--) {
+      callback(i)
+    }
+  }
+}
+
+class MergeAction<K> {
+  onMoveList: {
+    key: K,
+    value: ReducerDispatch<AnimateNumberFrameAction>
+  }[] = []
+  append(index: K, v: ReducerDispatch<AnimateNumberFrameAction>) {
+    this.onMoveList.push({
+      key: index,
+      value: v
+    })
+  }
+  merge() {
+    return mapReducerDispatchListA(this.onMoveList,
+      v => v.value,
+      function (d, a) {
+        return {
+          type: "changeY",
+          key: a.key,
+          value: d
+        } as const
+      })
+  }
+}
+
+function getElementKey<K, E>(element: Element<K, E>) {
+  return element.key
+}
+export function createReorderReducer<T, K, E>(
+  getKey: (v: T) => K,
+  config: AnimationConfig,
+  animateNumberFrameReducer: ReducerWithDispatch<AnimateFrameModel<number>, AnimateNumberFrameAction>,
+  getHeight: (e: E) => number,
+  getDiffHeight: (after: E, before: E) => number
+) {
+  function getElementHeight(v: Element<K, E>) {
+    return getHeight(v.div)
+  }
+  function changeDiff(
+    ma: MergeAction<K>,
+    model: ReorderModel<T, K>,
+    key: K,
+    diffY: number,
+    elements: Element<K, E>[]
+  ) {
+    let ty = 0
+    let newList = model.list.map(row => {
+      if (getKey(row.value) == key) {
+        ty = row.transY.value + diffY
+        const [transY, onMove] = animateNumberFrameReducer(row.transY, {
+          type: "changeTo",
+          target: ty
+        })
+        return {
+          ...row,
+          transY
+        }
+      }
+      return row
+    })
+    const target = reorderCheckTarget(
+      elements,
+      getElementKey,
+      getElementHeight,
+      key,
+      ty,
+      diffY
+    )
+    if (target) {
+      const [idx, idx1] = target
+      newList = arrayToMove(newList, idx, idx1)
+      const diffHeight = getDiffHeight(elements[idx1].div, elements[idx].div)
+      //2->4,3-2,4-3
+      //4->2,3-4,2-3
+      rangeBetween(idx, idx1, function (i) {
+        const row = newList[i]
+        if (!row.transY.animateTo) {
+          const [transY, onMove] = animateNumberFrameReducer(row.transY, {
+            type: "changeTo",
+            from: diffHeight,
+            target: 0,
+            config
+          })
+          ma.append(getKey(row.value), onMove)
+          newList[i] = {
+            ...row,
+            transY
+          }
+        }
+      })
+      const row = newList[idx1]
+      //部分改变,因为本身有偏移
+      const [transY, onMove] = animateNumberFrameReducer(row.transY, {
+        type: "silentDiff",
+        value: -diffHeight
+      })
+      newList[idx1] = {
+        ...row,
+        transY
+      }
+    }
+    return newList
+  }
+  return function <M extends ReorderModel<T, K>>(model: M, action: ReorderAction<K, E>): ReducerWithDispatchResult<M, ReorderAction<K, E>> {
+    if (action.type == "changeY") {
+      const ma = new MergeAction<K>()
+      let stillOnMove = true
+      const newList = model.list.map(row => {
+        if (getKey(row.value) == action.key) {
+          const [transY, onMove] = animateNumberFrameReducer(row.transY, action.value)
+          if (onMove) {
+            ma.append(action.key, onMove)
+          } else if (model.onMove?.key == action.key) {
+            stillOnMove = false
+          }
+          return {
+            ...row,
+            transY
+          }
+        }
+        return row
+      })
+      return [{
+        ...model,
+        list: newList,
+        onMove: stillOnMove ? model.onMove : undefined
+      }, ma.merge()]
+    } else if (action.type == "moveBegin") {
+      return [{
+        ...model,
+        onMove: {
+          key: action.key,
+          info: {
+            beginPoint: action.point,
+            lastPoint: action.point
+          }
+        }
+      }, undefined]
+    } else if (action.type == "changeDiff") {
+      if (model.onMove?.info) {
+        const ma = new MergeAction<K>()
+        const newList = changeDiff(ma, model, model.onMove.key, action.diffY, action.elements)
+        return [{
+          ...model,
+          list: newList
+        }, ma.merge()]
+      }
+    } else if (action.type == "didMove") {
+      if (model.onMove?.info) {
+        const index = model.onMove.key
+        const info = model.onMove.info
+        const ma = new MergeAction<K>()
+        const diffY = action.point.y - info.lastPoint.y
+        let newList = changeDiff(ma, model, index, diffY, action.elements);
+        if (action.end) {
+          newList = newList.map(row => {
+            if (getKey(row.value) == index) {
+              const [transY, onMove] = animateNumberFrameReducer(row.transY, {
+                type: "changeTo",
+                target: 0,
+                config: action.end
+              })
+              ma.append(index, onMove)
+              return {
+                ...row,
+                transY
+              }
+            }
+            return row
+          })
+        }
+        return [
+          {
+            ...model,
+            list: newList,
+            onMove: action.end
+              ? {
+                ...model.onMove,
+                info: undefined
+              }
+              : {
+                ...model.onMove,
+                info: {
+                  ...model.onMove.info,
+                  lastPoint: action.point
+                }
+              }
+          },
+          ma.merge()]
+      }
+    }
+    return [model, undefined]
   }
 }

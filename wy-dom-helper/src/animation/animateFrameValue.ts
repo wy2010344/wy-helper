@@ -1,4 +1,4 @@
-import { AnimateFrameChangeTo, AnimateFrameModel, AnimateLatestConfig, EmptyFun, FrameTick, ReadValueCenter, Reducer, ReducerWithDispatch, SetValue, ValueCenter, animateFrameReducer, colorEqual, emptyArray, emptyFun, emptyObject, mixColor, mixNumber, simpleEqual, valueCenterOf } from "wy-helper"
+import { ReadValueCenter, SetValue, ValueCenter, animateFrameReducer, colorEqual, createAnimateNumberFrameReducer, emptyFun, emptyObject, mixColor, mixNumber, simpleEqual, valueCenterOf } from "wy-helper"
 import { AnimationConfig } from "wy-helper"
 
 
@@ -194,40 +194,6 @@ export function animateNumberSilientChangeTo(n: AnimateFrameValue<number>, value
 
 
 export const animateColorFrame = buildAnimateFrame(colorEqual, mixColor)
-
-
-
-const numberReducer = animateFrameReducer(simpleEqual, mixNumber, requestAnimationFrame)
-
-export type AnimateNumberFrameAction = AnimateFrameChangeTo<number> | {
-  type: "silentDiff",
-  value: number
-} | FrameTick
-export const animateNumberFrameReducer: ReducerWithDispatch<AnimateFrameModel<number>, AnimateNumberFrameAction> = function (old, act) {
-  if (act.type == "silentDiff") {
-    const diff = act.value
-    if (diff != 0) {
-      const value = old.value + diff
-      if (old.animateTo) {
-        return [{
-          ...old,
-          value,
-          animateTo: {
-            ...old.animateTo,
-            from: old.animateTo.from + diff,
-            target: old.animateTo.target + diff
-          }
-        }, undefined]
-      }
-      return [{
-        ...old,
-        value
-      }, undefined]
-    }
-  } else {
-    return numberReducer(old, act)
-  }
-  return [old, undefined]
-}
+export const animateNumberFrameReducer = createAnimateNumberFrameReducer(requestAnimationFrame)
 export const animateColorFrameReducer = animateFrameReducer(colorEqual, mixColor, requestAnimationFrame)
 
