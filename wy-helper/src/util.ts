@@ -3,7 +3,58 @@
 export type FalseType = false | undefined | null | 0 | "" | void
 export type EmptyFun = (...vs: any[]) => void
 export function quote<T>(v: T, ...vs: any[]) { return v }
-export const objectFreeze = 'freeze' in Object ? Object.freeze.bind(Object) : quote
+export function run<T extends AnyFunction>(
+  fun: T
+) {
+  return fun()
+}
+
+class FreezeError extends Error {
+}
+export const objectFreeze: <T extends Object>(v: T) => T = run(() => {
+  if (globalThis.Proxy) {
+    return (a: object) => {
+      return new Proxy(a, {
+        set(target, p, newValue, receiver) {
+          throw new FreezeError("don't allow set value")
+        },
+      })
+    }
+  }
+  return 'freeze' in Object ? Object.freeze.bind(Object) : quote
+})
+// 检查对象是否是代理对象
+function isProxy(obj: any) {
+  return !!obj && obj instanceof Object && !!obj.constructor && obj.constructor.name === 'Proxy';
+};
+export function objectDeepFreeze<T>(n: T) {
+  if (typeof n == 'object' && n) {
+    if (isProxy(n) || Object.isFrozen(n)) {
+      return n
+    }
+    try {
+      if (Array.isArray(n)) {
+        for (let i = 0; i < n.length; i++) {
+          n[i] = objectDeepFreeze(n[i])
+        }
+      } else {
+        for (const key in n) {
+          n[key] = objectDeepFreeze(n[key])
+        }
+      }
+      return objectFreeze(n)
+    } catch (err) {
+      if (err instanceof FreezeError) {
+        //忽略
+      } else {
+        throw err
+      }
+    }
+  }
+  return n
+}
+
+
 
 export const emptyArray = objectFreeze([]) as readonly any[]
 export function getTheEmptyArray<T>() {
@@ -21,11 +72,6 @@ export function expandFunCall<T extends AnyFunction>(
   fun: T
 ) {
   fun()
-}
-export function run<T extends AnyFunction>(
-  fun: T
-) {
-  return fun()
 }
 export interface ManageValue<T> {
   add(v: T): void

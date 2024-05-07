@@ -1,5 +1,7 @@
 import { AnimationConfig, ReducerDispatch, ReducerWithDispatch, SetValue } from ".."
 import { arrayFunToOneOrEmpty } from '../ArrayHelper'
+import { simpleEqual } from '../equal'
+import { mixNumber } from '../NumberHelper'
 export type AnimateFrameModel<T> = {
   version: number
   value: T
@@ -126,3 +128,39 @@ export function animateFrameReducer<T>(
   }
 }
 
+
+
+export type AnimateNumberFrameAction = AnimateFrameChangeTo<number> | {
+  type: "silentDiff",
+  value: number
+} | FrameTick
+export function createAnimateNumberFrameReducer(requestAnimationFrame: (v: SetValue<number>) => void) {
+  const numberReducer = animateFrameReducer(simpleEqual, mixNumber, requestAnimationFrame)
+  const animateNumberFrameReducer: ReducerWithDispatch<AnimateFrameModel<number>, AnimateNumberFrameAction> = function (old, act) {
+    if (act.type == "silentDiff") {
+      const diff = act.value
+      if (diff != 0) {
+        const value = old.value + diff
+        if (old.animateTo) {
+          return [{
+            ...old,
+            value,
+            animateTo: {
+              ...old.animateTo,
+              from: old.animateTo.from + diff,
+              target: old.animateTo.target + diff
+            }
+          }, undefined]
+        }
+        return [{
+          ...old,
+          value
+        }, undefined]
+      }
+    } else {
+      return numberReducer(old, act)
+    }
+    return [old, undefined]
+  }
+  return animateNumberFrameReducer
+}

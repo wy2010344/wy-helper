@@ -1,5 +1,5 @@
-import { AnimateFrameModel, AnimationConfig, EaseFn, EmptyFun, FrameTick, MomentumCallIdeal, Reducer, ReducerDispatch, ReducerWithDispatch, ReducerWithDispatchResult, SetValue, arrayFunToOneOrEmpty, buildNoEdgeScroll, emptyArray, emptyFun, mapReducerDispatch, mapReducerDispatchList } from "wy-helper";
-import { AnimateFrameEvent, AnimateNumberFrameAction, animateNumberFrame, animateNumberFrameReducer, animateNumberSilientChangeDiff } from "./animation";
+import { AnimateFrameModel, AnimateNumberFrameAction, AnimationConfig, EaseFn, EmptyFun, FrameTick, MomentumCallIdeal, Reducer, ReducerDispatch, ReducerWithDispatch, ReducerWithDispatchResult, SetValue, arrayFunToOneOrEmpty, buildNoEdgeScroll, emptyArray, emptyFun, mapReducerDispatch, mapReducerDispatchList } from "wy-helper";
+import { AnimateFrameEvent, animateNumberFrame, animateNumberFrameReducer, animateNumberSilientChangeDiff } from "./animation";
 
 
 
