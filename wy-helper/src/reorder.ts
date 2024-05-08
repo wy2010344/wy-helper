@@ -1,4 +1,4 @@
-import { arrayFindIndexFrom, arrayToMove } from "./ArrayHelper"
+import { arrayFindIndexFrom, arrayMove } from "./ArrayHelper"
 import { ReducerDispatch, ReducerWithDispatch, ReducerWithDispatchResult, mapReducerDispatchListA } from "./ValueCenter"
 import { AnimateFrameModel, AnimateNumberFrameAction, AnimationConfig } from "./animation"
 import { arrayReduceRight } from "./equal"
@@ -102,11 +102,17 @@ export class Reorder<K = any> {
     if (item) {
       const [index, targetIndex] = item
       this.moveItem(key, this.layoutList[targetIndex].value)
+      arrayMove(this.layoutList, index, targetIndex)
+      // const diffHeight = this.layoutList[targetIndex].layout[this.direction].min - this.layoutList[index].layout[this.direction].min
+      // rangeBetween(index, targetIndex, i => {
+      //   const layout = this.layoutList[i].layout
+      //   layout[this.direction].min
+      // })
       return true
     }
   }
   constructor(
-    //如果这里是实时的,就会有问题
+    //如果这里不是实时的,就会有一点问题
     private moveItem: (itemKey: K, baseKey: K) => void
   ) {
     this.setMoveDiff = this.setMoveDiff.bind(this)
@@ -398,7 +404,7 @@ export function createReorderReducer<T, K, E>(
     )
     if (target) {
       const [idx, idx1] = target
-      newList = arrayToMove(newList, idx, idx1)
+      newList = arrayMove(newList, idx, idx1, true)
       const diffHeight = getDiffHeight(elements[idx1].div, elements[idx].div)
       //2->4,3-2,4-3
       //4->2,3-4,2-3

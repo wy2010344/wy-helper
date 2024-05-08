@@ -34,6 +34,7 @@ export function reorderChildChangeIndex<K>(
     updateBox(axisV)
     child.animateFrame(axisV, onLayout)
   }
+  //index改变,即触发布局改变,显式调用一下.
   animateFrmae()
   child.releaseLock()
   return subscribeRequestAnimationFrame(animateFrmae)

@@ -47,7 +47,9 @@ export function objectDeepFreeze<T>(n: T) {
       if (err instanceof FreezeError) {
         //忽略
       } else {
-        throw err
+        //都忽略,比如动态import回来的模块,无法冻结
+        console.error('freeeze fail', err)
+        // throw err
       }
     }
   }
