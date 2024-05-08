@@ -94,9 +94,11 @@ export function arrayFindFrom<T>(
   return vs[index]
 }
 
-export function arrayToMove<T>(list: T[], startIndex: number, endIndex: number) {
+export function arrayMove<T>(list: T[], startIndex: number, endIndex: number, clone?: boolean) {
   'worklet';
-  list = list.slice()
+  if (clone) {
+    list = list.slice()
+  }
   const [item] = list.splice(startIndex, 1)
   list.splice(endIndex, 0, item)
   return list
