@@ -30,15 +30,24 @@ export type FrameTick = {
   time: number
 }
 
+
+export type SilentChange<T> = {
+  type: "silentDiff",
+  value: T
+}
+
+export type AnimateFrameAct<T> = AnimateFrameChangeTo<T> | FrameTick | SilentChange<T>
 export function animateFrameReducer<T>(
   equal: (a: T, b: T) => any,
   /**
    * 取百分比
    */
   mixValue: (a: T, b: T, c: number) => T,
+  /**累加 */
+  add: (a: T, b: T) => T,
   requestAnimationFrame: (v: SetValue<number>) => void
-): ReducerWithDispatch<AnimateFrameModel<T>, AnimateFrameChangeTo<T> | FrameTick> {
-  type Act = AnimateFrameChangeTo<T> | FrameTick
+): ReducerWithDispatch<AnimateFrameModel<T>, AnimateFrameAct<T>> {
+  type Act = AnimateFrameAct<T>
   function inside(
     old: AnimateFrameModel<T>,
     act: Act,
@@ -118,6 +127,24 @@ export function animateFrameReducer<T>(
           startTime: performance.now()
         }
       }
+    } else if (act.type == "silentDiff") {
+      const diff = act.value
+      const value = add(old.value, diff)
+      if (old.animateTo) {
+        return {
+          ...old,
+          value,
+          animateTo: {
+            ...old.animateTo,
+            from: add(old.animateTo.from, diff),
+            target: add(old.animateTo.target, diff)
+          }
+        }
+      }
+      return {
+        ...old,
+        value
+      }
     }
     return old
   }
@@ -126,41 +153,4 @@ export function animateFrameReducer<T>(
     const value = inside(old, act, list)
     return [value, arrayFunToOneOrEmpty(list)] as const
   }
-}
-
-
-
-export type AnimateNumberFrameAction = AnimateFrameChangeTo<number> | {
-  type: "silentDiff",
-  value: number
-} | FrameTick
-export function createAnimateNumberFrameReducer(requestAnimationFrame: (v: SetValue<number>) => void) {
-  const numberReducer = animateFrameReducer(simpleEqual, mixNumber, requestAnimationFrame)
-  const animateNumberFrameReducer: ReducerWithDispatch<AnimateFrameModel<number>, AnimateNumberFrameAction> = function (old, act) {
-    if (act.type == "silentDiff") {
-      const diff = act.value
-      if (diff != 0) {
-        const value = old.value + diff
-        if (old.animateTo) {
-          return [{
-            ...old,
-            value,
-            animateTo: {
-              ...old.animateTo,
-              from: old.animateTo.from + diff,
-              target: old.animateTo.target + diff
-            }
-          }, undefined]
-        }
-        return [{
-          ...old,
-          value
-        }, undefined]
-      }
-    } else {
-      return numberReducer(old, act)
-    }
-    return [old, undefined]
-  }
-  return animateNumberFrameReducer
 }

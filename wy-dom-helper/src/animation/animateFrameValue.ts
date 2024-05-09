@@ -1,4 +1,4 @@
-import { ReadValueCenter, SetValue, ValueCenter, animateFrameReducer, colorEqual, createAnimateNumberFrameReducer, emptyFun, emptyObject, mixColor, mixNumber, simpleEqual, valueCenterOf } from "wy-helper"
+import { ReadValueCenter, SetValue, ValueCenter, animateFrameReducer, colorAdd, colorEqual, emptyFun, emptyObject, mathAdd, mixColor, mixNumber, mixPointNumber, pointAddNumber, pointEqual, simpleEqual, valueCenterOf } from "wy-helper"
 import { AnimationConfig } from "wy-helper"
 
 
@@ -63,6 +63,8 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T> {
      * 取百分比
      */
     public readonly mixValue: (a: T, b: T, c: number) => T,
+
+    public readonly add: (a: T, b: T) => T,
     initValue: T
   ) {
     this.value = valueCenterOf(initValue)
@@ -87,6 +89,15 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T> {
       this.animateTo.reDo()
     } else {
       this.value.set(target)
+    }
+  }
+  slientDiff(diff: T) {
+    if (this.animateTo) {
+      this.animateTo.from = this.add(this.animateTo.from, diff)
+      this.animateTo.target = this.add(this.animateTo.target, diff)
+      this.animateTo.reDo()
+    } else {
+      this.value.set(this.add(this.value.get(), diff))
     }
   }
   changeTo(target: T, config?: AnimationConfig, {
@@ -163,37 +174,21 @@ export function buildAnimateFrame<T>(
   /**
    * 取百分比
    */
-  mixValue: (a: T, b: T, c: number) => T
+  mixValue: (a: T, b: T, c: number) => T,
+  add: (a: T, b: T) => T
 ) {
   return function (
     value: T
   ) {
-    return new AnimateFrameValue(equal, mixValue, value)
+    return new AnimateFrameValue(equal, mixValue, add, value)
   }
 }
 
-export const animateNumberFrame = buildAnimateFrame(simpleEqual, mixNumber)
+export const animateNumberFrame = buildAnimateFrame(simpleEqual, mixNumber, mathAdd)
+export const animateColorFrame = buildAnimateFrame(colorEqual, mixColor, colorAdd)
+export const animatePointFrame = buildAnimateFrame(pointEqual, mixPointNumber, pointAddNumber)
 
-export function animateNumberSilientChangeDiff(n: AnimateFrameValue<number>, diff: number) {
-  const ato = n.getAnimateTo()
-  if (ato) {
-    n.slientChange(ato.target + diff, ato.from + diff)
-  } else {
-    n.changeTo(n.get() + diff)
-  }
-}
-export function animateNumberSilientChangeTo(n: AnimateFrameValue<number>, value: number) {
-  const ato = n.getAnimateTo()
-  if (ato) {
-    n.slientChange(value, ato.from + value - ato.target)
-  } else {
-    n.changeTo(value)
-  }
-}
-
-
-
-export const animateColorFrame = buildAnimateFrame(colorEqual, mixColor)
-export const animateNumberFrameReducer = createAnimateNumberFrameReducer(requestAnimationFrame)
-export const animateColorFrameReducer = animateFrameReducer(colorEqual, mixColor, requestAnimationFrame)
+export const animateNumberFrameReducer = animateFrameReducer(simpleEqual, mixNumber, mathAdd, requestAnimationFrame)
+export const animateColorFrameReducer = animateFrameReducer(colorEqual, mixColor, colorAdd, requestAnimationFrame)
+export const animatePointFrameReducer = animateFrameReducer(pointEqual, mixPointNumber, pointAddNumber, requestAnimationFrame)
 

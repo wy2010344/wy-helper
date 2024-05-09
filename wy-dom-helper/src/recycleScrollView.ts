@@ -1,5 +1,5 @@
-import { AnimateFrameModel, AnimateNumberFrameAction, AnimationConfig, EaseFn, EmptyFun, FrameTick, MomentumCallIdeal, Reducer, ReducerDispatch, ReducerWithDispatch, ReducerWithDispatchResult, SetValue, arrayFunToOneOrEmpty, buildNoEdgeScroll, emptyArray, emptyFun, mapReducerDispatch, mapReducerDispatchList } from "wy-helper";
-import { AnimateFrameEvent, animateNumberFrame, animateNumberFrameReducer, animateNumberSilientChangeDiff } from "./animation";
+import { AnimateFrameAct, AnimateFrameModel, AnimationConfig, EaseFn, EmptyFun, FrameTick, MomentumCallIdeal, Reducer, ReducerDispatch, ReducerWithDispatch, ReducerWithDispatchResult, SetValue, arrayFunToOneOrEmpty, buildNoEdgeScroll, emptyArray, emptyFun, mapReducerDispatch, mapReducerDispatchList } from "wy-helper";
+import { AnimateFrameEvent, animateNumberFrame, animateNumberFrameReducer } from "./animation";
 
 
 
@@ -22,7 +22,7 @@ export function recicleScrollViewView(
       idx = -Math.ceil(diff / rowHeight)
     }
     if (idx) {
-      animateNumberSilientChangeDiff(transY, idx * rowHeight)
+      transY.slientDiff(idx * rowHeight)
       flushSync(() => {
         addIndex(idx)
       })
@@ -119,7 +119,7 @@ export const initRecycleListModel: RecycleListModel = {
 type RecycleResult = ReducerWithDispatchResult<RecycleListModel, RecycleScrollAction>
 
 
-function transNumberToScrollView(value: AnimateNumberFrameAction): RecycleScrollAction {
+function transNumberToScrollView(value: AnimateFrameAct<number>): RecycleScrollAction {
   return {
     type: "changeTransY",
     value
@@ -199,7 +199,7 @@ export type RecycleScrollAction = {
   config?: AnimationConfig
 } | {
   type: "changeTransY"
-  value: AnimateNumberFrameAction
+  value: AnimateFrameAct<number>
 }
 export const recycleScrollListReducer: ReducerWithDispatch<RecycleListModel, RecycleScrollAction> = (model, action) => {
   if (action.type == 'init') {

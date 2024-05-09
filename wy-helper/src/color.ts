@@ -85,3 +85,13 @@ export function colorEqual(a: BGColor, b: BGColor) {
 		&& a.blue == b.blue
 		&& a.red == b.red
 }
+
+
+export function colorAdd(a: BGColor, b: BGColor): BGColor {
+	return {
+		alpha: a.alpha + b.alpha,
+		green: a.green + b.green,
+		blue: a.blue + b.blue,
+		red: a.red + b.red
+	}
+}

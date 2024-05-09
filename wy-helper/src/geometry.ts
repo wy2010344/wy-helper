@@ -1,4 +1,6 @@
+import { mixNumber } from "./NumberHelper"
 import { Compare, simpleEqual } from "./equal"
+import { mathAdd } from "./util"
 
 
 
@@ -119,3 +121,15 @@ export function convertBoxToBoundingBox<T>({ x, y }: Box<T>): BoundingBox<T> {
 }
 
 
+export function pointAddNumber(a: Point, b: Point): Point {
+  return pointOperate(a, b, mathAdd)
+}
+
+
+
+export function mixPointNumber(a: Point, b: Point, c: number): Point {
+  return {
+    x: mixNumber(a.x, b.x, c),
+    y: mixNumber(a.y, b.y, c)
+  }
+}
