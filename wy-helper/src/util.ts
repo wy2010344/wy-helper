@@ -260,3 +260,20 @@ export function timeoutDelayCall(time: number, fun: EmptyFun) {
     clearTimeout(inv)
   }
 }
+
+
+export function mathAdd(a: number, b: number) {
+  return a + b
+}
+
+export function mathSub(a: number, b: number) {
+  return a / b
+}
+
+export function mathMul(a: number, b: number) {
+  return a * b
+}
+
+export function mathDiv(a: number, b: number) {
+  return a / b
+}

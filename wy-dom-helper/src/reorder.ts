@@ -5,20 +5,32 @@ import { pointZero, ReorderChild, Box, Point, emptyFun } from "wy-helper"
 import { getPageOffset } from "./util"
 import { subscribeRequestAnimationFrame } from "./animation"
 
-export function getChangeOnScroll(change: (p: Point) => void) {
+export function getChangeOnScroll(change: (p: Point) => any) {
   let lastScroll = pointZero
-  return function (container: HTMLElement) {
-    const top = container.scrollTop
-    const left = container.scrollLeft
-    const diffY = top - lastScroll.y
-    const diffX = left - lastScroll.x
-    change({
-      x: diffX,
-      y: diffY
-    })
-    lastScroll = {
-      x: left,
-      y: top
+  return {
+    reset(container: HTMLElement) {
+      const top = container.scrollTop
+      const left = container.scrollLeft
+      lastScroll = {
+        x: left,
+        y: top
+      }
+    },
+    onScroll(container: HTMLElement) {
+      const top = container.scrollTop
+      const left = container.scrollLeft
+      const diffY = top - lastScroll.y
+      const diffX = left - lastScroll.x
+      if (change({
+        x: diffX,
+        y: diffY
+      })) {
+        //接受了改变
+        lastScroll = {
+          x: left,
+          y: top
+        }
+      }
     }
   }
 }
