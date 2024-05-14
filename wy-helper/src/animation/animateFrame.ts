@@ -1,26 +1,25 @@
 import { AnimationConfig, ReducerDispatch, ReducerWithDispatch, SetValue } from ".."
 import { arrayFunToOneOrEmpty } from '../ArrayHelper'
-import { simpleEqual } from '../equal'
 import { mixNumber } from '../NumberHelper'
-export type AnimateFrameModel<T> = {
+export type AnimateFrameModel = {
   version: number
-  value: T
+  value: number
   animateTo?: {
-    from: T
-    target: T
+    from: number
+    target: number
     config: AnimationConfig
     startTime: number
   }
 }
 
-export type AnimateFrameChangeTo<T> = {
+export type AnimateFrameChangeTo = {
   type: "changeTo"
-  target: T
+  target: number
   config?: never
 } | {
   type: "changeTo"
-  target: T
-  from?: T
+  target: number
+  from?: number
   config: AnimationConfig
 }
 
@@ -31,28 +30,21 @@ export type FrameTick = {
 }
 
 
-export type SilentChange<T> = {
+export type SilentChange = {
   type: "silentDiff",
-  value: T
+  value: number
 }
 
-export type AnimateFrameAct<T> = AnimateFrameChangeTo<T> | FrameTick | SilentChange<T>
-export function animateFrameReducer<T>(
-  equal: (a: T, b: T) => any,
-  /**
-   * 取百分比
-   */
-  mixValue: (a: T, b: T, c: number) => T,
-  /**累加 */
-  add: (a: T, b: T) => T,
+export type AnimateFrameAct = AnimateFrameChangeTo | FrameTick | SilentChange
+export function animateFrameReducer(
   requestAnimationFrame: (v: SetValue<number>) => void
-): ReducerWithDispatch<AnimateFrameModel<T>, AnimateFrameAct<T>> {
-  type Act = AnimateFrameAct<T>
+): ReducerWithDispatch<AnimateFrameModel, AnimateFrameAct> {
+  type Act = AnimateFrameAct
   function inside(
-    old: AnimateFrameModel<T>,
+    old: AnimateFrameModel,
     act: Act,
     list: ReducerDispatch<FrameTick>[]
-  ): AnimateFrameModel<T> {
+  ): AnimateFrameModel {
     if (act.type == "tick") {
       if (old.animateTo && old.version == act.version) {
         const diffTime = act.time - old.animateTo.startTime
@@ -69,7 +61,7 @@ export function animateFrameReducer<T>(
             })
           })
           if (diffTime > 0) {
-            const value = mixValue(
+            const value = mixNumber(
               old.animateTo.from,
               old.animateTo.target,
               c.fn(diffTime / c.duration)
@@ -89,7 +81,7 @@ export function animateFrameReducer<T>(
       }
     } else if (act.type == 'changeTo') {
       if (!act.config) {
-        if (equal(old.value, act.target) && !old.animateTo) {
+        if (old.value == act.target && !old.animateTo) {
           //不改变
           return old
         }
@@ -103,7 +95,7 @@ export function animateFrameReducer<T>(
       if (typeof act.from != 'undefined') {
         oldValue = act.from
       }
-      if (equal(oldValue, act.target)) {
+      if (oldValue == act.target) {
         //不改变
         return old
       }
@@ -129,15 +121,15 @@ export function animateFrameReducer<T>(
       }
     } else if (act.type == "silentDiff") {
       const diff = act.value
-      const value = add(old.value, diff)
+      const value = old.value + diff
       if (old.animateTo) {
         return {
           ...old,
           value,
           animateTo: {
             ...old.animateTo,
-            from: add(old.animateTo.from, diff),
-            target: add(old.animateTo.target, diff)
+            from: old.animateTo.from + diff,
+            target: old.animateTo.target + diff
           }
         }
       }

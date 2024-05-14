@@ -317,10 +317,8 @@ export const ruleGetString: RuleCallback<Que, string> = function (begin, end) {
   return begin.content.slice(begin.i, end.i)
 }
 
-export const whiteList = ' \r\n\t'.split('')
-const whiteSpaceMatch = orMatch(
-  ...whiteList.map(v => matchAnyString(v))
-)
+export const whiteList = stringToCharCode(' \r\n\t')
+const whiteSpaceMatch = matchCharIn(...whiteList)
 export const whiteSpaceRule = manyMatch(
   whiteSpaceMatch,
   1

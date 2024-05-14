@@ -24,7 +24,11 @@ export type ReorderModel<T, K> = {
   list: ReorderModelRow<T>[]
 }
 
-
+/**
+ * @todo 将里面的动画、拖动改变为对外部元素的通知执行
+ * 但有一点,状态变更后位置交换,要变更后才能突变,即需要effect
+ * 还好一个是布局动画,一个是安静的改变
+ */
 export type ReorderAction<K, E> = {
   type: "moveBegin"
   key: K

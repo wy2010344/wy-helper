@@ -1,4 +1,4 @@
-import { Point } from ".";
+import { Axis } from ".";
 
 
 export type EdgeScrollPureCfg = {
@@ -34,48 +34,27 @@ function getCfg(padding: number, dir: 'min' | 'max', M?: EdgeScrollBox): EdgeScr
 
 export type EdgeScrollConfig = {
   padding?: number
-  x?: EdgeScrollBox
-  y?: EdgeScrollBox
+  config?: EdgeScrollBox
 }
 export function edgeScrollChange(
-  cp: Point,
-  getRect: () => {
-    top: number
-    left: number
-    right: number
-    bottom: number
-  },
+  cp: number,
+  axis: Axis,
   config: EdgeScrollConfig,
-  set: (dir: 'top' | 'left', diff: number) => void
+  set: (diff: number) => void
 ) {
-  const rect = getRect()
   const padding = config.padding || 0
-  const yMin = getCfg(padding, 'min', config.y)
+  const yMin = getCfg(padding, 'min', config.config)
   if (yMin) {
-    const diffTop = rect.top + yMin.padding - cp.y
+    const diffTop = axis.min + yMin.padding - cp
     if (diffTop > 0) {
-      set('top', -diffTop)
+      set(-diffTop)
     }
   }
-  const yMax = getCfg(padding, 'max', config.y)
+  const yMax = getCfg(padding, 'max', config.config)
   if (yMax) {
-    const diffBottom = rect.bottom - yMax.padding - cp.y
+    const diffBottom = axis.max - yMax.padding - cp
     if (diffBottom < 0) {
-      set('top', -diffBottom)
-    }
-  }
-  const xMin = getCfg(padding, 'min', config.x)
-  if (xMin) {
-    const diffLeft = rect.left + xMin.padding - cp.x
-    if (diffLeft > 0) {
-      set('left', -diffLeft)
-    }
-  }
-  const xMax = getCfg(padding, 'max', config.x)
-  if (xMax) {
-    const diffRight = rect.right - xMax.padding - cp.x
-    if (diffRight < 0) {
-      set('left', -diffRight)
+      set(-diffBottom)
     }
   }
 }

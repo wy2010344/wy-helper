@@ -7,15 +7,15 @@ import { getPageOffset } from "../util";
 export function layoutFrameAnimation(get: GetValue<HTMLElement>, config: {
   duration: number
   fn: EaseFn
-}) {
+}, lastPS?: Point) {
   const transX = animateNumberFrame(0)
   const transY = animateNumberFrame(0)
   const styleStore = valueCenterOf(pointZero)
-
-  let lastPS: Point | undefined = undefined
-  return function () {
+  return function (ps?: Point) {
+    if (ps) {
+      lastPS = ps
+    }
     const div = get()
-
     function locationChange(ps: Point, lastPS: Point) {
       transX.changeTo(transX.get() + ps.x - lastPS.x)
       transY.changeTo(transY.get() + ps.y - lastPS.y)
