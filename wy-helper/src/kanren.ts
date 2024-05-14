@@ -1,3 +1,4 @@
+import { SetValue } from "./setStateHelper"
 import { EmptyFun, emptyObject } from "./util"
 
 export class KPair<L, R> {
@@ -270,7 +271,6 @@ export function toArray(v: KType): [KType[], KType] {
   return [list, v] as const
 }
 
-
 export function not<T>(g: Goal<T>): Goal<T> {
   return function (sub) {
     const s = g(sub)
@@ -331,19 +331,24 @@ function getVarRecord(map: Map<string, KVar>) {
   })
 }
 export function topRule<Arg extends any[]>(
-  fun: (v: Readonly<Record<string, KVar>>, ...vs: Arg) => Goal<KSubsitution>
+  fun: (...vs: Arg) => Goal<KSubsitution>
 ): (...vs: Arg) => Goal<KSubsitution> {
   return function (...vs) {
     const mSub = new MergeSub(vs)
     return function (sub) {
-      const map = new Map<string, KVar>()
-      const V = getVarRecord(map)
-      const stream = fun(V, ...vs)(sub)
+      // const map = new Map<string, KVar>()
+      // const V = getVarRecord(map)
+      const stream = fun(...vs)(sub)
       return streamBindGoal(stream, function (outSub) {
         return mSub.changeSub(outSub, sub)
       })
     }
   }
+}
+
+export function withVar<T>(fun: (v: VarV) => T, map = new Map<string, KVar>()) {
+  const V = getVarRecord(map)
+  return fun(V)
 }
 
 class MergeSub {
@@ -363,8 +368,7 @@ class MergeSub {
 }
 export function query<T>(fun: (v: Readonly<Record<string, KVar>>) => Goal<T>) {
   const map = new Map<string, KVar>()
-  const V = getVarRecord(map)
-  return [map, fun(V)] as const
+  return [map, withVar(fun, map)] as const
 }
 
 
@@ -395,20 +399,23 @@ export function add(goal: Goal<KSubsitution>) {
 }
 
 let globalStreams: Stream<KSubsitution>[] = []
+export type VarV = Readonly<Record<string, KVar>>
 //串联
 export function series(
   stream: Stream<KSubsitution>,
-  fun: EmptyFun
+  fun: SetValue<VarV>,
+  map = new Map<string, KVar>()
 ): Stream<KSubsitution> {
   globalStreams.unshift(stream)
-  fun()
+  const V = getVarRecord(map)
+  fun(V)
   return globalStreams.shift()!
 }
 //并联
 export function parallel(
-  a: EmptyFun,
-  b: EmptyFun,
-  ...vs: EmptyFun[]
+  a: SetValue<VarV>,
+  b: SetValue<VarV>,
+  ...vs: SetValue<VarV>[]
 ) {
   add(sub => {
     const stream = success(sub)
@@ -438,15 +445,15 @@ export function seriesNot(fun: EmptyFun) {
 }
 
 export function topFun<Arg extends any[]>(
-  fun: (v: Readonly<Record<string, KVar>>, ...vs: Arg) => void
+  fun: (...vs: Arg) => void
 ) {
   return function (...vs: Arg) {
     add(sub => {
       const mSub = new MergeSub(vs)
-      const map = new Map<string, KVar>()
-      const V = getVarRecord(map)
-      return series(success(sub), () => {
-        fun(V, ...vs)
+      // const map = new Map<string, KVar>()
+      // const V = getVarRecord(map)
+      return series(success(sub), (V) => {
+        fun(...vs)
         add(outSub => {
           return mSub.changeSub(outSub, sub)
         })
@@ -460,6 +467,5 @@ export function query1(
   ) => void,
   stream: Stream<KSubsitution> = success(null)) {
   const map = new Map<string, KVar>()
-  const V = getVarRecord(map)
-  return [map, series(stream, () => fun(V))] as const
+  return [map, series(stream, fun, map)] as const
 }

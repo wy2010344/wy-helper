@@ -2,7 +2,18 @@ import { ReadValueCenter, SetValue, ValueCenter, animateFrameReducer, colorAdd, 
 import { AnimationConfig } from "wy-helper"
 
 
-export function subscribeRequestAnimationFrame(callback: (time: number, isInit: boolean) => void, init?: boolean) {
+export function subscribeRequestAnimationFrame(
+  callback: (time: number, isInit: boolean) => void,
+  init?: boolean
+) {
+  return superSubscribeRequestAnimationFrame(requestAnimationFrame, callback, init)
+}
+
+export function superSubscribeRequestAnimationFrame(
+  requestAnimationFrame: (fun: SetValue<number>) => void,
+  callback: (time: number, isInit: boolean) => void,
+  init?: boolean
+) {
   let canceled = false
   function request(time: number) {
     if (canceled) {
@@ -20,21 +31,20 @@ export function subscribeRequestAnimationFrame(callback: (time: number, isInit: 
   }
 }
 
-class AnimateTo<T> {
-  constructor(
 
-    public from: T,
-    public target: T,
+class AnimateTo {
+  constructor(
+    public from: number,
+    public target: number,
     public config: AnimationConfig,
-    private mixValue: (a: T, b: T, c: number) => T,
-    private setValue: (v: T, onProcess?: boolean) => void
+    private setValue: (v: number, onProcess?: boolean) => void
   ) { }
 
   private time: number = 0
   update(diffTime: number, onProcess?: boolean) {
     this.time = diffTime
     const c = this.config
-    const value = this.mixValue(this.from, this.target, c.fn(diffTime / c.duration))
+    const value = mixNumber(this.from, this.target, c.fn(diffTime / c.duration))
     this.setValue(value, onProcess)
   }
 
@@ -43,36 +53,27 @@ class AnimateTo<T> {
   }
 }
 
-export type AnimateFrameEvent<T> = {
-  from?: T
-  onProcess?(v: T): void
+export type AnimateFrameEvent = {
+  from?: number
+  onProcess?(v: number): void
   onFinish?(v: boolean): void
 }
 /**
  * 使用react的render,可能不平滑,因为react是异步的,生成值到渲染到视图上,可能有时间间隔
  * 或者总是使用flushSync.
  */
-export class AnimateFrameValue<T> implements ReadValueCenter<T> {
-  private value: ValueCenter<T>
+export class AnimateFrameValue implements ReadValueCenter<number> {
+  private value: ValueCenter<number>
   constructor(
-    /**
-     * 两个值是否相等
-     */
-    public readonly equal: (a: T, b: T) => any,
-    /**
-     * 取百分比
-     */
-    public readonly mixValue: (a: T, b: T, c: number) => T,
-
-    public readonly add: (a: T, b: T) => T,
-    initValue: T
+    initValue: number,
+    private requestAnimateFrame = requestAnimationFrame
   ) {
     this.value = valueCenterOf(initValue)
   }
   /**
    * 如果正在发生动画,这个值存在
    */
-  private animateTo: AnimateTo<T> | undefined = undefined
+  private animateTo: AnimateTo | undefined = undefined
   getAnimateTo() {
     return this.animateTo
   }
@@ -82,7 +83,7 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T> {
     this.lastCancel = emptyFun
     this.animateTo = undefined
   }
-  slientChange(target: T, from: T = target) {
+  slientChange(target: number, from: number = target) {
     if (this.animateTo) {
       this.animateTo.from = from
       this.animateTo.target = target
@@ -91,20 +92,20 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T> {
       this.value.set(target)
     }
   }
-  slientDiff(diff: T) {
+  slientDiff(diff: number) {
     if (this.animateTo) {
-      this.animateTo.from = this.add(this.animateTo.from, diff)
-      this.animateTo.target = this.add(this.animateTo.target, diff)
+      this.animateTo.from = this.animateTo.from + diff
+      this.animateTo.target = this.animateTo.target + diff
       this.animateTo.reDo()
     } else {
-      this.value.set(this.add(this.value.get(), diff))
+      this.value.set(this.value.get() + diff)
     }
   }
-  changeTo(target: T, config?: AnimationConfig, {
+  changeTo(target: number, config?: AnimationConfig, {
     from,
     onProcess = emptyFun,
     onFinish = emptyFun
-  }: AnimateFrameEvent<T> = emptyObject) {
+  }: AnimateFrameEvent = emptyObject) {
     if (!config) {
       //中止动画
       this.lastCancel()
@@ -115,7 +116,7 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T> {
       typeof from != 'undefined'
         ? from : this.animateTo
           ? this.animateTo.target : this.value.get()
-    if (this.equal(target, baseValue)) {
+    if (target = baseValue) {
       //不会发生任何改变.
       return
     }
@@ -125,7 +126,6 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T> {
       baseValue,
       target,
       config,
-      this.mixValue,
       (v, o) => {
         that.value.set(v)
         if (o) {
@@ -134,7 +134,7 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T> {
       })
     this.animateTo = animateTo
     const timePeriod = performance.now()
-    const cancel = subscribeRequestAnimationFrame(function (date) {
+    const cancel = superSubscribeRequestAnimationFrame(this.requestAnimateFrame, function (date) {
       const diffTime = date - timePeriod
       const toValue = animateTo.target
       const c = animateTo.config
@@ -159,36 +159,16 @@ export class AnimateFrameValue<T> implements ReadValueCenter<T> {
     }
     return 'animate'
   }
-  get(): T {
+  get() {
     return this.value.get()
   }
-  subscribe(fun: SetValue<T>) {
+  subscribe(fun: SetValue<number>) {
     return this.value.subscribe(fun)
   }
 }
-export function buildAnimateFrame<T>(
-  /**
-   * 两个值是否相等
-   */
-  equal: (a: T, b: T) => any,
-  /**
-   * 取百分比
-   */
-  mixValue: (a: T, b: T, c: number) => T,
-  add: (a: T, b: T) => T
-) {
-  return function (
-    value: T
-  ) {
-    return new AnimateFrameValue(equal, mixValue, add, value)
-  }
+
+export function animateNumberFrame(value: number, requestAnimateFrame = requestAnimationFrame) {
+  return new AnimateFrameValue(value, requestAnimateFrame)
 }
-
-export const animateNumberFrame = buildAnimateFrame(simpleEqual, mixNumber, mathAdd)
-export const animateColorFrame = buildAnimateFrame(colorEqual, mixColor, colorAdd)
-export const animatePointFrame = buildAnimateFrame(pointEqual, mixPointNumber, pointAddNumber)
-
-export const animateNumberFrameReducer = animateFrameReducer(simpleEqual, mixNumber, mathAdd, requestAnimationFrame)
-export const animateColorFrameReducer = animateFrameReducer(colorEqual, mixColor, colorAdd, requestAnimationFrame)
-export const animatePointFrameReducer = animateFrameReducer(pointEqual, mixPointNumber, pointAddNumber, requestAnimationFrame)
+export const animateNumberFrameReducer = animateFrameReducer(requestAnimationFrame)
 

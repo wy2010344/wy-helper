@@ -1,4 +1,4 @@
-import { emptyArray, emptyFun, quote } from "../util"
+import { emptyFun, quote } from "../util"
 import { getCurrentQue, or, parseGet, parseSkip } from "./parse"
 import { Que, andMatch, andRuleGet, manyMatch, manyRuleGet, matchAnyString, matchCharIn, matchCharNotIn, matchEnd, matchToEnd, orMatch, orRuleGet, ruleGet } from "./tokenParser"
 

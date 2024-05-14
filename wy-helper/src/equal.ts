@@ -1,5 +1,3 @@
-import { quote } from "."
-
 export type Compare<T> = (a: T, b: T) => any
 
 export function simpleEqual<T>(a: T, b: T) {

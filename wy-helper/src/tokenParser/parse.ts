@@ -1,6 +1,5 @@
-import { GetValue } from '../setStateHelper'
 import { emptyFun } from '../util'
-import { ParseFun, BaseQue, error, Que, matchCharIn, matchAnyString, matchCharNotIn, ParseFunGet, ParserSuccess, success } from './tokenParser'
+import { ParseFun, BaseQue, error, Que } from './tokenParser'
 export function parseSkip<Q extends BaseQue<any>>(
   fun: ParseFun<Q>,
   message = ''
@@ -23,7 +22,7 @@ export function parseGet<Q extends BaseQue<any>, T>(
 }
 
 export function parseTop<Fun extends (...vs: any[]) => any>(fun: Fun, message = '') {
-  return (...vs: Parameters<Fun>) => {
+  return (...vs: Parameters<Fun>): ReturnType<Fun> => {
     try {
       return fun(...vs)
     } catch (err) {
@@ -96,6 +95,7 @@ export function or<T1, T2, T3, T4, T5, T6>(
   ],
   message?: string
 ): T1 | T2 | T3 | T4 | T5 | T6
+export function or<T>(vs: (() => T)[], message?: string): T
 export function or(
   vs: (() => any)[],
   message = ''
