@@ -19,6 +19,9 @@ export type ReorderModel<T, K> = {
     }
   }
   scrollTop: number
+  /**
+   * 主要是render延迟生效,拖拽移动已触发调整,但版本还是旧的.
+   */
   version: number
   gap: number
   list: ReorderModelRow<T>[]

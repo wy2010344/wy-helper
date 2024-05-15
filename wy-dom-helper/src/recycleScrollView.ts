@@ -75,7 +75,7 @@ export function recicleScrollViewView(
         aUpdate(nValue)
       }
     },
-    wrapperAdd(n: number, config?: AnimationConfig, event?: AnimateFrameEvent<number>) {
+    wrapperAdd(n: number, config?: AnimationConfig, event?: AnimateFrameEvent) {
       if (n) {
         if (transY.getAnimateTo() || !config) {
           addIndex(n)
@@ -101,7 +101,7 @@ export type RecycleListModel = {
   size: number
   cellHeight: number
   initTransY: number
-  transY: AnimateFrameModel<number>
+  transY: AnimateFrameModel
   index: number
 }
 
@@ -119,7 +119,7 @@ export const initRecycleListModel: RecycleListModel = {
 type RecycleResult = ReducerWithDispatchResult<RecycleListModel, RecycleScrollAction>
 
 
-function transNumberToScrollView(value: AnimateFrameAct<number>): RecycleScrollAction {
+function transNumberToScrollView(value: AnimateFrameAct): RecycleScrollAction {
   return {
     type: "changeTransY",
     value
@@ -199,7 +199,7 @@ export type RecycleScrollAction = {
   config?: AnimationConfig
 } | {
   type: "changeTransY"
-  value: AnimateFrameAct<number>
+  value: AnimateFrameAct
 }
 export const recycleScrollListReducer: ReducerWithDispatch<RecycleListModel, RecycleScrollAction> = (model, action) => {
   if (action.type == 'init') {
