@@ -44,6 +44,11 @@ export type ReorderAction<K, E> = {
 } | {
   type: "end",
   point: number
+  version: number
+  gap?: number
+  elements: ReorderElement<K, E>[]
+  scrollTop: number
+  config: AnimationConfig
 } | {
   type: "didEnd",
   gap?: number
@@ -54,11 +59,6 @@ export type ReorderAction<K, E> = {
   type: "changeY"
   key: K
   value: AnimateFrameAct
-} | {
-  type: "layout",
-  key: K
-  offset: number
-  config: AnimationConfig
 }
 
 export type ReorderElement<K, E> = {
@@ -151,6 +151,9 @@ export function createReorderReducer<T, K, E>(
     elements: ReorderElement<K, E>[],
     gap: number
   ) {
+    if (!diffY) {
+      return [model.list, false] as const
+    }
     let ty = 0
     let newList = model.list.map(row => {
       if (getKey(row.value) == key) {
@@ -234,8 +237,9 @@ export function createReorderReducer<T, K, E>(
         ...row,
         transY
       }
+      return [newList, true] as const
     }
-    return newList
+    return [newList, false] as const
   }
   return function <M extends ReorderModel<T, K>>(model: M, action: ReorderAction<K, E>): ReducerWithDispatchResult<M, ReorderAction<K, E>> {
     if (action.type == "changeY") {
@@ -281,13 +285,13 @@ export function createReorderReducer<T, K, E>(
         const ma = new MergeAction<K>()
         const diffY = action.point - info.lastPoint
         const diffYM = action.scrollTop - model.scrollTop
-        const newList = changeDiff(ma, model, index, diffY + diffYM, action.elements, gap);
+        const [newList, didChange] = changeDiff(ma, model, index, diffY + diffYM, action.elements, gap);
         return [
           {
             ...model,
             gap,
             list: newList,
-            version: action.version + 1,
+            version: didChange ? action.version + 1 : action.version,
             scrollTop: action.scrollTop,
             onMove: {
               ...model.onMove,
@@ -301,61 +305,84 @@ export function createReorderReducer<T, K, E>(
       }
     } else if (action.type == "end") {
       if (model.onMove?.info) {
-        return [
-          {
-            ...model,
-            onMove: {
-              ...model.onMove,
-              info: undefined,
-              endAt: {
-                point: action.point,
-                lastPoint: model.onMove.info.lastPoint
+        const info = model.onMove.info
+        if (model.version == action.version) {
+          const index = model.onMove.key
+          const diffY = action.point - info.lastPoint
+          const diffYM = action.scrollTop - model.scrollTop
+          return didEnd(model, index, diffY + diffYM, action)
+        } else {
+          //需要补充完成
+          return [
+            {
+              ...model,
+              onMove: {
+                ...model.onMove,
+                info: undefined,
+                endAt: {
+                  point: action.point,
+                  lastPoint: model.onMove.info.lastPoint
+                }
               }
-            }
-          },
-          undefined
-        ]
+            },
+            undefined
+          ]
+        }
       }
     } else if (action.type == "didEnd") {
       if (model.onMove?.endAt) {
         const index = model.onMove.key
-        const gap = getDefaultGap(model.gap, action.gap)
-        const ma = new MergeAction<K>()
         const endAt = model.onMove.endAt
         const diffY = endAt.point - endAt.lastPoint
         const diffYM = action.scrollTop - model.scrollTop
-        let newList = changeDiff(ma, model, index, diffY + diffYM, action.elements, gap);
-        newList = newList.map(row => {
-          if (getKey(row.value) == index) {
-            const [transY, onMove] = animateNumberFrameReducer(row.transY, {
-              type: "changeTo",
-              target: 0,
-              config: action.config
-            })
-            ma.append(index, onMove)
-            return {
-              ...row,
-              transY
-            }
-          }
-          return row
-        })
-        return [
-          {
-            ...model,
-            gap,
-            list: newList,
-            version: model.version + 1,
-            scrollTop: action.scrollTop,
-            onMove: {
-              ...model.onMove,
-              endAt: undefined
-            }
-          },
-          ma.merge()
-        ]
+        return didEnd(model, index, diffY + diffYM, action)
       }
     }
     return [model, undefined]
+  }
+
+  function didEnd<M extends ReorderModel<T, K>>(
+    model: M,
+    index: K,
+    diff: number,
+    action: {
+      elements: ReorderElement<K, E>[]
+      gap?: number
+      config: AnimationConfig
+      scrollTop: number
+    }
+  ): ReducerWithDispatchResult<M, ReorderAction<K, E>> {
+    const gap = getDefaultGap(model.gap, action.gap)
+    const ma = new MergeAction<K>()
+    let [newList, didChange] = changeDiff(ma, model, index, diff, action.elements, gap);
+    newList = newList.map(row => {
+      if (getKey(row.value) == index) {
+        const [transY, onMove] = animateNumberFrameReducer(row.transY, {
+          type: "changeTo",
+          target: 0,
+          config: action.config
+        })
+        ma.append(index, onMove)
+        return {
+          ...row,
+          transY
+        }
+      }
+      return row
+    })
+    return [
+      {
+        ...model,
+        gap,
+        list: newList,
+        version: didChange ? model.version + 1 : model.version,
+        scrollTop: action.scrollTop,
+        onMove: {
+          ...model.onMove,
+          endAt: undefined
+        }
+      },
+      ma.merge()
+    ]
   }
 }
