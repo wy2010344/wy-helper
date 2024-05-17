@@ -1,7 +1,7 @@
 import { arrayMove } from "../ArrayHelper"
 import { ReducerDispatch, ReducerWithDispatch, ReducerWithDispatchResult, mapReducerDispatchListA } from "../ValueCenter"
 import { AnimateFrameAct, AnimateFrameModel, AnimationConfig } from "../animation"
-import { reorderCheckTarget } from "./util"
+import { rangeBetweenLeft, rangeBetweenRight, reorderCheckTarget } from "./util"
 export type ReorderModelRow<T> = {
   transY: AnimateFrameModel
   value: T
@@ -36,25 +36,29 @@ export type ReorderAction<K, E> = {
 } | {
   //在滚动的时候,也使用这个
   type: "didMove"
-  version: number
   point: number
+
   gap?: number
+  version: number
   elements: ReorderElement<K, E>[]
   scrollTop: number
 } | {
   type: "end",
   point: number
-  version: number
+  config: AnimationConfig
+
   gap?: number
+  version: number
   elements: ReorderElement<K, E>[]
   scrollTop: number
-  config: AnimationConfig
 } | {
   type: "didEnd",
-  gap?: number
-  scrollTop: number
-  elements: ReorderElement<K, E>[]
   config: AnimationConfig
+
+  gap?: number
+  version: number
+  elements: ReorderElement<K, E>[]
+  scrollTop: number
 } | {
   type: "changeY"
   key: K
@@ -65,31 +69,6 @@ export type ReorderElement<K, E> = {
   key: K,
   div: E
 }
-
-
-function rangeBetweenLeft(idx: number, idx1: number, callback: (i: number) => void) {
-  if (idx < idx1) {
-    for (let i = idx; i < idx1; i++) {
-      callback(i)
-    }
-  } else {
-    for (let i = idx; i > idx1; i--) {
-      callback(i)
-    }
-  }
-}
-function rangeBetweenRight(idx: number, idx1: number, callback: (i: number) => void) {
-  if (idx < idx1) {
-    for (let i = idx; i < idx1; i++) {
-      callback(i + 1)
-    }
-  } else {
-    for (let i = idx; i > idx1; i--) {
-      callback(i - 1)
-    }
-  }
-}
-
 class MergeAction<K> {
   onMoveList: {
     key: K,
@@ -112,10 +91,6 @@ class MergeAction<K> {
         } as const
       })
   }
-}
-
-function getElementKey<K, E>(element: ReorderElement<K, E>) {
-  return element.key
 }
 
 function getDefaultGap(oldGap: number, newGap?: number) {
@@ -146,42 +121,46 @@ export function createReorderReducer<T, K, E>(
   function changeDiff(
     ma: MergeAction<K>,
     model: ReorderModel<T, K>,
-    key: K,
+    currentIndex: number,
     diffY: number,
     elements: ReorderElement<K, E>[],
-    gap: number
+    gap: number,
+    version: number
   ) {
     if (!diffY) {
       return [model.list, false] as const
     }
-    let ty = 0
-    let newList = model.list.map(row => {
-      if (getKey(row.value) == key) {
-        ty = row.transY.value + diffY
-        const [transY, onMove] = animateNumberFrameReducer(row.transY, {
-          type: "changeTo",
-          target: ty
-        })
-        return {
-          ...row,
-          transY
-        }
-      }
-      return row
+    //移动
+    let newList = model.list.slice()
+    const currentRow = newList[currentIndex]!
+    const ty = currentRow.transY.value + diffY
+    const [transY, onMove] = animateNumberFrameReducer(currentRow.transY, {
+      type: "changeTo",
+      target: ty
     })
+    newList[currentIndex] = {
+      ...currentRow,
+      transY
+    }
+
+
+
+    if (version != model.version) {
+      return [newList, false] as const
+    }
+
+    //交换
     const target = reorderCheckTarget(
       elements,
-      getElementKey,
+      currentIndex,
       getElementHeight,
-      key,
       ty,
       diffY,
       gap
     )
     if (target) {
       const [idx, idx1] = target
-      newList = arrayMove(newList, idx, idx1, true)
-
+      newList = arrayMove(newList, idx, idx1)
       /**
        * 如果向后移动
        * 从elements上取
@@ -197,23 +176,22 @@ export function createReorderReducer<T, K, E>(
         //对于所有非自己元素,移动当前元素的高度与gap
         //如何与react兼容?状态变更触发事件,需要在useEffect里依赖状态去触发事件....
         const row = newList[i]
-        if (!row.transY.animateTo) {
-          const [transY, onMove] = animateNumberFrameReducer(row.transY, {
-            type: "changeTo",
-            from: otherHeight,
-            target: 0,
-            config
-          })
-          ma.append(getKey(row.value), onMove)
-          newList[i] = {
-            ...row,
-            transY
-          }
+
+        const [transY, onMove] = animateNumberFrameReducer(row.transY, {
+          type: "changeTo",
+          from: otherHeight,
+          target: 0,
+          config
+        })
+        ma.append(getKey(row.value), onMove)
+        newList[i] = {
+          ...row,
+          transY
         }
       })
+
+
       const row = newList[idx1]
-
-
       let diffHeight = 0
       rangeBetweenRight(idx, idx1, function (i) {
         const row = elements[i]
@@ -278,14 +256,15 @@ export function createReorderReducer<T, K, E>(
         }
       }, undefined]
     } if (action.type == "didMove") {
-      if (model.onMove?.info && model.version == action.version) {
-        const index = model.onMove.key
+      if (model.onMove?.info) {
+        const key = model.onMove.key
         const info = model.onMove.info
         const gap = getDefaultGap(model.gap, action.gap)
         const ma = new MergeAction<K>()
         const diffY = action.point - info.lastPoint
         const diffYM = action.scrollTop - model.scrollTop
-        const [newList, didChange] = changeDiff(ma, model, index, diffY + diffYM, action.elements, gap);
+        const currentIndex = getIndex(model.list, key)
+        const [newList, didChange] = changeDiff(ma, model, currentIndex, diffY + diffYM, action.elements, gap, action.version);
         return [
           {
             ...model,
@@ -341,11 +320,17 @@ export function createReorderReducer<T, K, E>(
     return [model, undefined]
   }
 
+
+
+  function getIndex(list: ReorderModelRow<T>[], key: K) {
+    return list.findIndex(row => getKey(row.value) == key)
+  }
   function didEnd<M extends ReorderModel<T, K>>(
     model: M,
-    index: K,
+    key: K,
     diff: number,
     action: {
+      version: number
       elements: ReorderElement<K, E>[]
       gap?: number
       config: AnimationConfig
@@ -354,22 +339,27 @@ export function createReorderReducer<T, K, E>(
   ): ReducerWithDispatchResult<M, ReorderAction<K, E>> {
     const gap = getDefaultGap(model.gap, action.gap)
     const ma = new MergeAction<K>()
-    let [newList, didChange] = changeDiff(ma, model, index, diff, action.elements, gap);
-    newList = newList.map(row => {
-      if (getKey(row.value) == index) {
-        const [transY, onMove] = animateNumberFrameReducer(row.transY, {
-          type: "changeTo",
-          target: 0,
-          config: action.config
-        })
-        ma.append(index, onMove)
-        return {
-          ...row,
-          transY
-        }
-      }
-      return row
+    const currentIndex = getIndex(model.list, key)
+    let [newList, didChange] = changeDiff(ma, model, currentIndex, diff, action.elements, gap, action.version);
+    if (newList == model.list) {
+      newList = newList.slice()
+    }
+
+
+    const theIndex = getIndex(newList, key)
+    const row = newList[theIndex]
+    const [transY, onMove] = animateNumberFrameReducer(row.transY, {
+      type: "changeTo",
+      target: 0,
+      config: action.config
     })
+    ma.append(key, onMove)
+    newList[theIndex] = {
+      ...row,
+      transY
+    }
+
+
     return [
       {
         ...model,

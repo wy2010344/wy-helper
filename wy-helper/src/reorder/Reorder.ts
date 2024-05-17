@@ -10,9 +10,6 @@ export interface ReorderItemData<K> {
   layout: Box
 }
 
-function reorderItemDataGetKey<K>(n: ReorderItemData<K>) {
-  return n.value
-}
 type MoveV<K> = {
   lastValue: Point
   currentItem: ReorderChild<K>
@@ -34,11 +31,11 @@ function sortIndex<K>(a: ReorderItemData<K>, b: ReorderItemData<K>) {
 }
 export class Reorder<K> {
   checkToMove(key: K, offset: Point, diff: Point) {
+    const index = this.layoutList.findIndex(v => v.value == key)
     const item = reorderCheckTarget(
       this.layoutList,
-      reorderItemDataGetKey,
+      index,
       getSize[this.direction],
-      key,
       offset[this.direction],
       diff[this.direction],
       this.gap

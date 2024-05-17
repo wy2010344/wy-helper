@@ -184,4 +184,12 @@ export class YearMonthVirtualView {
       };
     }
   }
+  toNumber() {
+    return yearMonthToNumber(this.year, this.month)
+  }
+}
+
+
+export function yearMonthToNumber(year: number, month: number) {
+  return year * 100 + month
 }

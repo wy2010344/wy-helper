@@ -30,13 +30,18 @@ export type FrameTick = {
 }
 
 
-export type SilentChange = {
+export type SilentDiff = {
   type: "silentDiff",
   value: number
 }
 
-export type AnimateFrameAct = AnimateFrameChangeTo | FrameTick | SilentChange
-export function animateFrameReducer(
+export type SilentChange = {
+  type: "silentChange",
+  value: number
+}
+
+export type AnimateFrameAct = AnimateFrameChangeTo | FrameTick | SilentDiff | SilentChange
+export function createAnimateFrameReducer(
   requestAnimationFrame: (v: SetValue<number>) => void
 ): ReducerWithDispatch<AnimateFrameModel, AnimateFrameAct> {
   type Act = AnimateFrameAct
@@ -137,6 +142,24 @@ export function animateFrameReducer(
         ...old,
         value
       }
+    } else if (act.type == "silentChange") {
+      if (old.animateTo) {
+        const diff = act.value - old.animateTo.target
+        const value = old.value + diff
+        return {
+          ...old,
+          value,
+          animateTo: {
+            ...old.animateTo,
+            target: act.value,
+            from: old.animateTo.from + diff,
+          }
+        }
+      }
+      return {
+        ...old,
+        value: act.value
+      }
     }
     return old
   }
@@ -144,5 +167,30 @@ export function animateFrameReducer(
     const list: ReducerDispatch<FrameTick>[] = []
     const value = inside(old, act, list)
     return [value, arrayFunToOneOrEmpty(list)] as const
+  }
+}
+
+export function animateFrameReducerFinished(
+  before: AnimateFrameModel,
+  act: AnimateFrameAct,
+  after: AnimateFrameModel
+) {
+  if (act.type == 'tick') {
+    if (before.animateTo && !after.animateTo) {
+      //正常结束
+      return true
+    }
+  } else if (act.type == 'changeTo') {
+    if (before.animateTo) {
+      if (after.animateTo) {
+        if (before.version != after.version) {
+          //被新动画替换
+          return 'break'
+        }
+      } else {
+        //强制中止
+        return 'break'
+      }
+    }
   }
 }
