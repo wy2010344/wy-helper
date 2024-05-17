@@ -511,13 +511,19 @@ export function buildScroll({
  * @param deltaX 位移
  * @param width 宽度
  * @param VELOCITY_THRESHOLD 容错
- * @returns 
+ * @returns 1 向右移动 -1向左移动
  */
 export function scrollJudgeDirection(
   velocityX: number,
   deltaX: number,
   width: number,
-  VELOCITY_THRESHOLD = 0.1) {
+  {
+    VELOCITY_THRESHOLD = 0.1,
+    DELTA_THRESHOLD = width / 2
+  }: {
+    VELOCITY_THRESHOLD?: number
+    DELTA_THRESHOLD?: number
+  } = emptyObject) {
   let directionX = 0;
   // Used in SwipeView.handlePanStart for hasty swipes
   if (Math.abs(velocityX) > VELOCITY_THRESHOLD) {
@@ -528,8 +534,8 @@ export function scrollJudgeDirection(
     if ((directionX > 0 && deltaX < 0) || (directionX < 0 && deltaX > 0)) {
       directionX = 0;
     }
-  } else if (Math.abs(deltaX) >= width / 2) {
+  } else if (Math.abs(deltaX) >= DELTA_THRESHOLD) {
     directionX = deltaX > 0 ? 1 : -1;
   }
-  return directionX
+  return -directionX
 }

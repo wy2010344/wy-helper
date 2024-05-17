@@ -66,8 +66,19 @@ export function createEmptyArray<T>() {
   return [] as T[]
 }
 export const emptyObject = objectFreeze({})
+
+export function getTheEmptyObject<T>() {
+  return emptyObject as T
+}
 export function emptyFun(...vs: any[]) { }
 
+export function quoteOrLazyGet<T>(v: T | (() => T), ...vs: any[]): T {
+  if (typeof v == 'function') {
+    return (v as any)()
+  } else {
+    return v
+  }
+}
 export type AnyFunction = (...vs: any[]) => any
 export async function quotePromise<T>(v: T, ...vs: any[]) { return v }
 export function expandFunCall<T extends AnyFunction>(

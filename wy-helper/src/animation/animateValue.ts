@@ -6,25 +6,17 @@ import { EmptyFun, emptyFun } from "../util"
 
 
 
-export type AnimateLatestConfig<T> = {
+export type AnimateLatestConfig = {
   fromTime: number
-  fromValue: T
+  fromValue: number
   onFinish(v: boolean): void
   config: AnimationConfig
 }
 
-export class AnimateValue<T>{
+export class AnimateValue {
   constructor(
-    /**
-     * 两个值是否相等
-     */
-    public readonly equal: (a: T, b: T) => any,
-    /**
-     * 取百分比
-     */
-    public readonly mixValue: (a: T, b: T, c: number) => T,
     public readonly reload: EmptyFun,
-    private value: T
+    private value: number
   ) {
     this.lastTriggerValue = value
     this.trigger = {
@@ -33,12 +25,12 @@ export class AnimateValue<T>{
     }
   }
   private trigger: {
-    toValue: T
+    toValue: number
     config?: AnimationConfig
     onFinish(success: boolean): void
   }
-  private lastTriggerValue: T
-  private lastTrigger: undefined | AnimateLatestConfig<T>
+  private lastTriggerValue: number
+  private lastTrigger: undefined | AnimateLatestConfig
   getValue() {
     return this.value
   }
@@ -49,7 +41,7 @@ export class AnimateValue<T>{
     return this.lastTrigger
   }
   changeTo(
-    toValue: T,
+    toValue: number,
     config?: AnimationConfig,
     onFinish: (success: boolean) => void = emptyFun
   ) {
@@ -66,7 +58,7 @@ export class AnimateValue<T>{
       this.value = toValue
       return toValue
     }
-    if (!this.equal(this.lastTriggerValue, toValue)) {
+    if (this.lastTriggerValue != toValue) {
       this.lastTriggerValue = toValue
       this.lastTrigger?.onFinish(false)
       this.lastTrigger = {
@@ -83,7 +75,7 @@ export class AnimateValue<T>{
       const du = this.lastTrigger.config.duration
       if (t < du) {
         const percent = this.lastTrigger.config.fn(t / du)
-        this.value = this.mixValue(this.lastTrigger.fromValue, toValue, percent)
+        this.value = mixNumber(this.lastTrigger.fromValue, toValue, percent)
         this.reload()
         return this.value
       } else {
@@ -96,21 +88,3 @@ export class AnimateValue<T>{
     return this.value
   }
 }
-export function buildAnimate<T>(
-  /**
-   * 两个值是否相等
-   */
-  equal: (a: T, b: T) => any,
-  /**
-   * 取百分比
-   */
-  mixValue: (a: T, b: T, c: number) => T
-) {
-  return function (reload: EmptyFun, initValue: T) {
-    return new AnimateValue(equal, mixValue, reload, initValue)
-  }
-}
-
-
-export const animateNumber = buildAnimate(simpleEqual, mixNumber)
-export const animateColor = buildAnimate(colorEqual, mixColor)

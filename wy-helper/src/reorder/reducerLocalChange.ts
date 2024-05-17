@@ -1,8 +1,8 @@
 import { arrayMove } from "../ArrayHelper"
 import { AnimationConfig } from "../animation"
-import { EmptyFun } from "../util"
-import { reorderCheckTarget } from "./util"
-export type ReorderModel<K> = {
+import { EmptyFun, run } from "../util"
+import { rangeBetweenLeft, rangeBetweenRight, reorderCheckTarget } from "./util"
+export type ReorderLocalModel<K> = {
   onMove?: {
     key: K
     info?: {
@@ -29,7 +29,7 @@ export type ReorderModel<K> = {
  * 但有一点,状态变更后位置交换,要变更后才能突变,即需要effect
  * 还好一个是布局动画,一个是安静的改变
  */
-export type ReorderAction<K> = {
+export type ReorderLocalAction<K> = {
   type: "moveBegin"
   key: K
   point: number
@@ -37,98 +37,66 @@ export type ReorderAction<K> = {
 } | {
   //在滚动的时候,也使用这个
   type: "didMove"
-  version: number
   point: number
+
+  version: number
   gap?: number
-  elements: ReorderElement<K>[]
+  elements: ReorderLocalElement<K>[]
   scrollTop: number
 } | {
   type: "end",
   point: number
+  config: AnimationConfig
+
   version: number
   gap?: number
-  elements: ReorderElement<K>[]
+  elements: ReorderLocalElement<K>[]
   scrollTop: number
-  config: AnimationConfig
 } | {
   type: "didEnd",
-  gap?: number
-  scrollTop: number
-  elements: ReorderElement<K>[]
   config: AnimationConfig
+
+  gap?: number
+  version: number
+  scrollTop: number
+  elements: ReorderLocalElement<K>[]
 }
 
-export interface ReorderElement<K> {
+export interface ReorderLocalElement<K> {
   key: K
   getHeight(): number
+  getTransY(): number
   /**
    * 突变增加diff
    * @param diff 
    */
   changeDiff(diff: number): void
-  onAnimate(): boolean
+
+  silentDiff(value: number): void
   /**
-   * layout动画
+   * layout动画,在内部去阻止重新动画
    * @param value 
    */
   layoutFrom(value: number): void
-
-  silentDiff(value: number): void
   /**
    * 拖拽结束归于0
    */
   endLayout(): void
-  getTransY(): number
 }
 
-
-function rangeBetweenLeft(idx: number, idx1: number, callback: (i: number) => void) {
-  if (idx < idx1) {
-    for (let i = idx; i < idx1; i++) {
-      callback(i)
-    }
-  } else {
-    for (let i = idx; i > idx1; i--) {
-      callback(i)
-    }
-  }
-}
-function rangeBetweenRight(idx: number, idx1: number, callback: (i: number) => void) {
-  if (idx < idx1) {
-    for (let i = idx; i < idx1; i++) {
-      callback(i + 1)
-    }
-  } else {
-    for (let i = idx; i > idx1; i--) {
-      callback(i - 1)
-    }
-  }
-}
 
 class MergeAction<K> {
-  onMoveList: {
-    key: K,
-    value: EmptyFun
-  }[] = []
-  append(index: K, v: EmptyFun) {
-    this.onMoveList.push({
-      key: index,
-      value: v
-    })
+  onMoveList: EmptyFun[] = []
+  append(v: EmptyFun) {
+    this.onMoveList.push(v)
   }
   merge() {
     if (this.onMoveList.length) {
       return () => {
-        this.onMoveList.forEach(row => {
-          row.value()
-        })
+        this.onMoveList.forEach(run)
       }
     }
   }
-}
-
-function getElementKey<K>(element: ReorderElement<K>) {
-  return element.key
 }
 
 function getDefaultGap(oldGap: number, newGap?: number) {
@@ -148,35 +116,37 @@ function getDefaultGap(oldGap: number, newGap?: number) {
  * @returns 
  */
 
-function getElementHeight<K>(v: ReorderElement<K>) {
+function getElementHeight<K>(v: ReorderLocalElement<K>) {
   return v.getHeight()
 }
-function getElement<K>(elements: ReorderElement<K>[], key: K) {
-  return elements.find(v => v.key == key)
+function getElementIndex<K>(elements: ReorderLocalElement<K>[], key: K) {
+  return elements.findIndex(v => v.key == key)
 }
 function changeDiff<K>(
   ma: MergeAction<K>,
-  key: K,
+  currentIndex: number,
   diffY: number,
-  elements: ReorderElement<K>[],
-  gap: number
+  elements: ReorderLocalElement<K>[],
+  gap: number,
+  canChange: boolean
 ) {
   if (!diffY) {
     return
   }
   let ty = 0
-  const element = getElement(elements, key)
-  if (element) {
-    ty = element.getTransY()
-    ma.append(key, function () {
-      element.changeDiff(diffY)
-    })
+  const element = elements[currentIndex]
+  ty = element.getTransY() + diffY
+  ma.append(function () {
+    element.changeDiff(diffY)
+  })
+  if (!canChange) {
+    return
   }
+
   const target = reorderCheckTarget(
     elements,
-    getElementKey,
+    currentIndex,
     getElementHeight,
-    key,
     ty,
     diffY,
     gap
@@ -202,11 +172,9 @@ function changeDiff<K>(
       //对于所有非自己元素,移动当前元素的高度与gap
       //如何与react兼容?状态变更触发事件,需要在useEffect里依赖状态去触发事件....
       const element = newElements[i]
-      if (!element.onAnimate()) {
-        ma.append(key, function () {
-          element.layoutFrom(otherHeight)
-        })
-      }
+      ma.append(function () {
+        element.layoutFrom(otherHeight)
+      })
     })
     let diffHeight = 0
     rangeBetweenRight(idx, idx1, function (i) {
@@ -224,15 +192,15 @@ function changeDiff<K>(
      * 2->1,则是1的高度=gap
      */
     const element = elements[idx]
-    ma.append(key, function () {
+    ma.append(function () {
       element.silentDiff(-diffHeight)
     })
     return [idx, idx1] as const
   }
 }
-export function reorderReducer<K, M extends ReorderModel<K>>(
+export function reorderLocalReducer<K, M extends ReorderLocalModel<K>>(
   model: M,
-  action: ReorderAction<K>
+  action: ReorderLocalAction<K>
 ): M {
   if (action.type == "moveBegin") {
     return {
@@ -247,16 +215,22 @@ export function reorderReducer<K, M extends ReorderModel<K>>(
       }
     }
   } if (action.type == "didMove") {
-    if (model.onMove?.info && model.version == action.version) {
-      const index = model.onMove.key
+    if (model.onMove?.info) {
+      const key = model.onMove.key
       const info = model.onMove.info
       const gap = getDefaultGap(model.gap, action.gap)
       const ma = new MergeAction<K>()
       const diffY = action.point - info.lastPoint
       const diffYM = action.scrollTop - model.scrollTop
-      const change = changeDiff(ma, index, diffY + diffYM, action.elements, gap);
+      const currentIndex = getElementIndex(action.elements, key)
+      const change = changeDiff(
+        ma, currentIndex,
+        diffY + diffYM,
+        action.elements,
+        gap,
+        model.version == action.version
+      );
       let version = action.version
-
       if (change) {
         version = version + 1
         model.changeIndex(change[0], change[1], version, ma.merge())
@@ -318,25 +292,36 @@ export function reorderReducer<K, M extends ReorderModel<K>>(
   return model
 }
 
-function didEnd<K, M extends ReorderModel<K>>(
+function didEnd<K, M extends ReorderLocalModel<K>>(
   model: M,
   key: K,
   diff: number,
   action: {
-    elements: ReorderElement<K>[]
+    version: number
+    elements: ReorderLocalElement<K>[]
     gap?: number
     config: AnimationConfig
     scrollTop: number
   }) {
   const ma = new MergeAction<K>()
   const gap = getDefaultGap(model.gap, action.gap)
-  const change = changeDiff(ma, key, diff, action.elements, gap);
-  const element = getElement(action.elements, key)
+
+  const currentIndex = getElementIndex(action.elements, key)
+  const change = changeDiff(ma,
+    currentIndex,
+    diff,
+    action.elements,
+    gap,
+    action.version == model.version);
+
+
+  const element = action.elements[currentIndex]
   if (element) {
-    ma.append(key, function () {
+    ma.append(function () {
       element.endLayout()
     })
   }
+
   let version = model.version
   if (change) {
     version = version + 1

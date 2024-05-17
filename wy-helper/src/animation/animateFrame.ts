@@ -34,8 +34,12 @@ export type AnimateFrameEvent = {
   onFinish?(v: boolean): void
 }
 
-
-class AnimateTo {
+export interface AnimateTo {
+  from: number,
+  target: number,
+  config: AnimationConfig,
+}
+class AnimateToImpl implements AnimateTo {
   constructor(
     public from: number,
     public target: number,
@@ -56,11 +60,16 @@ class AnimateTo {
   }
 }
 
+export interface AnimateFrameValue extends ReadValueCenter<number> {
+  slientDiff(n: number): void
+  getAnimateTo(): AnimateTo | undefined
+  changeTo(target: number, config?: AnimationConfig, ext?: AnimateFrameEvent): "immediately" | "animate" | undefined
+}
 /**
  * 使用react的render,可能不平滑,因为react是异步的,生成值到渲染到视图上,可能有时间间隔
  * 或者总是使用flushSync.
  */
-export class AnimateFrameValue implements ReadValueCenter<number> {
+export class AnimateFrameValueImpl implements AnimateFrameValue {
   private value: ValueCenter<number>
   constructor(
     initValue: number,
@@ -71,7 +80,7 @@ export class AnimateFrameValue implements ReadValueCenter<number> {
   /**
    * 如果正在发生动画,这个值存在
    */
-  private animateTo: AnimateTo | undefined = undefined
+  private animateTo: AnimateToImpl | undefined = undefined
   getAnimateTo() {
     return this.animateTo
   }
@@ -81,9 +90,11 @@ export class AnimateFrameValue implements ReadValueCenter<number> {
     this.lastCancel = emptyFun
     this.animateTo = undefined
   }
-  slientChange(target: number, from: number = target) {
+  slientChange(target: number, from?: number) {
     if (this.animateTo) {
-      this.animateTo.from = from
+      this.animateTo.from = typeof from == 'number'
+        ? from
+        : this.animateTo.from + target - this.animateTo.target
       this.animateTo.target = target
       this.animateTo.reDo()
     } else {
@@ -126,7 +137,7 @@ export class AnimateFrameValue implements ReadValueCenter<number> {
     }
     this.lastCancel()
     const that = this
-    const animateTo = new AnimateTo(
+    const animateTo = new AnimateToImpl(
       baseValue,
       target,
       config,

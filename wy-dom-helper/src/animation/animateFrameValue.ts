@@ -1,4 +1,4 @@
-import { AnimateFrameValue, animateFrameReducer, superSubscribeRequestAnimationFrame } from "wy-helper"
+import { AnimateFrameValueImpl, createAnimateFrameReducer, superSubscribeRequestAnimationFrame, createRecycleScrollListReducer } from "wy-helper"
 
 
 export function subscribeRequestAnimationFrame(
@@ -8,10 +8,9 @@ export function subscribeRequestAnimationFrame(
   return superSubscribeRequestAnimationFrame(requestAnimationFrame, callback, init)
 }
 
-
-
-export function animateNumberFrame(value: number, requestAnimateFrame = requestAnimationFrame) {
-  return new AnimateFrameValue(value, requestAnimateFrame)
+export function animateFrame(value: number, requestAnimateFrame = requestAnimationFrame) {
+  return new AnimateFrameValueImpl(value, requestAnimateFrame)
 }
-export const animateNumberFrameReducer = animateFrameReducer(requestAnimationFrame)
+export const animateFrameReducer = createAnimateFrameReducer(requestAnimationFrame)
 
+export const recycleScrollListReducer = createRecycleScrollListReducer(animateFrameReducer)

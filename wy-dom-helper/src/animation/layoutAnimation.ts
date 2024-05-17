@@ -1,5 +1,5 @@
 import { EaseFn, GetValue, Point, pointEqual, pointZero, syncMergeCenter, valueCenterOf } from "wy-helper";
-import { animateNumberFrame, subscribeRequestAnimationFrame } from "./animateFrameValue";
+import { animateFrame, subscribeRequestAnimationFrame } from "./animateFrameValue";
 import { getPageOffset } from "../util";
 
 
@@ -8,8 +8,8 @@ export function layoutFrameAnimation(get: GetValue<HTMLElement>, config: {
   duration: number
   fn: EaseFn
 }, lastPS?: Point) {
-  const transX = animateNumberFrame(0)
-  const transY = animateNumberFrame(0)
+  const transX = animateFrame(0)
+  const transY = animateFrame(0)
   const styleStore = valueCenterOf(pointZero)
   return function (ps?: Point) {
     if (ps) {

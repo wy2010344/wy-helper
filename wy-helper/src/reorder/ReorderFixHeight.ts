@@ -10,9 +10,6 @@ export interface ReorderFixHeightItemData<K> {
   child: ReorderFixHeightChild<K>
 }
 
-function reorderItemDataGetKey<K>(n: ReorderFixHeightItemData<K>) {
-  return n.value
-}
 type MoveV<K> = {
   lastValue: Point
   currentItem: ReorderFixHeightChild<K>
@@ -36,11 +33,11 @@ function rangeBetween(idx: number, idx1: number, callback: (i: number) => void) 
 }
 export class ReorderFixHeight<K> {
   checkToMove(key: K, offset: Point, diff: Point) {
+    const index = this.layoutList.findIndex(v => v.value == key)
     const item = reorderCheckTarget(
       this.layoutList,
-      reorderItemDataGetKey,
+      index,
       this.getHeight,
-      key,
       offset[this.direction],
       diff[this.direction],
       this.gap)
