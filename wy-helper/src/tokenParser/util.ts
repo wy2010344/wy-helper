@@ -1,4 +1,5 @@
-import { CharRange, andMatch, manyMatch, matchAnyString, orMatch, orMatchEmpty } from "./tokenParser";
+import { parseSkip } from "./parse";
+import { CharRange, andMatch, manyMatch, matchAnyString, matchEnd, orMatch, orMatchEmpty, whiteSpaceRule, whiteSpaceRuleZero } from "./tokenParser";
 
 
 
@@ -31,3 +32,21 @@ export const isFloat = andMatch(
     )
   )
 )
+
+
+export function skipWhiteSpace(atLeastOne?: boolean) {
+  if (atLeastOne) {
+    parseSkip(whiteSpaceRule)
+  } else {
+    parseSkip(whiteSpaceRuleZero)
+  }
+}
+
+
+export function skipAnyString(...vs: string[]) {
+  parseSkip(matchAnyString(...vs), vs.join(','))
+}
+
+export function skipMatchEnd() {
+  parseSkip(matchEnd)
+}

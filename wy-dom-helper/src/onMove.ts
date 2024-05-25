@@ -97,3 +97,95 @@ export function subscribeMove(
     throw new Error('不知道是什么类型' + eventType)
   }
 }
+
+export interface PagePoint {
+  pageX: number
+  pageY: number
+}
+export function subscribeDragMove(
+  onMove: (pagePoint: PagePoint, end: boolean | undefined, e: Event) => boolean,
+  arg?: OnMoveArg
+) {
+  const dm = subscribeMove(function (e, a) {
+    onMove(e, a, e)
+  }, 'mouse', arg)
+  const dt = subscribeMove(function (e, a) {
+    onMove(e.touches[0], a, e)
+  }, 'touch', arg)
+  return function () {
+    dm()
+    dt()
+  }
+}
+
+export function dragInit(fun: (e: PagePoint, m: Event) => void) {
+  return {
+    onMouseDown(e: MouseEvent) {
+      fun(e, e)
+    },
+    onTouchStart(e: TouchEvent) {
+      fun(e.touches[0], e)
+    }
+  }
+}
+
+
+
+function subscribeEvent(div: any, type: string, fun: any, opt: any) {
+  div.addEventListener(type, fun, opt)
+  return function () {
+    div.removeEventListener(type, fun, opt)
+  }
+}
+
+export function subscribeDragInit(div: Node, fun: (e: PagePoint, ole: Event) => void, capture?: boolean) {
+  let cancelOption: AddEventListenerOptions = {
+    capture
+  }
+  const d1 = subscribeEvent(div, "mousedown", function (e: any) {
+    fun(e, e)
+  }, cancelOption)
+  const d2 = subscribeEvent(div, "touchstart", function (e: any) {
+    fun(e.touches[0], e)
+  }, cancelOption)
+  return function () {
+    d1()
+    d2()
+  }
+}
+
+export function cacheVelocity() {
+  let last: {
+    time: number,
+    value: number
+  } | undefined = undefined
+  let velocity = 0
+  function set(time: number, value: number): number
+  function set(): void
+  function set(): any {
+    if (arguments.length == 0) {
+      last = undefined
+      velocity = 0
+    } else {
+      if (last) {
+        const time = arguments[0]
+        const value = arguments[1]
+        if (time != last.time) {
+          velocity = (value - last.value) / (time - last.time)
+          last.value = value
+          last.time = time
+        } else if (value != last.value) {
+          console.warn("同一时间的速度不一样?", value, last.value)
+          last.value = value
+        }
+      } else {
+        last = {
+          time: arguments[0],
+          value: arguments[1]
+        }
+      }
+      return velocity
+    }
+  }
+  return set
+}
