@@ -1,3 +1,5 @@
+import { cacheGet } from "wy-helper"
+
 type MBKeyboard = {
   code?: string
   keyCode: number,
@@ -62,6 +64,9 @@ export interface MbRange {
 
 export const mb = {
   DOM: {
+    supportTouch: cacheGet(() => {
+      return 'ontouchstart' in window
+    }),
     addEvent(v: any, key: string, fun: any) {
       v.addEventListener(key, fun)
     },
@@ -348,8 +353,4 @@ function prefixStyle(style: string) {
   if (_vendor === false) return false;
   if (_vendor === '') return style;
   return _vendor + style.charAt(0).toUpperCase() + style.substr(1);
-}
-
-const style = {
-
 }

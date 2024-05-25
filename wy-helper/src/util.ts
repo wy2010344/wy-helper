@@ -166,13 +166,13 @@ export function asLazy<T>(v: T) {
 }
 
 
-export function lazyGet<T>(fun: () => T) {
-  let value: T | undefined = undefined
+export function cacheGet<T>(fun: () => T) {
+  let value: { v: T } | undefined = undefined
   return function () {
     if (!value) {
-      value = fun()
+      value = { v: fun() }
     }
-    return value
+    return value.v
   }
 }
 

@@ -78,6 +78,16 @@ export const easeFns = {
     }
   },
   /**
+   * 
+   * 
+https://easings.net/#easeInElastic
+const c4 = (2 * Math.PI) / 3;
+return x === 0
+  ? 0
+  : x === 1
+  ? 1
+  : -Math.pow(2, 10 * x - 10) * Math.sin((x * 10 - 10.75) * c4);
+
    * 从https://github.com/zhangxinxu/Tween/blob/master/tween.js 简化
    * @param a 振幅
    * @param p 频率(越小周期越多)
