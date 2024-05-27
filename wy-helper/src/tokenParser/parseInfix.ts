@@ -278,7 +278,6 @@ export function infixRightNeedQuote(
       return false
     }
 }
-
 // export type AInfixNode<T> = {
 //   type: "infix"
 //   infix: InfixToken
