@@ -4,6 +4,7 @@ export * from './tween'
 export * from './bezier'
 export * from './animateFrameReducer'
 export * from './animateFrame'
+export * from './spring'
 export type AnimationConfig = {
   duration: number
   /**
