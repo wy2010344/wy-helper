@@ -1,9 +1,10 @@
-import { AnimationConfig, ReducerDispatch, ReducerWithDispatch, SetValue } from ".."
+import { ReducerDispatch, ReducerWithDispatch, SetValue, SpringOutValue } from ".."
 import { arrayFunToOneOrEmpty } from '../ArrayHelper'
-import { mixNumber } from '../NumberHelper'
+import { AnimationConfig } from "./AnimationConfig"
 export type AnimateFrameModel = {
   version: number
   value: number
+  current?: SpringOutValue
   animateTo?: {
     from: number
     target: number
@@ -54,7 +55,13 @@ export function createAnimateFrameReducer(
       if (old.animateTo && old.version == act.version) {
         const diffTime = act.time - old.animateTo.startTime
         const c = old.animateTo.config
-        if (diffTime < c.duration) {
+        if (c.finished(diffTime, old.current)) {
+          //结束
+          return {
+            version: old.version,
+            value: old.animateTo.target
+          }
+        } else {
           //正常触发动画
           list.push(function (dispatch) {
             requestAnimationFrame(time => {
@@ -66,21 +73,12 @@ export function createAnimateFrameReducer(
             })
           })
           if (diffTime > 0) {
-            const value = mixNumber(
-              old.animateTo.from,
-              old.animateTo.target,
-              c.fn(diffTime / c.duration)
-            )
+            const current = c.computed(diffTime, old.animateTo.from, old.animateTo.target)
             return {
               ...old,
-              value
+              value: old.animateTo.target - current.displacement,
+              current
             }
-          }
-        } else {
-          //结束
-          return {
-            version: old.version,
-            value: old.animateTo.target
           }
         }
       }
@@ -103,6 +101,12 @@ export function createAnimateFrameReducer(
       if (oldValue == act.target) {
         //不改变
         return old
+      }
+      if (act.config.initFinished(oldValue, act.target)) {
+        return {
+          version: old.version,
+          value: act.target
+        }
       }
       const version = old.version + 1
       list.push(function (dispatch) {

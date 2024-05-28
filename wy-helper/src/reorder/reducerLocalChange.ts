@@ -1,5 +1,5 @@
 import { arrayMove } from "../ArrayHelper"
-import { AnimationConfig } from "../animation"
+import { AnimationConfig } from "../animation/AnimationConfig"
 import { EmptyFun, run } from "../util"
 import { rangeBetweenLeft, rangeBetweenRight, reorderCheckTarget } from "./util"
 export type ReorderLocalModel<K> = {

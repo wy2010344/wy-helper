@@ -1,6 +1,7 @@
 import { arrayFunToOneOrEmpty } from "../ArrayHelper"
 import { ReducerWithDispatch, ReducerWithDispatchResult, mapReducerDispatch } from "../ValueCenter"
-import { AnimateFrameAct, AnimateFrameModel, AnimationConfig } from "../animation"
+import { AnimateFrameAct, AnimateFrameModel } from "../animation"
+import { AnimationConfig } from "../animation/AnimationConfig"
 
 export type RecycleListModel = {
   size: number

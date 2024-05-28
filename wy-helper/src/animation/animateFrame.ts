@@ -1,8 +1,9 @@
-import { AnimationConfig } from ".."
+import { AnimationConfig } from "./AnimationConfig"
 import { ReadValueCenter, ValueCenter, valueCenterOf } from "../ValueCenter"
 import { SetValue } from "../setStateHelper"
 import { mixNumber } from '../NumberHelper'
 import { emptyFun, emptyObject } from '../util'
+import { SpringOutValue } from "./spring"
 export function superSubscribeRequestAnimationFrame(
   requestAnimationFrame: (fun: SetValue<number>) => void,
   callback: (time: number, isInit: boolean) => void,
@@ -38,21 +39,22 @@ export interface AnimateTo {
   from: number,
   target: number,
   config: AnimationConfig,
+  current?: SpringOutValue
 }
 class AnimateToImpl implements AnimateTo {
+  current: SpringOutValue | undefined
   constructor(
     public from: number,
     public target: number,
     public config: AnimationConfig,
     private setValue: (v: number, onProcess?: boolean) => void
   ) { }
-
   private time: number = 0
   update(diffTime: number, onProcess?: boolean) {
     this.time = diffTime
-    const c = this.config
-    const value = mixNumber(this.from, this.target, c.fn(diffTime / c.duration))
-    this.setValue(value, onProcess)
+    const out = this.config.computed(diffTime, this.from, this.target)
+    this.current = out
+    this.setValue(this.target - out.displacement, onProcess)
   }
 
   reDo() {
@@ -129,13 +131,19 @@ export class AnimateFrameValueImpl implements AnimateFrameValue {
       baseValue = from
     } else {
       baseValue = this.animateTo
-        ? this.animateTo.target : this.value.get()
+        ? this.animateTo.target
+        : this.value.get()
     }
     if (target == baseValue) {
       //不会发生任何改变.
       return
     }
     this.lastCancel()
+    if (config.initFinished(baseValue, target)) {
+      //超越检测动画
+      this.value.set(target)
+      return 'immediately'
+    }
     const that = this
     const animateTo = new AnimateToImpl(
       baseValue,
@@ -158,17 +166,17 @@ export class AnimateFrameValueImpl implements AnimateFrameValue {
         const diffTime = date - timePeriod
         const toValue = animateTo.target
         const c = animateTo.config
-        if (diffTime < c.duration) {
-          if (diffTime > 0) {
-            //不明白为什么,但确实会出现diffTime小于0
-            animateTo.update(diffTime, true)
-          }
-        } else {
+        if (c.finished(diffTime, animateTo.current)) {
           that.value.set(toValue)
           cancel()
           that.clear()
           //在trigger里访问到animateTo已经结束
           onFinish(true)
+        } else {
+          if (diffTime > 0) {
+            //不明白为什么,但确实会出现diffTime小于0
+            animateTo.update(diffTime, true)
+          }
         }
       })
     this.lastCancel = function () {

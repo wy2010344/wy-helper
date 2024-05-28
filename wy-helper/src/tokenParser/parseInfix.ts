@@ -1,7 +1,7 @@
 import { List } from "../kanren"
 import { emptyFun } from "../util"
 import { or, parseGet } from "./parse"
-import { ParseFun, Que, matchAnyString } from "./tokenParser"
+import { ParseFun, Que, error, matchAnyString } from "./tokenParser"
 import { skipWhiteSpace } from "./util"
 
 
@@ -25,6 +25,7 @@ export type MatchGet = {
   display: string
   stringify(n: string): string
 }
+
 export type Infix = string | MatchGet
 /**
  * 从后往前结合
@@ -43,6 +44,30 @@ function parseInfixBB<F>(
   return { first, exts }
 }
 
+function parseInfixNode(value: MatchGet) {
+  return function () {
+    return parseGet(value.match, (begin, end) => {
+      const str = value.get(begin, end)
+      return {
+        value: str,
+        begin: begin.i,
+        end: end.i,
+        errors: []
+      } as InfixToken
+    })
+  }
+}
+function parseInfixStr(value: string) {
+  return () => {
+    return parseGet(matchAnyString(value), (begin, end) => {
+      return {
+        value: begin.content.slice(begin.i, end.i),
+        begin: begin.i,
+        end: end.i
+      } as InfixToken
+    })
+  }
+}
 function parsePrefix<F>(
   infixes: Infix[],
   parseLeaf: () => F
@@ -57,26 +82,9 @@ function parsePrefix<F>(
         skipWhiteSpace()
         const infix = or(infixes.map(value => {
           if (typeof value == 'string') {
-            return () => {
-              return parseGet(matchAnyString(value), (begin, end) => {
-                return {
-                  value: begin.content.slice(begin.i, end.i),
-                  begin: begin.i,
-                  end: end.i
-                } as InfixToken
-              })
-            }
+            return parseInfixStr(value)
           } else {
-            return () => {
-              return parseGet(value.match, (begin, end) => {
-                return {
-                  value: value.get(begin, end),
-                  begin: begin.i,
-                  end: end.i,
-                  errors: []
-                } as InfixToken
-              })
-            }
+            return parseInfixNode(value)
           }
         }))
         skipWhiteSpace()
@@ -124,27 +132,9 @@ export function parseSuffix<F>(
         skipWhiteSpace()
         const infix = or(infixes.map(value => {
           if (typeof value == 'string') {
-            return () => {
-              return parseGet(matchAnyString(value), (begin, end) => {
-                return {
-                  value: begin.content.slice(begin.i, end.i),
-                  begin: begin.i,
-                  end: end.i,
-                  errors: []
-                } as InfixToken
-              })
-            }
+            return parseInfixStr(value)
           } else {
-            return () => {
-              return parseGet(value.match, (begin, end) => {
-                return {
-                  value: value.get(begin, end),
-                  begin: begin.i,
-                  end: end.i,
-                  errors: []
-                } as InfixToken
-              })
-            }
+            return parseInfixNode(value)
           }
         }))
         exts.push({
