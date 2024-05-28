@@ -101,9 +101,13 @@ export function subscribeMove(
 export interface PagePoint {
   pageX: number
   pageY: number
+  screenX: number
+  screenY: number
+  clientX: number
+  clientY: number
 }
 export function subscribeDragMove(
-  onMove: (pagePoint: PagePoint, end: boolean | undefined, e: Event) => boolean,
+  onMove: (pagePoint: PagePoint, end: boolean | undefined, e: Event) => void,
   arg?: OnMoveArg
 ) {
   const dm = subscribeMove(function (e, a) {
@@ -138,7 +142,7 @@ function subscribeEvent(div: any, type: string, fun: any, opt: any) {
   }
 }
 
-export function subscribeDragInit(div: Node, fun: (e: PagePoint, ole: Event) => void, capture?: boolean) {
+export function subscribeDragInit(div: Node, fun: (e: PagePoint | undefined, ole: Event) => void, capture?: boolean) {
   let cancelOption: AddEventListenerOptions = {
     capture
   }
@@ -154,7 +158,7 @@ export function subscribeDragInit(div: Node, fun: (e: PagePoint, ole: Event) => 
   }
 }
 
-export function cacheVelocity() {
+export function cacheVelocity(BEFORE_LAST_KINEMATICS_DELAY = 32) {
   let last: {
     time: number,
     value: number
@@ -167,21 +171,20 @@ export function cacheVelocity() {
       last = undefined
       velocity = 0
     } else {
+      const time = arguments[0]
+      const value = arguments[1]
       if (last) {
-        const time = arguments[0]
-        const value = arguments[1]
-        if (time != last.time) {
-          velocity = (value - last.value) / (time - last.time)
+        const diffTime = time - last.time
+        if (diffTime > BEFORE_LAST_KINEMATICS_DELAY) {
+          velocity = (value - last.value) / diffTime
           last.value = value
           last.time = time
-        } else if (value != last.value) {
-          console.warn("同一时间的速度不一样?", value, last.value)
-          last.value = value
         }
       } else {
+        velocity = 0
         last = {
-          time: arguments[0],
-          value: arguments[1]
+          time,
+          value
         }
       }
       return velocity

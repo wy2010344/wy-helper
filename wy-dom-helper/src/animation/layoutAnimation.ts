@@ -1,4 +1,4 @@
-import { EaseFn, EmptyFun, FalseType, GetValue, Point, emptyObject, pointEqual, pointZero, run, syncMergeCenter, valueCenterOf } from "wy-helper";
+import { AnimationConfig, EaseFn, EmptyFun, FalseType, GetValue, Point, emptyObject, pointEqual, pointZero, run, syncMergeCenter, valueCenterOf } from "wy-helper";
 import { animateFrame } from "./animateFrameValue";
 import { getPageOffset } from "../util";
 
@@ -25,10 +25,7 @@ export function layoutFrameAnimation({
   /**
    * 如果靠render来驱动,则需要如此
    */
-  return function (div: HTMLElement, config: {
-    duration: number
-    fn: EaseFn
-  }) {
+  return function (div: HTMLElement, config: AnimationConfig) {
     function locationChange(ps: Point, lastPS: Point) {
       transX.changeTo(transX.get() + ps.x - lastPS.x)
       transY.changeTo(transY.get() + ps.y - lastPS.y)

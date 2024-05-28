@@ -1,4 +1,4 @@
-import { AnimateFrameEvent, AnimateFrameValue, AnimationConfig } from "../animation"
+import { AnimateFrameEvent, AnimateFrameValue, AnimationConfig, TweenAnimationConfig } from "../animation"
 import { EaseFn, MomentumCallIdeal, buildNoEdgeScroll } from "../scroller"
 import { EmptyFun } from "../util"
 
@@ -42,10 +42,10 @@ export function recicleScrollViewView(
           const idx = Math.round(value / rowHeight)
           let nValue = initScrollHeight + idx * rowHeight
 
-          transY.changeTo(nValue, {
+          transY.changeTo(nValue, new TweenAnimationConfig(
             duration,
-            fn: scrollFn
-          }, {
+            scrollFn
+          ), {
             onProcess: aUpdate,
             onFinish(v) {
               if (v) {

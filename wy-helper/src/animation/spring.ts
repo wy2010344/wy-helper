@@ -4,7 +4,8 @@ export function springBase({
   omega0,
   deltaX,
   initialVelocity,
-  velocityWhenZta1Plus
+  velocityWhenZta1Plus,
+  elapsedTime
 }: {
   /**自由振荡角频率 */
   omega0: number
@@ -14,7 +15,8 @@ export function springBase({
   deltaX: number
   /**初始速度 v0 (可选) */
   initialVelocity: number;
-  velocityWhenZta1Plus?: boolean
+  velocityWhenZta1Plus?: boolean,
+  elapsedTime: number
 }) {
   // value = to - displacement
   if (zta < 1) {
@@ -22,56 +24,50 @@ export function springBase({
     const cosCoeff = deltaX
     // Underdamped
     const sinCoeff = (initialVelocity + (zta * omega0 * deltaX)) / omegaD
-    return function (elapsedTime: number) {
-      const cos1 = Math.cos(omegaD * elapsedTime)
-      const sin1 = Math.sin(omegaD * elapsedTime)
+    const cos1 = Math.cos(omegaD * elapsedTime)
+    const sin1 = Math.sin(omegaD * elapsedTime)
 
-      const underDampedEnvelope = Math.exp(-zta * omega0 * elapsedTime)
+    const underDampedEnvelope = Math.exp(-zta * omega0 * elapsedTime)
 
-      const displacement = underDampedEnvelope * (cosCoeff * cos1 + sinCoeff * sin1)
-      return {
-        //FM,Gpt,Jc,ReA
-        displacement,
-        //Jc,Rea依赖上一步,没有对上,Gpt,FM没有提供
-        velocity: displacement * (-omega0) * zta
-          + underDampedEnvelope * omegaD * (sinCoeff * cos1 - cosCoeff * sin1)
-      }
+    const displacement = underDampedEnvelope * (cosCoeff * cos1 + sinCoeff * sin1)
+    return {
+      //FM,Gpt,Jc,ReA
+      displacement,
+      //Jc,Rea依赖上一步,没有对上,Gpt,FM没有提供
+      velocity: displacement * (-omega0) * zta
+        + underDampedEnvelope * omegaD * (sinCoeff * cos1 - cosCoeff * sin1)
     }
+
   } else if (zta == 1) {
     // Critically damped,
     const coeffA = deltaX
     const coeffB = initialVelocity + omega0 * deltaX
-    return function (elapsedTime: number) {
-      const criticallyDampedEnvelope = Math.exp(-omega0 * elapsedTime)
-      return {
-        //==FM,Gpt,Jc,ReA
-        displacement: (coeffA + coeffB * elapsedTime) * criticallyDampedEnvelope,
-        //Jc,Rea没有对止,Gpt,FM没有提供
-        velocity: velocityWhenZta1Plus
-          ? criticallyDampedEnvelope * (
-            (coeffA + coeffB * elapsedTime) * (-omega0) + coeffB
-          ) : 0
-      }
+    const criticallyDampedEnvelope = Math.exp(-omega0 * elapsedTime)
+    return {
+      //==FM,Gpt,Jc,ReA
+      displacement: (coeffA + coeffB * elapsedTime) * criticallyDampedEnvelope,
+      //Jc,Rea没有对止,Gpt,FM没有提供
+      velocity: velocityWhenZta1Plus
+        ? criticallyDampedEnvelope * (
+          (coeffA + coeffB * elapsedTime) * (-omega0) + coeffB
+        ) : 0
     }
+
   } else {
     const cext = omega0 * Math.sqrt(zta * zta - 1)
     const gammaPlus = (-zta * omega0 + cext)
     const gammaMinus = (-zta * omega0 - cext)
     // Overdamped
     const coeffA = deltaX - (gammaMinus * deltaX - initialVelocity) / (gammaMinus - gammaPlus)
-
     const coeffB = (gammaMinus * deltaX - initialVelocity) / (gammaMinus - gammaPlus)
-
-    return function (elapsedTime: number) {
-      return {
-        //Jc
-        displacement: coeffA * Math.exp(gammaMinus * elapsedTime) +
-          coeffB * Math.exp(gammaPlus * elapsedTime),
-        //Jc
-        velocity: velocityWhenZta1Plus
-          ? coeffA * gammaMinus * Math.exp(gammaMinus * elapsedTime) + coeffB * gammaPlus * Math.exp(gammaPlus * elapsedTime)
-          : 0
-      }
+    return {
+      //Jc
+      displacement: coeffA * Math.exp(gammaMinus * elapsedTime) +
+        coeffB * Math.exp(gammaPlus * elapsedTime),
+      //Jc
+      velocity: velocityWhenZta1Plus
+        ? coeffA * gammaMinus * Math.exp(gammaMinus * elapsedTime) + coeffB * gammaPlus * Math.exp(gammaPlus * elapsedTime)
+        : 0
     }
   }
 }
