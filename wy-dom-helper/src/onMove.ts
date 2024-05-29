@@ -13,16 +13,16 @@ type OnMoveArg = {
   element?: Element
 }
 export function subscribeMove(
-  onMove: (e: PointerEvent, end?: boolean) => void,
+  onMove: (e: PointerEvent, end?: true) => void,
   eventType?: "pointer",
   arg?: OnMoveArg
 ): EmptyFun
 export function subscribeMove(
-  onMove: (e: TouchEvent, end?: boolean) => void,
+  onMove: (e: TouchEvent, end?: true) => void,
   eventType: "touch", arg?: OnMoveArg
 ): EmptyFun
 export function subscribeMove(
-  onMove: (e: MouseEvent, end?: boolean) => void,
+  onMove: (e: MouseEvent, end?: true) => void,
   eventType: "mouse", arg?: OnMoveArg
 ): EmptyFun
 export function subscribeMove(
@@ -71,9 +71,11 @@ export function subscribeMove(
   if (eventType == "mouse") {
     element.addEventListener("mousemove", move, moveOption)
     element.addEventListener("mouseup", end, endOption)
+    element.addEventListener("mouseleave", end, endOption)
     return function () {
       element.removeEventListener("mousemove", move, moveOption)
       element.removeEventListener("mouseup", end, endOption)
+      element.removeEventListener("mouseleave", end, endOption)
     }
   } else if (eventType == "pointer") {
     element.addEventListener("pointermove", move, moveOption)
@@ -106,15 +108,20 @@ export interface PagePoint {
   clientX: number
   clientY: number
 }
+
+interface DragMove {
+  (pagePoint: PagePoint, end: true, e: Event): void
+  (pagePoint: PagePoint | undefined, end: undefined, e: Event): void
+}
 export function subscribeDragMove(
-  onMove: (pagePoint: PagePoint, end: boolean | undefined, e: Event) => void,
+  onMove: DragMove,
   arg?: OnMoveArg
 ) {
   const dm = subscribeMove(function (e, a) {
-    onMove(e, a, e)
+    onMove(e, a as any, e)
   }, 'mouse', arg)
   const dt = subscribeMove(function (e, a) {
-    onMove(e.touches[0], a, e)
+    onMove(e.touches[0], a as any, e)
   }, 'touch', arg)
   return function () {
     dm()
@@ -156,39 +163,4 @@ export function subscribeDragInit(div: Node, fun: (e: PagePoint | undefined, ole
     d1()
     d2()
   }
-}
-
-export function cacheVelocity(BEFORE_LAST_KINEMATICS_DELAY = 32) {
-  let last: {
-    time: number,
-    value: number
-  } | undefined = undefined
-  let velocity = 0
-  function set(time: number, value: number): number
-  function set(): void
-  function set(): any {
-    if (arguments.length == 0) {
-      last = undefined
-      velocity = 0
-    } else {
-      const time = arguments[0]
-      const value = arguments[1]
-      if (last) {
-        const diffTime = time - last.time
-        if (diffTime > BEFORE_LAST_KINEMATICS_DELAY) {
-          velocity = (value - last.value) / diffTime
-          last.value = value
-          last.time = time
-        }
-      } else {
-        velocity = 0
-        last = {
-          time,
-          value
-        }
-      }
-      return velocity
-    }
-  }
-  return set
 }

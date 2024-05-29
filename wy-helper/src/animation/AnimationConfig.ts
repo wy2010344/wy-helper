@@ -12,6 +12,7 @@ export interface AnimationConfig {
 }
 
 
+
 export class TweenAnimationConfig implements AnimationConfig {
   constructor(
     public readonly duration: number,
@@ -76,6 +77,108 @@ export class SpringBaseAnimationConfig implements AnimationConfig {
   finished(diffTime: number, out?: SpringOutValue): boolean {
     if (out) {
       return springIsStop(out, this.displacementThreshold, this.velocityThreshold)
+    }
+    return false
+  }
+}
+
+
+export function getTimeToVelocity(
+  gamma: number,
+  initialVelocity: number,
+  velocity: number
+) {
+  return -Math.log(Math.abs(velocity / initialVelocity)) / gamma
+}
+
+/**
+ * 获得初始速度下的最大运动距离
+ * @param initialVelocity 
+ * @returns 
+ */
+export function getMaxDistance(
+  gamma: number,
+  /**初始速度 */
+  initialVelocity: number
+) {
+  return gamma * initialVelocity
+}
+function getDisplacement(
+  gamma: number,
+  /**初始速度 */
+  initialVelocity: number,
+  /**时间 */
+  elapsedTime: number
+) {
+  return getMaxDistance(gamma, initialVelocity) * Math.exp(-gamma * elapsedTime)
+}
+export class DampingAnimationConfig implements AnimationConfig {
+  constructor(
+    public readonly gamma: number,
+    public readonly initVelocity: number,
+    public readonly velocityThreshold: number
+  ) {
+    this.endT = getTimeToVelocity(gamma, initVelocity, velocityThreshold)
+  }
+  endT: number
+  initFinished(from: number, target: number): boolean {
+    return Math.abs(this.initVelocity) < this.velocityThreshold
+  }
+  computed(diffTime: number, from: number, target: number): SpringOutValue {
+    const t = diffTime / 1000
+    return {
+      displacement: getDisplacement(this.gamma, this.initVelocity, t),
+      velocity: Infinity
+    }
+  }
+  finished(diffTime: number, out?: SpringOutValue | undefined): boolean {
+    const t = diffTime / 1000
+    return this.endT < t
+  }
+}
+
+
+export class DampingEdgeAnimationConfig implements AnimationConfig {
+  constructor(
+    public readonly gamma: number,
+    /**阻尼比:0~1~无穷,0~1是欠阻尼,即会来回,1~无穷不会来回*/
+    public readonly zta: number,
+    /**自由振荡角频率 */
+    public readonly omega0: number,
+    public readonly initVelocity: number,
+    public readonly centerVelocity: number,
+    public readonly velocityThreshold: number,
+    public readonly displacementThreshold: number,
+    public readonly nt: number
+  ) {
+  }
+  initFinished(from: number, target: number): boolean {
+    return false
+  }
+  computed(diffTime: number, from: number, target: number): SpringOutValue {
+    const t = diffTime / 1000
+    if (t <= this.nt) {
+      return {
+        displacement: getDisplacement(this.gamma, this.initVelocity, t),
+        velocity: Infinity
+      }
+    } else {
+      return springBase({
+        zta: this.zta,
+        omega0: this.omega0,
+        //这里不应该为0
+        deltaX: 0,
+        initialVelocity: this.centerVelocity,
+        elapsedTime: t - this.nt
+      })
+    }
+  }
+  finished(diffTime: number, out?: SpringOutValue | undefined): boolean {
+    const t = diffTime / 1000
+    if (t > this.nt) {
+      if (out) {
+        return springIsStop(out, this.displacementThreshold, this.velocityThreshold)
+      }
     }
     return false
   }
