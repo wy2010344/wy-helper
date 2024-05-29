@@ -28,14 +28,15 @@ export const easeFns = {
       return 1 - easing((1 - t) * 2) / 2
     }
   },
+  /**N次方 */
   poly,
-  //二次方
+  /**二次方 */
   quad: poly(2),
-  //三次方
+  /**三次方 */
   cubic: poly(3),
-  //四次方
+  /**四次方 */
   quart: poly(4),
-  //五次方
+  /**五次方 */
   quint: poly(5),
   /**
    * 正弦曲线的缓动

@@ -1,3 +1,4 @@
+import { AnimationConfig } from "./AnimationConfig";
 
 export function springBase({
   zta,
@@ -72,6 +73,13 @@ export function springBase({
   }
 }
 
+/**
+ * 阻尼力使用与速度成正比,并非客观物理规律,只是摩擦力分静态摩擦力与动态摩擦力,而不是与速度相关,方便计算
+ * @param stiffness 
+ * @param damping 
+ * @param mass 
+ * @returns 
+ */
 export function getZtaAndOmega0From(
   /**弹性系数 k */
   stiffness: number,
@@ -125,3 +133,5 @@ export function springIsStop2(
 ) {
   const energy = (Math.pow(n.displacement, 2) * omega0 + Math.pow(n.velocity, 2) / omega0) * damping / zta / 2
 }
+
+

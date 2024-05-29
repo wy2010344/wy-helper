@@ -1,3 +1,4 @@
+import { AnimationConfig, DampingAnimationConfig, DampingEdgeAnimationConfig, SpringBaseAnimationConfig, SpringOutValue, getMaxDistance, getTimeToVelocity, springBase, springIsStop } from "./animation"
 import { SetValue } from "./setStateHelper"
 import { emptyObject } from "./util"
 
@@ -58,24 +59,22 @@ export const scrollEases = {
 }
 
 export interface MomentumCall {
-  (
-    /** < 0 当前位移 */
-    current: number,
-    velocity: number,
-    /** 容器尺寸,如wrapperHeight  */
-    wrapperSize: number,
-    /**最下滚动,一般为wrapperHeight-clientHeight,即maxScroll,为负数 */
-    lowerMargin: number,
-    /**最上滚动,一般为0 */
-    upperMargin: number
-  ): {
-    /**目标位移 */
-    destination: number
-    /**到目标位移用时 */
-    duration: number
-  }
+  (arg: MomentumEndArg): MomentumCallOut
 }
 
+export interface MomentumEndArg {
+  /** < 0 当前位移 */
+  current: number,
+  velocity: number,
+  /**最下滚动,一般为wrapperHeight-clientHeight,即maxScroll,为负数 */
+  lowerMargin: number,
+  /**最上滚动,一般为0 */
+  upperMargin: number,
+  // /** 容器尺寸,如wrapperHeight  */
+  wrapperSize: number,
+}
+
+export type MomentumCallOut = [number, AnimationConfig]
 
 export interface MomentumCallIdeal {
   (velocity: number): {
@@ -84,12 +83,20 @@ export interface MomentumCallIdeal {
   }
 }
 
-
+export type OldGetValue = {
+  getOnDragEnd(duration: number, edge: boolean): AnimationConfig
+  onEdgeBack: AnimationConfig
+}
 export class MomentumIScroll {
   private constructor(
     public readonly deceleration = 0.0006
   ) {
     this.deceleration = Math.abs(deceleration)
+  }
+
+  idealFn(t: number, dir: -1 | 1, absSpeed: number) {
+    //(初速度+末速度)*t/2
+    return dir * t * (absSpeed + (absSpeed - this.deceleration * t)) / 2
   }
   /**
    * 通过速度获得理想的信息
@@ -100,16 +107,18 @@ export class MomentumIScroll {
     const absSpeed = Math.abs(velocity)
     //速度除以减速度,得变成0的时间
     const duration = absSpeed / this.deceleration;
+
+    const dir = velocity < 0 ? -1 : 1
     //时间*((初速度+0)/2)=位移,即均匀减速运动,需要使用二次方quadratic,easeOut
-    const distance = duration * (absSpeed / 2) * (velocity < 0 ? -1 : 1);
+    const distance = duration * (absSpeed / 2) * dir;
 
     return {
+      dir,
       absSpeed,
       distance,
       duration
     }
   }
-
   /**
    * 通过位移倒推速度和时间
    * @param distance 
@@ -123,9 +132,8 @@ export class MomentumIScroll {
       duration
     }
   }
-
   /**
-   * 有边界的情况
+   * 有边界的情况,受边界弹性的影响
    * @param current 
    * @param velocity 
    * @param wrapperSize 
@@ -134,31 +142,62 @@ export class MomentumIScroll {
    * @returns 
    */
   getDestinationWithMargin(
-    current: number,
-    /**速度,可能为负数*/
-    velocity: number,
-    wrapperSize: number,
-    lowerMargin: number,
-    upperMargin: number
-  ) {
-    let { absSpeed, duration, distance } = this.getWithSpeedIdeal(velocity)
-    //时间*((初速度+0)/2)=位移,即均匀减速运动,需要使用二次方quadratic,easeOut
-    let destination = current + distance
-    //超出边界的时间,减少位移
-    if (destination < lowerMargin) {
-      destination = wrapperSize ? lowerMargin - (wrapperSize / 2.5 * (absSpeed / 8)) : lowerMargin;
-      let distance = Math.abs(destination - current);
-      duration = distance / absSpeed;
-    } else if (destination > upperMargin) {
-      destination = wrapperSize ? wrapperSize / 2.5 * (absSpeed / 8) : upperMargin;
-      let distance = Math.abs(current) + destination;
-      duration = distance / absSpeed;
+    {
+      current, velocity,
+      lowerMargin, upperMargin, wrapperSize
+    }: MomentumEndArg,
+    get: OldGetValue
+  ): MomentumCallOut {
+    if (lowerMargin < current && current < upperMargin) {
+      //在边界内部
+      let { absSpeed, duration, distance } = this.getWithSpeedIdeal(velocity)
+      //时间*((初速度+0)/2)=位移,即均匀减速运动,需要使用二次方quadratic,easeOut
+      let destination = current + distance
+      let edge = false
+      let finalPosition = 0
+      //超出边界的时间,减少位移
+      if (destination < lowerMargin) {
+        destination = wrapperSize ? lowerMargin - (wrapperSize / 2.5 * (absSpeed / 8)) : lowerMargin;
+        let distance = Math.abs(destination - current);
+        duration = distance / absSpeed;
+        edge = true
+        finalPosition = lowerMargin
+      } else if (destination > upperMargin) {
+        destination = wrapperSize ? wrapperSize / 2.5 * (absSpeed / 8) : upperMargin;
+        let distance = Math.abs(current) + destination;
+        duration = distance / absSpeed;
+        edge = true
+        finalPosition = upperMargin
+      }
+      if (edge) {
+        const before = get.getOnDragEnd(duration, true)
+        return [
+          finalPosition,
+          {
+            initFinished(from, target) {
+              return before.initFinished(from, target)
+            },
+            computed(diffTime, from, target) {
+              const dx = diffTime - duration
+              if (dx > 0) {
+                return get.onEdgeBack.computed(dx, destination, target)
+              }
+              return before.computed(diffTime, from, destination)
+            },
+            finished(diffTime, out) {
+              const dx = diffTime - duration
+              if (dx > 0) {
+                return get.onEdgeBack.finished(dx, out)
+              }
+              return false
+            },
+          }]
+      }
+      return [destination, get.getOnDragEnd(duration, false)]
+    } else {
+      //在边界外面
+      return [getDestination(current, lowerMargin, upperMargin), get.onEdgeBack]
     }
-
-    return {
-      destination: Math.round(destination),
-      duration: duration
-    };
   }
   static readonly default = new MomentumIScroll()
   static get(deceleration?: number) {
@@ -173,7 +212,141 @@ export class MomentumIScroll {
 }
 
 
+export function getGammaFrom(
+  /** 阻尼系数 d */
+  damping: number,
+  /** 质量 m */
+  mass: number,
+) {
+  return mass / damping
+}
 
+
+function getDestination(value: number, lowerMargin: number, upperMargin: number) {
+  if (value <= lowerMargin) {
+    return lowerMargin
+  }
+  if (upperMargin <= value) {
+    return upperMargin
+  }
+  return value
+}
+
+export class MomentumDamping {
+  constructor(
+    /**
+     * 质量/阻尼系数
+     */
+    public readonly gamma: number
+  ) { }
+  getVelocity(
+    /**初始速度 */
+    initialVelocity: number,
+    /**时间 */
+    elapsedTime: number
+  ) {
+    return -initialVelocity * Math.exp(-this.gamma * elapsedTime)
+  }
+  /**
+   * 获得到达指定距离的时间,即滚动到达边界
+   * @param initialVelocity 
+   * @param distance 
+   * @returns 
+   */
+  private getTimeToDistance(
+    maxDistance: number,
+    distance: number) {
+    return Math.log(Math.abs(1 - distance / maxDistance)) / this.gamma
+  }
+
+  getDestinationIdeal(
+    velocity: number,
+    velocityThreshold = 2
+  ): AnimationConfig {
+    velocity = velocity * 1000
+    return new DampingAnimationConfig(this.gamma, velocity, velocityThreshold)
+  }
+  getDestinationWithMargin(
+    {
+      current, velocity,
+      lowerMargin, upperMargin
+    }: MomentumEndArg,
+    zta = 1,
+    omega0 = 8,
+    displacementThreshold = 0.01,
+    velocityThreshold = 2
+  ): MomentumCallOut {
+    const that = this
+    velocity = velocity * 1000
+    if (lowerMargin < current && current < upperMargin) {
+      //在容器内
+      /**
+       * (t: number) => SpringOutValue
+       * 这里其实分两个阶段,
+       * 阶段1,走到edge
+       * 阶段2,走出edge,使用弹簧动画
+       *  但这个弹簧动画,阻尼是知道的,质量也可能确定了,弹性系数不知道,deltaX是0
+       */
+      const distance = getMaxDistance(this.gamma, velocity)
+      const destination = current + distance
+      if (destination < lowerMargin || destination > upperMargin) {
+        const edge = getDestination(destination, lowerMargin, upperMargin)
+        const nt = this.getTimeToDistance(distance, edge)
+        const initialVelocity = that.getVelocity(velocity, nt)
+        return [
+          edge,
+          new DampingEdgeAnimationConfig(
+            this.gamma,
+            zta,
+            omega0,
+            velocity,
+            initialVelocity,
+            velocityThreshold,
+            displacementThreshold,
+            nt
+          )]
+      } else {
+        return [
+          destination,
+          new DampingAnimationConfig(this.gamma, velocity, velocityThreshold)
+        ]
+      }
+    } else {
+      //从边缘恢复
+      const destination = getDestination(current, lowerMargin, upperMargin)
+      return [
+        destination,
+        new SpringBaseAnimationConfig({
+          zta, omega0,
+          initialVelocity: velocity,
+          displacementThreshold,
+          velocityThreshold
+        })
+        //   {
+        //   initFinished(from, target) {
+        //     return false
+        //   },
+        //   computed(diffTime) {
+        //     const t = diffTime / 1000
+        //     return springBase({
+        //       zta,
+        //       omega0,
+        //       deltaX: destination - current,
+        //       initialVelocity: velocity,
+        //       elapsedTime: t
+        //     })
+        //   },
+        //   finished(diffTime, out) {
+        //     if (out) {
+        //       return springIsStop(out, displacementThreshold, velocityThreshold)
+        //     }
+        //     return false
+        //   },
+        // }
+      ]
+    }
+  }
+}
 export class MomentumBScoll {
 
   constructor(
@@ -185,46 +358,80 @@ export class MomentumBScoll {
     public readonly swipeTime = 2500
   ) { }
   getWithSpeedIdeal(velocity: number) {
-
-    const duration = Math.min(this.swipeTime, (velocity * 2) / this.deceleration)
+    const absSpeed = Math.abs(velocity)
+    const duration = Math.min(this.swipeTime, (absSpeed * 2) / this.deceleration)
+    const dir = velocity < 0 ? -1 : 1
     return {
-      distance: ((velocity * velocity) / this.deceleration) * (velocity < 0 ? -1 : 1),
+      dir,
+      absSpeed,
+      distance: ((velocity * velocity) / this.deceleration) * dir,
       duration
     }
   }
 
   getDestinationWithMargin(
-    current: number,
-    /**速度,可能为负数*/
-    velocity: number,
-    wrapperSize: number,
-    lowerMargin: number,
-    upperMargin: number
-  ) {
+    {
+      current, velocity,
+      lowerMargin, upperMargin, wrapperSize
+    }: MomentumEndArg,
+    get: OldGetValue
+  ): MomentumCallOut {
+    if (lowerMargin < current && current < upperMargin) {
+      let { distance, duration } = this.getWithSpeedIdeal(velocity)
+      let destination = current + distance
+      let rate = 15
+      let edge = false
 
-    let { distance, duration } = this.getWithSpeedIdeal(velocity)
-    let destination = current + distance
-    let rate = 15
-    if (destination < lowerMargin) {
-      destination = wrapperSize
-        ? Math.max(
-          lowerMargin - wrapperSize / 4,
-          lowerMargin - (wrapperSize / rate) * velocity
-        )
-        : lowerMargin
-      duration = this.swipeBounceTime
-    } else if (destination > upperMargin) {
-      destination = wrapperSize
-        ? Math.min(
-          upperMargin + wrapperSize / 4,
-          upperMargin + (wrapperSize / rate) * velocity
-        )
-        : upperMargin
-      duration = this.swipeBounceTime
-    }
-    return {
-      destination: Math.round(destination),
-      duration: duration
+      let finalPosition = 0
+
+      if (destination < lowerMargin) {
+        destination = wrapperSize
+          ? Math.max(
+            lowerMargin - wrapperSize / 4,
+            lowerMargin - (wrapperSize / rate) * velocity
+          )
+          : lowerMargin
+        duration = this.swipeBounceTime
+        edge = true
+        finalPosition = lowerMargin
+      } else if (destination > upperMargin) {
+        destination = wrapperSize
+          ? Math.min(
+            upperMargin + wrapperSize / 4,
+            upperMargin + (wrapperSize / rate) * velocity
+          )
+          : upperMargin
+        duration = this.swipeBounceTime
+        edge = true
+        finalPosition = upperMargin
+      }
+      if (edge) {
+        const before = get.getOnDragEnd(duration, true)
+        return [
+          finalPosition,
+          {
+            initFinished(from, target) {
+              return before.initFinished(from, target)
+            },
+            computed(diffTime, from, target) {
+              const dx = diffTime - duration
+              if (dx > 0) {
+                return get.onEdgeBack.computed(dx, destination, target)
+              }
+              return before.computed(diffTime, from, destination)
+            },
+            finished(diffTime, out) {
+              const dx = diffTime - duration
+              if (dx > 0) {
+                return get.onEdgeBack.finished(dx, out)
+              }
+              return false
+            },
+          }]
+      }
+      return [destination, get.getOnDragEnd(duration, false)]
+    } else {
+      return [getDestination(current, lowerMargin, upperMargin), get.onEdgeBack]
     }
   }
 
@@ -254,20 +461,53 @@ export class MomentumBScoll {
 
 
 export const momentum = {
-  iScroll(arg: {
+  dampingIdeal({
+    gamma,
+    velocityThreshold = 2
+  }: {
+    gamma: number
+    velocityThreshold?: number
+  }): MomentumCallIdeal {
+    return function (speed) {
+      return {
+        distance: getMaxDistance(gamma, speed),
+        duration: getTimeToVelocity(gamma, speed, velocityThreshold)
+      }
+    }
+  },
+  dammping({
+    gamma,
+    zta = 1,
+    omega0 = 8,
+    displacementThreshold = 0.01,
+    velocityThreshold = 2
+  }: {
+    gamma: number
+    zta?: number
+    omega0?: number
+    displacementThreshold?: number
+    velocityThreshold?: number
+  }): MomentumCall {
+    const m = new MomentumDamping(gamma)
+    return function (v) {
+      return m.getDestinationWithMargin(
+        v,
+        zta,
+        omega0,
+        displacementThreshold,
+        velocityThreshold)
+    }
+  },
+  iScroll(get: OldGetValue, arg: {
     //表示 momentum 动画的减速度。
-    deceleration?: number,
+    deceleration?: number
   } = emptyObject): MomentumCall {
     const iScroll = MomentumIScroll
       .get(arg.deceleration)
-    return function (
-      current,
-      velocity,
-      wrapperSize,
-      lowerMargin,
-      upperMargin
-    ) {
-      return iScroll.getDestinationWithMargin(current, velocity, wrapperSize, lowerMargin, upperMargin)
+    return function (v) {
+      return iScroll.getDestinationWithMargin(v,
+        get
+      )
     }
   },
   iScrollIdeal(arg: {
@@ -281,25 +521,20 @@ export const momentum = {
     }
   },
   bScroll(
+    get: OldGetValue,
     arg: {
       //表示 momentum 动画的减速度。
       deceleration?: number,
       //设置当运行 momentum 动画时，超过边缘后的回弹整个动画时间。
       swipeBounceTime?: number
       //设置 momentum 动画的动画时长。
-      swipeTime?: number
+      swipeTime?: number,
     } = emptyObject
   ): MomentumCall {
     const iScroll = MomentumBScoll
       .get(arg)
-    return function (
-      current,
-      velocity,
-      wrapperSize,
-      lowerMargin,
-      upperMargin
-    ) {
-      return iScroll.getDestinationWithMargin(current, velocity, wrapperSize, lowerMargin, upperMargin)
+    return function (v) {
+      return iScroll.getDestinationWithMargin(v, get)
     }
   },
   bScrollIdeal(
@@ -321,6 +556,14 @@ export const momentum = {
 
 
 
+
+/**
+ * 这里是滚动受传统摩擦阻力的情况,摩擦阻力F=ma 这个是固定不变的
+ * 但滚动也可能受阻尼力,阻尼力F=-cV 这个与速度有关,产生减速度又作用于质量而产生加速度
+ *  如果滚动到边界外,当然受边界吸引回来,这个阻尼系数是不变的,只有弹性系数
+ * @param param0 
+ * @returns 
+ */
 export function buildNoEdgeScroll({
   momentum,
   changeDiff
@@ -328,7 +571,8 @@ export function buildNoEdgeScroll({
   momentum: MomentumCallIdeal
   changeDiff(
     diff: number,
-    duration?: number): void
+    duration?: number
+  ): void
 }) {
   let moveM: MoveCache | undefined = undefined
 
@@ -386,7 +630,7 @@ export function buildScroll({
   containerSize,
   getCurrentValue,
   changeTo,
-  momentum,
+  finish
 }: {
   /**到达边缘时拖拽减速 */
   edgeSlow?: number
@@ -397,20 +641,14 @@ export function buildScroll({
   //滚动内容
   containerSize(): number
   getCurrentValue(): number
-  changeTo(value: number, config?: {
-    type: "reset"
-  } | {
-    type: "smooth" | "smooth-edge"
-    duration: number
-  }, onFinish?: SetValue<boolean>): void
-  momentum: MomentumCall
+  changeTo(value: number): void
+  finish(v: MomentumEndArg): void
 }) {
   let moveM: MoveCache | undefined = undefined
   function getMaxScroll() {
     return wrapperSize() - containerSize()
   }
   function getMargin() {
-
     const maxScroll = getMaxScroll()
     const upperMargin = upperScrollDiff
     const lowerMargin = maxScroll + lowerScrollDiff
@@ -418,18 +656,6 @@ export function buildScroll({
       upperMargin,
       lowerMargin,
       maxScroll
-    }
-  }
-  function resetLocation(newY: number, maxScrollY: number) {
-    const toY = newY > upperScrollDiff
-      ? upperScrollDiff
-      : newY < maxScrollY + lowerScrollDiff
-        ? maxScrollY + lowerScrollDiff
-        : newY
-    if (toY != newY) {
-      changeTo(toY, {
-        type: "reset"
-      })
     }
   }
   function setMove(last: MoveCache, n: number) {
@@ -470,34 +696,19 @@ export function buildScroll({
         }
         const newY = setMove(last, n)
         moveM = undefined
-        const { lowerMargin, upperMargin, maxScroll } = getMargin()
-        if (newY < upperMargin && newY > lowerMargin) {
-          if (typeof velocity != 'number') {
-            velocity = (n - last.beginValue) / (performance.now() - last.beginTime) //默认使用平均速度,因为最后的瞬间速度可能为0?
-          }
-          const { destination, duration } = momentum(
-            newY,
-            velocity,
-            wrapperSize(),
-            lowerMargin,
-            upperMargin
-          )
-          changeTo(
-            destination,
-            {
-              type: destination < upperMargin && destination > lowerMargin
-                ? 'smooth'
-                : 'smooth-edge',
-              duration
-            },
-            function (bool) {
-              if (bool) {
-                resetLocation(getCurrentValue(), getMaxScroll())
-              }
-            })
-        } else {
-          resetLocation(newY, maxScroll)
+        const { lowerMargin, upperMargin } = getMargin()
+
+        if (typeof velocity != 'number') {
+          velocity = (n - last.beginValue) / (performance.now() - last.beginTime) //默认使用平均速度,因为最后的瞬间速度可能为0?
         }
+
+        finish({
+          current: newY,
+          velocity,
+          lowerMargin,
+          upperMargin,
+          wrapperSize: wrapperSize()
+        })
       }
     }
   }
@@ -538,4 +749,59 @@ export function scrollJudgeDirection(
     directionX = deltaX > 0 ? 1 : -1;
   }
   return -directionX
+}
+
+
+
+
+class CacheVelocity {
+  constructor(
+    public readonly BEFORE_LAST_KINEMATICS_DELAY = 32
+  ) { }
+  private list: {
+    time: number,
+    value: number
+  }[] = []
+  private velocity = 0
+  getIdx(time: number) {
+    for (let i = 0; i < this.list.length; i++) {
+      const row = this.list[i]
+      let diffTime = time - row.time
+      if (diffTime > this.BEFORE_LAST_KINEMATICS_DELAY) {
+        return i
+      }
+    }
+    return this.list.length - 1
+  }
+  clear() {
+    this.list.length = 0
+    this.velocity = 0
+  }
+  reset(time: number, value: number) {
+    this.clear()
+    return this.append(time, value)
+  }
+  append(time: number, value: number) {
+    if (this.list.length) {
+      let idx = this.getIdx(time)
+      const cell = this.list[idx]
+      if (time != cell.time) {
+        this.velocity = (value - cell.value) / (time - cell.time)
+        this.list.length = idx + 1
+      }
+    } else {
+      this.velocity = 0
+    }
+    this.list.unshift({
+      time,
+      value
+    })
+    return this.velocity
+  }
+  get() {
+    return this.velocity
+  }
+}
+export function cacheVelocity(BEFORE_LAST_KINEMATICS_DELAY = 32) {
+  return new CacheVelocity(BEFORE_LAST_KINEMATICS_DELAY)
 }
