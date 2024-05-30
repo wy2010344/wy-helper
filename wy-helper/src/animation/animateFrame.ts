@@ -1,7 +1,6 @@
 import { AnimationConfig } from "./AnimationConfig"
 import { ReadValueCenter, ValueCenter, valueCenterOf } from "../ValueCenter"
 import { SetValue } from "../setStateHelper"
-import { mixNumber } from '../NumberHelper'
 import { emptyFun, emptyObject } from '../util'
 import { SpringOutValue } from "./spring"
 export function superSubscribeRequestAnimationFrame(
@@ -52,7 +51,7 @@ class AnimateToImpl implements AnimateTo {
   private time: number = 0
   update(diffTime: number, onProcess?: boolean) {
     this.time = diffTime
-    const out = this.config.computed(diffTime, this.from, this.target)
+    const out = this.config.computed(diffTime, this.target - this.from)
     this.current = out
     this.setValue(this.target - out.displacement, onProcess)
   }
@@ -139,7 +138,7 @@ export class AnimateFrameValueImpl implements AnimateFrameValue {
       return
     }
     this.lastCancel()
-    if (config.initFinished(baseValue, target)) {
+    if (config.initFinished(target - baseValue)) {
       //超越检测动画
       this.value.set(target)
       return 'immediately'

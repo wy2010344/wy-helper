@@ -1,5 +1,5 @@
 import { AnimateFrameEvent, AnimateFrameValue, AnimationConfig, TweenAnimationConfig } from "../animation"
-import { EaseFn, MomentumCallIdeal, buildNoEdgeScroll } from "../scroller"
+import { EaseFn, MomentumCallIdeal } from "../scroller"
 import { EmptyFun } from "../util"
 
 
@@ -7,8 +7,8 @@ export function recicleScrollViewView(
   flushSync: (fun: EmptyFun) => void,
   addIndex: (n: number) => void,
   rowHeight: number,
-  momentum: MomentumCallIdeal,
-  scrollFn: EaseFn,
+  // momentum: MomentumCallIdeal,
+  // scrollFn: EaseFn,
   transY: AnimateFrameValue
 ) {
   let initScrollHeight = 0
@@ -35,31 +35,61 @@ export function recicleScrollViewView(
       initScrollHeight = n
       transY.changeTo(n)
     },
-    scroll: buildNoEdgeScroll({
-      changeDiff(diff, duration) {
-        const value = transY.get() + diff - initScrollHeight
-        if (typeof duration == 'number') {
-          const idx = Math.round(value / rowHeight)
-          let nValue = initScrollHeight + idx * rowHeight
+    /**
+     * 拖拽到当下的Y
+     * @param moveY 
+     */
+    moveUpdate(moveY: number) {
+      transY.changeTo(moveY + initScrollHeight)
+      diffUpdate(moveY)
+    },
+    //速度
+    endMove(idealDistance: number,
+      getConfig: (realDistance: number) => AnimationConfig
+    ) {
+      // const fc = new FrictionalFactory()
+      // fc.getFromVelocity(v).maxDistance 
+      const value = transY.get() + idealDistance - initScrollHeight
+      const idx = Math.round(value / rowHeight)
+      const nValue = idx * rowHeight + initScrollHeight
+      // const fc1 = fc.getFromDistance()
+      const config = getConfig(nValue - transY.get())
+      transY.changeTo(nValue, config, {
+        onProcess(v) {
+          aUpdate(v)
+        },
+        onFinish(v) {
+          if (v) {
+            aUpdate(transY.get())
+          }
+        },
+      })
+    },
+    // scroll: buildNoEdgeScroll({
+    //   changeDiff(diff, duration) {
+    //     const value = transY.get() + diff - initScrollHeight
+    //     if (typeof duration == 'number') {
+    //       const idx = Math.round(value / rowHeight)
+    //       let nValue = initScrollHeight + idx * rowHeight
 
-          transY.changeTo(nValue, new TweenAnimationConfig(
-            duration,
-            scrollFn
-          ), {
-            onProcess: aUpdate,
-            onFinish(v) {
-              if (v) {
-                aUpdate(transY.get())
-              }
-            },
-          })
-        } else {
-          transY.changeTo(value + initScrollHeight)
-          diffUpdate(value)
-        }
-      },
-      momentum
-    }),
+    //       transY.changeTo(nValue, new TweenAnimationConfig(
+    //         duration,
+    //         scrollFn
+    //       ), {
+    //         onProcess: aUpdate,
+    //         onFinish(v) {
+    //           if (v) {
+    //             aUpdate(transY.get())
+    //           }
+    //         },
+    //       })
+    //     } else {
+    //       transY.changeTo(value + initScrollHeight)
+    //       diffUpdate(value)
+    //     }
+    //   },
+    //   momentum
+    // }),
     stopScroll(toCurrent?: boolean) {
       const ato = transY.getAnimateTo()
       if (ato) {
