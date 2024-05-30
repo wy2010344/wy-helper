@@ -73,7 +73,7 @@ export function createAnimateFrameReducer(
             })
           })
           if (diffTime > 0) {
-            const current = c.computed(diffTime, old.animateTo.from, old.animateTo.target)
+            const current = c.computed(diffTime, old.animateTo.target - old.animateTo.from)
             return {
               ...old,
               value: old.animateTo.target - current.displacement,
@@ -102,7 +102,7 @@ export function createAnimateFrameReducer(
         //不改变
         return old
       }
-      if (act.config.initFinished(oldValue, act.target)) {
+      if (act.config.initFinished(act.target - oldValue)) {
         return {
           version: old.version,
           value: act.target

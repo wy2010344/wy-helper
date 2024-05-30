@@ -59,10 +59,17 @@ export type RecycleScrollAction = {
 } | {
   type: "changeDiff"
   diff: number
-  config?: AnimationConfig
 } | {
   type: "changeTransY"
   value: AnimateFrameAct
+} | {
+  type: "endMove",
+  idealDistance: number,
+  /**
+   * @todo config提升到全局,别的index改变也用这个.
+   * @param distance 
+   */
+  getConfig(distance: number): AnimationConfig
 }
 
 export function createRecycleScrollListReducer(
@@ -128,18 +135,18 @@ export function createRecycleScrollListReducer(
       }, undefined]
     } else if (action.type == "changeDiff") {
       const diff = action.diff + model.transY.value - model.initTransY
-      if (action.config) {
-        const idx = Math.round(diff / model.cellHeight)
-        return updateIndex(model, idx, action.config)
-      } else {
-        return updateDiff(diff, {
-          ...model,
-          transY: {
-            version: model.transY.version,
-            value: diff + model.initTransY
-          }
-        })
-      }
+      return updateDiff(diff, {
+        ...model,
+        transY: {
+          version: model.transY.version,
+          value: diff + model.initTransY
+        }
+      })
+    } else if (action.type == 'endMove') {
+      const value = Math.round(action.idealDistance + model.transY.value - model.initTransY)
+      const idx = Math.round(value / model.cellHeight)
+      const config = action.getConfig(idx * model.cellHeight + model.initTransY - model.transY.value)
+      return updateIndex(model, idx, config)
     } else if (action.type == "changeTransY") {
       const value = action.value
       const [newTransY, act] = animateNumberFrameReducer(model.transY, value)
