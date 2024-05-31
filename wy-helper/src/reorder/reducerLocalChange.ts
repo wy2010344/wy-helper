@@ -1,5 +1,4 @@
 import { arrayMove } from "../ArrayHelper"
-import { AnimationConfig } from "../animation/AnimationConfig"
 import { EmptyFun, run } from "../util"
 import { rangeBetweenLeft, rangeBetweenRight, reorderCheckTarget } from "./util"
 export type ReorderLocalModel<K> = {
@@ -46,15 +45,12 @@ export type ReorderLocalAction<K> = {
 } | {
   type: "end",
   point: number
-  config: AnimationConfig
-
   version: number
   gap?: number
   elements: ReorderLocalElement<K>[]
   scrollTop: number
 } | {
   type: "didEnd",
-  config: AnimationConfig
 
   gap?: number
   version: number
@@ -300,7 +296,6 @@ function didEnd<K, M extends ReorderLocalModel<K>>(
     version: number
     elements: ReorderLocalElement<K>[]
     gap?: number
-    config: AnimationConfig
     scrollTop: number
   }) {
   const ma = new MergeAction<K>()

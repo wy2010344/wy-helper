@@ -1,6 +1,6 @@
 import { MomentumEndArg, MomentumJudge, MomentumJudgeBack } from "../scroller"
 import { getDestination } from "../scroller/util"
-import { AnimationConfig, TimeoutAnimationConfig } from "./AnimationConfig"
+import { AnimationConfig } from "./AnimationConfig"
 import { SpringOutValue } from "./spring"
 
 
@@ -151,26 +151,16 @@ export class Frictional {
     velocity: number) {
     return (this.initVelocity - velocity) / this.deceleration
   }
-}
 
-/**
- * 摩擦阻力的动画
- */
-export class FrictionalAnimationConfig extends TimeoutAnimationConfig {
-  constructor(
-    public readonly frictional: Frictional,
-    endTime = frictional.duration
-  ) {
-    super(endTime)
-  }
-  initFinished(deltaX: number): boolean {
-    return false
-  }
-  computed(diffTime: number, deltaX: number): SpringOutValue {
-    return {
-      displacement: deltaX - this.frictional.getDistance(diffTime),
-      //不计算
-      velocity: Infinity// this.frictional.getVelocity(diffTime)
+  animationConfig(endTime = this.duration): AnimationConfig {
+    const that = this
+    return function (diffTime) {
+      if (diffTime < endTime) {
+        const value = that.getDistance(diffTime)
+        return [value, false]
+      } else {
+        return [that.getDistance(endTime), true]
+      }
     }
   }
 }

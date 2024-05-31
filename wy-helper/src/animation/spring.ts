@@ -1,24 +1,23 @@
-import { AnimationConfig } from "./AnimationConfig";
+import { emptyObject } from "../util"
 
-export function springBase({
-  zta,
-  omega0,
-  deltaX,
-  initialVelocity,
-  velocityWhenZta1Plus,
-  elapsedTime
-}: {
+export type SpringBaseArg = {
   /**自由振荡角频率 */
-  omega0: number
+  omega0?: number
   /**阻尼比:0~1~无穷,0~1是欠阻尼,即会来回,1~无穷不会来回*/
-  zta: number
+  zta?: number
+  velocityWhenZta1Plus?: boolean
+}
+export function springBase(
+  elapsedTime: number,
   /**起始位置 */
-  deltaX: number
+  deltaX: number,
   /**初始速度 v0 (可选) */
-  initialVelocity: number;
-  velocityWhenZta1Plus?: boolean,
-  elapsedTime: number
-}) {
+  initialVelocity: number,
+  {
+    zta = 1,
+    omega0 = 8,
+    velocityWhenZta1Plus
+  }: SpringBaseArg = emptyObject) {
   // value = to - displacement
   if (zta < 1) {
     const omegaD = omega0 * Math.sqrt(1 - zta * zta)

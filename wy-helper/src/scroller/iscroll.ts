@@ -1,6 +1,6 @@
 import { MomentumCall, MomentumCallOut, MomentumEndArg, OldGetValue } from ".";
-import { AnimationConfig, SpringOutValue } from "../animation";
-import { ScrollEdgeAnimation, getDestination } from "./util";
+import { combineAnimationConfig } from "../animation";
+import { getDestination } from "./util";
 
 export class MomentumIScroll {
   private constructor(
@@ -56,53 +56,56 @@ export class MomentumIScroll {
    * @param upperMargin 
    * @returns 
    */
-  getDestinationWithMargin(
-    get: OldGetValue
-  ): MomentumCall {
-    const that = this
-    return function (
-      {
-        current, velocity,
-        lowerMargin, upperMargin, wrapperSize
-      }: MomentumEndArg,) {
-
-      if (lowerMargin < current && current < upperMargin) {
-        //在边界内部
-        let { absSpeed, duration, distance } = that.getWithSpeedIdeal(velocity)
-        //时间*((初速度+0)/2)=位移,即均匀减速运动,需要使用二次方quadratic,easeOut
-        let destination = current + distance
-        let edge = false
-        let finalPosition = 0
-        //超出边界的时间,减少位移
-        if (destination < lowerMargin) {
-          destination = wrapperSize ? lowerMargin - wrapperSize / 2.5 * (absSpeed / 8) : lowerMargin;
-          let distance = Math.abs(destination - current);
-          duration = distance / absSpeed;
-          edge = true
-          finalPosition = lowerMargin
-        } else if (destination > upperMargin) {
-          destination = wrapperSize ? upperMargin + wrapperSize / 2.5 * (absSpeed / 8) : upperMargin;
-          let distance = Math.abs(current) + destination;
-          duration = distance / absSpeed;
-          edge = true
-          finalPosition = upperMargin
-        }
-        if (edge) {
-          const before = get.getOnDragEnd(duration, true)
-          return [
-            finalPosition,
-            new ScrollEdgeAnimation(
-              before,
-              duration,
-              destination - current,
-              finalPosition - destination,
-              get.onEdgeBack)]
-        }
-        return [destination, get.getOnDragEnd(duration, false)]
-      } else {
-        //在边界外面
-        return [getDestination(current, lowerMargin, upperMargin), get.onEdgeBack]
+  destinationWithMargin(
+    {
+      current, velocity,
+      lowerMargin, upperMargin, wrapperSize
+    }: MomentumEndArg
+  ): MomentumCallOut {
+    if (lowerMargin < current && current < upperMargin) {
+      //在边界内部
+      let { absSpeed, duration, distance } = this.getWithSpeedIdeal(velocity)
+      //时间*((初速度+0)/2)=位移,即均匀减速运动,需要使用二次方quadratic,easeOut
+      let destination = current + distance
+      let edge = false
+      let finalPosition = 0
+      //超出边界的时间,减少位移
+      if (destination < lowerMargin) {
+        destination = wrapperSize ? lowerMargin - wrapperSize / 2.5 * (absSpeed / 8) : lowerMargin;
+        let distance = Math.abs(destination - current);
+        duration = distance / absSpeed;
+        edge = true
+        finalPosition = lowerMargin
+      } else if (destination > upperMargin) {
+        destination = wrapperSize ? upperMargin + wrapperSize / 2.5 * (absSpeed / 8) : upperMargin;
+        let distance = Math.abs(current) + destination;
+        duration = distance / absSpeed;
+        edge = true
+        finalPosition = upperMargin
       }
+      if (edge) {
+        return {
+          type: "scroll-edge",
+          from: current,
+          target: destination,
+          finalPosition: finalPosition,
+          duration
+        }
+      }
+      return {
+        type: "scroll",
+        from: current,
+        target: destination,
+        duration
+      }
+    } else {
+      const finalPosition = getDestination(current, lowerMargin, upperMargin)
+      return {
+        type: "edge-back",
+        from: current,
+        target: finalPosition
+      }
+
     }
   }
   static readonly default = new MomentumIScroll()

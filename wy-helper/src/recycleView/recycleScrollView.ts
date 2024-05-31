@@ -1,5 +1,4 @@
-import { AnimateFrameEvent, AnimateFrameValue, AnimationConfig, TweenAnimationConfig } from "../animation"
-import { EaseFn, MomentumCallIdeal } from "../scroller"
+import { AnimateFrameEvent, AnimateFrameValue, GetDeltaXAnimationConfig } from "../animation"
 import { EmptyFun } from "../util"
 
 
@@ -45,16 +44,14 @@ export function recicleScrollViewView(
     },
     //速度
     endMove(idealDistance: number,
-      getConfig: (realDistance: number) => AnimationConfig
+      getConfig: GetDeltaXAnimationConfig
     ) {
       // const fc = new FrictionalFactory()
       // fc.getFromVelocity(v).maxDistance 
       const value = transY.get() + idealDistance - initScrollHeight
       const idx = Math.round(value / rowHeight)
       const nValue = idx * rowHeight + initScrollHeight
-      // const fc1 = fc.getFromDistance()
-      const config = getConfig(nValue - transY.get())
-      transY.changeTo(nValue, config, {
+      transY.changeTo(nValue, getConfig, {
         onProcess(v) {
           aUpdate(v)
         },
@@ -65,34 +62,9 @@ export function recicleScrollViewView(
         },
       })
     },
-    // scroll: buildNoEdgeScroll({
-    //   changeDiff(diff, duration) {
-    //     const value = transY.get() + diff - initScrollHeight
-    //     if (typeof duration == 'number') {
-    //       const idx = Math.round(value / rowHeight)
-    //       let nValue = initScrollHeight + idx * rowHeight
-
-    //       transY.changeTo(nValue, new TweenAnimationConfig(
-    //         duration,
-    //         scrollFn
-    //       ), {
-    //         onProcess: aUpdate,
-    //         onFinish(v) {
-    //           if (v) {
-    //             aUpdate(transY.get())
-    //           }
-    //         },
-    //       })
-    //     } else {
-    //       transY.changeTo(value + initScrollHeight)
-    //       diffUpdate(value)
-    //     }
-    //   },
-    //   momentum
-    // }),
     stopScroll(toCurrent?: boolean) {
-      const ato = transY.getAnimateTo()
-      if (ato) {
+      let ato = transY.getAnimateTo()
+      if (ato?.hasTarget()) {
         let nValue = ato.target
         if (toCurrent) {
           const v = transY.get() - initScrollHeight
@@ -103,7 +75,7 @@ export function recicleScrollViewView(
         aUpdate(nValue)
       }
     },
-    wrapperAdd(n: number, config?: AnimationConfig, event?: AnimateFrameEvent) {
+    wrapperAdd(n: number, config?: GetDeltaXAnimationConfig, event?: AnimateFrameEvent) {
       if (n) {
         if (transY.getAnimateTo() || !config) {
           addIndex(n)

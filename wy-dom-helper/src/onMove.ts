@@ -110,18 +110,17 @@ export interface PagePoint {
 }
 
 interface DragMove {
-  (pagePoint: PagePoint, end: true, e: Event): void
-  (pagePoint: PagePoint | undefined, end: undefined, e: Event): void
+  (pagePoint: PagePoint | undefined, e: Event): void
 }
 export function subscribeDragMove(
   onMove: DragMove,
   arg?: OnMoveArg
 ) {
   const dm = subscribeMove(function (e, a) {
-    onMove(e, a as any, e)
+    onMove(a ? undefined : e, e)
   }, 'mouse', arg)
   const dt = subscribeMove(function (e, a) {
-    onMove(e.touches[0], a as any, e)
+    onMove(a ? undefined : e.touches[0], e)
   }, 'touch', arg)
   return function () {
     dm()

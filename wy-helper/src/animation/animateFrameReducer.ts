@@ -1,13 +1,12 @@
-import { ReducerDispatch, ReducerWithDispatch, SetValue, SpringOutValue } from ".."
+import { ReducerDispatch, ReducerWithDispatch, SetValue } from ".."
 import { arrayFunToOneOrEmpty } from '../ArrayHelper'
-import { AnimationConfig } from "./AnimationConfig"
+import { AnimationConfig, GetDeltaXAnimationConfig } from "./AnimationConfig"
 export type AnimateFrameModel = {
   version: number
   value: number
-  current?: SpringOutValue
   animateTo?: {
+    target?: number
     from: number
-    target: number
     config: AnimationConfig
     startTime: number
   }
@@ -16,10 +15,14 @@ export type AnimateFrameModel = {
 export type AnimateFrameChangeTo = {
   type: "changeTo"
   target: number
-  config?: never
+  getConfig?: never
 } | {
   type: "changeTo"
   target: number
+  from?: number
+  getConfig: GetDeltaXAnimationConfig
+} | {
+  type: "setAnimate"
   from?: number
   config: AnimationConfig
 }
@@ -46,6 +49,35 @@ export function createAnimateFrameReducer(
   requestAnimationFrame: (v: SetValue<number>) => void
 ): ReducerWithDispatch<AnimateFrameModel, AnimateFrameAct> {
   type Act = AnimateFrameAct
+  function buildAnimate(
+    old: AnimateFrameModel,
+    list: ReducerDispatch<FrameTick>[],
+    oldValue: number,
+    config: AnimationConfig,
+    target?: number
+  ) {
+
+    const version = old.version + 1
+    list.push(function (dispatch) {
+      requestAnimationFrame(time => {
+        dispatch({
+          type: "tick",
+          version,
+          time
+        })
+      })
+    })
+    return {
+      version,
+      value: oldValue,
+      animateTo: {
+        from: oldValue,
+        target,
+        config,
+        startTime: performance.now()
+      }
+    }
+  }
   function inside(
     old: AnimateFrameModel,
     act: Act,
@@ -54,15 +86,32 @@ export function createAnimateFrameReducer(
     if (act.type == "tick") {
       if (old.animateTo && old.version == act.version) {
         const diffTime = act.time - old.animateTo.startTime
-        const c = old.animateTo.config
-        if (c.finished(diffTime, old.current)) {
-          //结束
-          return {
-            version: old.version,
-            value: old.animateTo.target
+        if (diffTime > 0) {
+          const c = old.animateTo.config
+          const [distance, finished] = c(diffTime)
+          const value = distance + old.animateTo.from
+          if (finished) {
+            return {
+              version: old.version,
+              value
+            }
+          } else {
+            //正常触发动画
+            list.push(function (dispatch) {
+              requestAnimationFrame(time => {
+                dispatch({
+                  type: "tick",
+                  version: act.version,
+                  time
+                })
+              })
+            })
+            return {
+              ...old,
+              value
+            }
           }
         } else {
-          //正常触发动画
           list.push(function (dispatch) {
             requestAnimationFrame(time => {
               dispatch({
@@ -72,18 +121,10 @@ export function createAnimateFrameReducer(
               })
             })
           })
-          if (diffTime > 0) {
-            const current = c.computed(diffTime, old.animateTo.target - old.animateTo.from)
-            return {
-              ...old,
-              value: old.animateTo.target - current.displacement,
-              current
-            }
-          }
         }
       }
     } else if (act.type == 'changeTo') {
-      if (!act.config) {
+      if (!act.getConfig) {
         if (old.value == act.target && !old.animateTo) {
           //不改变
           return old
@@ -98,47 +139,32 @@ export function createAnimateFrameReducer(
       if (typeof act.from != 'undefined') {
         oldValue = act.from
       }
-      if (oldValue == act.target) {
-        //不改变
-        return old
-      }
-      if (act.config.initFinished(act.target - oldValue)) {
+      const config = act.getConfig(act.target - oldValue)
+      if (!config) {
         return {
           version: old.version,
           value: act.target
         }
       }
-      const version = old.version + 1
-      list.push(function (dispatch) {
-        requestAnimationFrame(time => {
-          dispatch({
-            type: "tick",
-            version,
-            time
-          })
-        })
-      })
-      return {
-        version,
-        value: oldValue,
-        animateTo: {
-          from: oldValue,
-          target: act.target,
-          config: act.config,
-          startTime: performance.now()
-        }
+      return buildAnimate(old, list, oldValue, config, act.target)
+    } else if (act.type == "setAnimate") {
+      let oldValue = old.value
+      if (typeof act.from != 'undefined') {
+        oldValue = act.from
       }
+      return buildAnimate(old, list, oldValue, act.config)
     } else if (act.type == "silentDiff") {
       const diff = act.value
       const value = old.value + diff
       if (old.animateTo) {
+        const oldTarget = old.animateTo.target
         return {
           ...old,
           value,
           animateTo: {
             ...old.animateTo,
             from: old.animateTo.from + diff,
-            target: old.animateTo.target + diff
+            target: typeof oldTarget == 'number' ? oldTarget + diff : oldTarget
           }
         }
       }
@@ -148,16 +174,21 @@ export function createAnimateFrameReducer(
       }
     } else if (act.type == "silentChange") {
       if (old.animateTo) {
-        const diff = act.value - old.animateTo.target
-        const value = old.value + diff
-        return {
-          ...old,
-          value,
-          animateTo: {
-            ...old.animateTo,
-            target: act.value,
-            from: old.animateTo.from + diff,
+        const oldTarget = old.animateTo.target
+        if (typeof oldTarget == 'number') {
+          const diff = act.value - oldTarget
+          const value = old.value + diff
+          return {
+            ...old,
+            value,
+            animateTo: {
+              ...old.animateTo,
+              target: act.value,
+              from: old.animateTo.from + diff,
+            }
           }
+        } else {
+          console.log("不能顺利执行silentChange,因为动画不是目标值动画")
         }
       }
       return {
