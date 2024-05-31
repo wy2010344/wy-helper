@@ -1,7 +1,7 @@
 import { arrayMove } from "../ArrayHelper"
 import { ReducerDispatch, ReducerWithDispatch, ReducerWithDispatchResult, mapReducerDispatchListA } from "../ValueCenter"
 import { AnimateFrameAct, AnimateFrameModel } from "../animation"
-import { AnimationConfig } from "../animation/AnimationConfig"
+import { AnimationConfig, GetDeltaXAnimationConfig } from "../animation/AnimationConfig"
 import { rangeBetweenLeft, rangeBetweenRight, reorderCheckTarget } from "./util"
 export type ReorderModelRow<T> = {
   transY: AnimateFrameModel
@@ -46,7 +46,7 @@ export type ReorderAction<K, E> = {
 } | {
   type: "end",
   point: number
-  config: AnimationConfig
+  getConfig: GetDeltaXAnimationConfig
 
   gap?: number
   version: number
@@ -54,7 +54,7 @@ export type ReorderAction<K, E> = {
   scrollTop: number
 } | {
   type: "didEnd",
-  config: AnimationConfig
+  getConfig: GetDeltaXAnimationConfig
 
   gap?: number
   version: number
@@ -112,7 +112,7 @@ function getDefaultGap(oldGap: number, newGap?: number) {
  */
 export function createReorderReducer<T, K, E>(
   getKey: (v: T) => K,
-  config: AnimationConfig,
+  getConfig: GetDeltaXAnimationConfig,
   animateNumberFrameReducer: ReducerWithDispatch<AnimateFrameModel, AnimateFrameAct>,
   getHeight: (e: E) => number
 ) {
@@ -182,7 +182,7 @@ export function createReorderReducer<T, K, E>(
           type: "changeTo",
           from: otherHeight,
           target: 0,
-          config
+          getConfig
         })
         ma.append(getKey(row.value), onMove)
         newList[i] = {
@@ -334,7 +334,7 @@ export function createReorderReducer<T, K, E>(
       version: number
       elements: ReorderElement<K, E>[]
       gap?: number
-      config: AnimationConfig
+      getConfig: GetDeltaXAnimationConfig
       scrollTop: number
     }
   ): ReducerWithDispatchResult<M, ReorderAction<K, E>> {
@@ -352,7 +352,7 @@ export function createReorderReducer<T, K, E>(
     const [transY, onMove] = animateNumberFrameReducer(row.transY, {
       type: "changeTo",
       target: 0,
-      config: action.config
+      getConfig: action.getConfig
     })
     ma.append(key, onMove)
     newList[theIndex] = {

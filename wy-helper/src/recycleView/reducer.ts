@@ -1,7 +1,6 @@
 import { arrayFunToOneOrEmpty } from "../ArrayHelper"
 import { ReducerWithDispatch, ReducerWithDispatchResult, mapReducerDispatch } from "../ValueCenter"
-import { AnimateFrameAct, AnimateFrameModel } from "../animation"
-import { AnimationConfig } from "../animation/AnimationConfig"
+import { AnimateFrameAct, AnimateFrameModel, AnimationConfig, GetDeltaXAnimationConfig } from "../animation"
 
 export type RecycleListModel = {
   size: number
@@ -51,11 +50,11 @@ export type RecycleScrollAction = {
 } | {
   type: "addIndex",
   value: number
-  config?: never
+  getConfig?: never
 } | {
   value: number
   type: "addIndex"
-  config: AnimationConfig
+  getConfig: GetDeltaXAnimationConfig
 } | {
   type: "changeDiff"
   diff: number
@@ -69,7 +68,7 @@ export type RecycleScrollAction = {
    * @todo config提升到全局,别的index改变也用这个.
    * @param distance 
    */
-  getConfig(distance: number): AnimationConfig
+  getConfig: GetDeltaXAnimationConfig
 }
 
 export function createRecycleScrollListReducer(
@@ -78,13 +77,13 @@ export function createRecycleScrollListReducer(
   function updateIndex(
     model: RecycleListModel,
     idx: number,
-    config: AnimationConfig
+    getConfig: GetDeltaXAnimationConfig
   ): RecycleResult {
     let nValue = model.initTransY + idx * model.cellHeight
     const [transY, act] = animateNumberFrameReducer(model.transY, {
       type: "changeTo",
       target: nValue,
-      config
+      getConfig
     })
     return [{
       ...model,
@@ -126,8 +125,8 @@ export function createRecycleScrollListReducer(
         size: action.size
       }, undefined]
     } else if (action.type == "addIndex") {
-      if (action.config) {
-        return updateIndex(model, -action.value, action.config)
+      if (action.getConfig) {
+        return updateIndex(model, -action.value, action.getConfig)
       }
       return [{
         ...model,
@@ -145,8 +144,7 @@ export function createRecycleScrollListReducer(
     } else if (action.type == 'endMove') {
       const value = Math.round(action.idealDistance + model.transY.value - model.initTransY)
       const idx = Math.round(value / model.cellHeight)
-      const config = action.getConfig(idx * model.cellHeight + model.initTransY - model.transY.value)
-      return updateIndex(model, idx, config)
+      return updateIndex(model, idx, action.getConfig)
     } else if (action.type == "changeTransY") {
       const value = action.value
       const [newTransY, act] = animateNumberFrameReducer(model.transY, value)

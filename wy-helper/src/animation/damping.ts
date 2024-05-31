@@ -1,6 +1,6 @@
 import { MomentumEndArg, MomentumJudgeBack } from "../scroller"
 import { getDestination } from "../scroller/util"
-import { AnimationConfig, TimeoutAnimationConfig } from "./AnimationConfig"
+import { AnimationConfig } from "./AnimationConfig"
 import { SpringOutValue } from "./spring"
 
 
@@ -42,8 +42,9 @@ export class DammpingFactory {
     velocityThreshold = 2
   ) {
     const that = this
+    const maxTime = this.getFromVelocity(velocityThreshold).duration
     return function (velocity: number): AnimationConfig {
-      return new DampingAnimationConfig(that.getFromVelocity(velocity), velocityThreshold)
+      return that.getFromVelocity(velocity).animationConfig(maxTime)
     }
   }
 
@@ -149,6 +150,13 @@ export class Dammping {
   ) {
     return this.maxDistance * Math.exp(- this.gamma * elapsedTime)
   }
+
+  getDistance(
+    /**时间 */
+    elapsedTime: number
+  ) {
+    return this.maxDistance - this.getDisplacement(elapsedTime)
+  }
   /**
    * 
    * x(t)=max(1-getDisplacement(t))
@@ -173,33 +181,16 @@ export class Dammping {
   ) {
     return this.initVelocity * Math.exp(-this.gamma * elapsedTime)
   }
-}
-/**
- * 阻尼力动画
- */
-export class DampingAnimationConfig implements AnimationConfig {
-  constructor(
-    public readonly dammping: Dammping,
-    public readonly endTime = dammping.duration
-  ) {
-  }
-  initFinished(deltaX: number): boolean {
-    return Math.abs(this.dammping.initVelocity) < this.dammping.factory.velocityThreshold
-  }
-  computed(diffTime: number, deltaX: number): SpringOutValue {
-    diffTime = diffTime / 1000
-    return {
-      displacement: deltaX - this.dammping.maxDistance + this.dammping.getDisplacement(diffTime),
-      velocity: this.dammping.getVelocity(diffTime)
+
+  animationConfig(endTime = this.duration): AnimationConfig {
+    const that = this
+    return function (diffTime) {
+      if (diffTime < endTime) {
+        const value = that.getDistance(diffTime)
+        return [value, false]
+      } else {
+        return [that.getDistance(endTime), true]
+      }
     }
-  }
-  finished(diffTime: number, out?: SpringOutValue | undefined): boolean {
-    if (diffTime >= this.endTime * 1000) {
-      return true
-    }
-    if (out && Math.abs(out.velocity) < this.dammping.factory.velocityThreshold) {
-      return true
-    }
-    return false
   }
 }

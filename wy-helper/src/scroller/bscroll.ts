@@ -1,6 +1,7 @@
-import { MomentumCall, MomentumCallOut, MomentumEndArg, MomentumJudgeBack, OldGetValue } from "."
+import { MomentumCall, MomentumCallOut, MomentumEndArg, OldGetValue } from "."
+import { combineAnimationConfig } from "../animation"
 import { emptyObject } from "../util"
-import { ScrollEdgeAnimation, getDestination } from "./util"
+import { getDestination } from "./util"
 
 export class MomentumBScoll {
   private constructor(
@@ -23,59 +24,62 @@ export class MomentumBScoll {
     }
   }
 
-  getDestinationWithMargin(
-    get: OldGetValue,
-  ): MomentumCall {
-    const that = this
-    return function (
-      {
-        current, velocity,
-        lowerMargin, upperMargin, wrapperSize
-      }: MomentumEndArg) {
+  destinationWithMargin(
+    {
+      current, velocity,
+      lowerMargin, upperMargin, wrapperSize
+    }: MomentumEndArg
+  ): MomentumCallOut {
+    if (lowerMargin < current && current < upperMargin) {
+      let { distance, duration, absSpeed } = this.getWithSpeedIdeal(velocity)
+      let destination = current + distance
+      let rate = 15
+      let edge = false
 
-      if (lowerMargin < current && current < upperMargin) {
-        let { distance, duration, absSpeed } = that.getWithSpeedIdeal(velocity)
-        let destination = current + distance
-        let rate = 15
-        let edge = false
+      let finalPosition = 0
 
-        let finalPosition = 0
-
-        if (destination < lowerMargin) {
-          destination = wrapperSize
-            ? Math.max(
-              lowerMargin - wrapperSize / 4,
-              lowerMargin - (wrapperSize / rate) * absSpeed
-            )
-            : lowerMargin
-          duration = that.swipeBounceTime
-          edge = true
-          finalPosition = lowerMargin
-        } else if (destination > upperMargin) {
-          destination = wrapperSize
-            ? Math.min(
-              upperMargin + wrapperSize / 4,
-              upperMargin + (wrapperSize / rate) * absSpeed
-            )
-            : upperMargin
-          duration = that.swipeBounceTime
-          edge = true
-          finalPosition = upperMargin
+      if (destination < lowerMargin) {
+        destination = wrapperSize
+          ? Math.max(
+            lowerMargin - wrapperSize / 4,
+            lowerMargin - (wrapperSize / rate) * absSpeed
+          )
+          : lowerMargin
+        duration = this.swipeBounceTime
+        edge = true
+        finalPosition = lowerMargin
+      } else if (destination > upperMargin) {
+        destination = wrapperSize
+          ? Math.min(
+            upperMargin + wrapperSize / 4,
+            upperMargin + (wrapperSize / rate) * absSpeed
+          )
+          : upperMargin
+        duration = this.swipeBounceTime
+        edge = true
+        finalPosition = upperMargin
+      }
+      if (edge) {
+        return {
+          type: "scroll-edge",
+          duration,
+          from: current,
+          target: destination,
+          finalPosition: finalPosition,
         }
-        if (edge) {
-          const before = get.getOnDragEnd(duration, true)
-          return [
-            finalPosition,
-            new ScrollEdgeAnimation(
-              before,
-              duration,
-              destination - current,
-              finalPosition - destination,
-              get.onEdgeBack)]
-        }
-        return [destination, get.getOnDragEnd(duration, false)]
-      } else {
-        return [getDestination(current, lowerMargin, upperMargin), get.onEdgeBack]
+      }
+      return {
+        type: "scroll",
+        duration,
+        from: current,
+        target: destination
+      }
+    } else {
+      const finalPosition = getDestination(current, lowerMargin, upperMargin)
+      return {
+        type: "edge-back",
+        from: current,
+        target: finalPosition
       }
     }
   }

@@ -1,5 +1,5 @@
-import { AnimationConfig } from "../animation"
-import { emptyObject } from "../util"
+import { AnimationConfig, GetDeltaXAnimationConfig } from "../animation"
+import { FalseType, emptyObject } from "../util"
 export * from './bscroll'
 export * from './iscroll'
 
@@ -89,12 +89,27 @@ export interface MomentumJudgeBack {
   target: number
 }
 
-export type MomentumCallOut = [number, AnimationConfig]
+export type MomentumCallOut = {
+  type: "scroll"
+  from: number
+  target: number
+  duration: number
+} | {
+  type: "edge-back"
+  from: number
+  target: number
+} | {
+  type: "scroll-edge"
+  from: number
+  target: number
+  finalPosition: number
+  duration: number
+}
 
 
 export type OldGetValue = {
-  getOnDragEnd(duration: number, edge: boolean): AnimationConfig
-  onEdgeBack: AnimationConfig
+  getOnDragEnd(duration: number, deltaX: number, edge: boolean): AnimationConfig
+  onEdgeBack(deltaX: number): AnimationConfig
 }
 
 
