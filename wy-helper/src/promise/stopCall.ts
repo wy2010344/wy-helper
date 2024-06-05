@@ -97,6 +97,7 @@ export class PromiseAutoLoadMore<T, K> {
   ) {
     objectFreeze(this)
   }
+  static empty = new PromiseAutoLoadMore()
   reload(
     getFun: (k: K, abort?: AbortSignal) => Promise<AutoLoadMoreCore<T, K>>,
     first: K
