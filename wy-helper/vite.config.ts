@@ -12,6 +12,7 @@ export default defineConfig({
         index: resolve(__dirname, 'src/index.ts'),
         kanren: resolve(__dirname, 'src/kanren.ts'),
         tokenParser: resolve(__dirname, 'src/tokenParser/index.ts'),
+        infixLang: resolve(__dirname, 'src/infixLang/index.ts'),
         Vue: resolve(__dirname, 'src/Vue.ts'),
       },
       formats: ["es", "cjs"]

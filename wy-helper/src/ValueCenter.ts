@@ -160,7 +160,7 @@ export function createReduceValueCenter<T, A>(
 export type Reducer<T, A> = (v: T, a: A) => T
 export type ReducerWithDispatch<T, A> = (v: T, a: A) => ReducerWithDispatchResult<T, A>
 export type ReducerDispatch<A> = SetValue<SetValue<A>> | undefined
-export type ReducerWithDispatchResult<T, A> = [T, ReducerDispatch<A>]
+export type ReducerWithDispatchResult<T, A> = [T, ReducerDispatch<A>] | [T]
 
 
 export function mapReducerDispatch<A, B>(

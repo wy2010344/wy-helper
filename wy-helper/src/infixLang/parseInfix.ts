@@ -1,8 +1,8 @@
 import { List } from "../kanren"
 import { emptyFun } from "../util"
-import { or, parseGet } from "./parse"
-import { ParseFun, Que, error, matchAnyString } from "./tokenParser"
-import { skipWhiteSpace } from "./util"
+import { or, parseGet } from "../tokenParser/parse"
+import { ParseFun, Que, matchAnyString } from "../tokenParser/tokenParser"
+import { skipWhiteSpace } from "../tokenParser/util"
 
 
 export interface InfixToken {

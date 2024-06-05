@@ -27,19 +27,23 @@ export const objectFreeze: <T extends Object>(v: T) => T = run(() => {
 function isProxy(obj: any) {
   return !!obj && obj instanceof Object && !!obj.constructor && obj.constructor.name === 'Proxy';
 };
-export function objectDeepFreeze<T>(n: T) {
+export function objectDeepFreeze<T>(n: T, before: any[] = []) {
   if (typeof n == 'object' && n) {
     if (isProxy(n) || Object.isFrozen(n)) {
       return n
     }
+    if (before.includes(n)) {
+      return n
+    }
     try {
+      const newBefore = before.concat(n)
       if (Array.isArray(n)) {
         for (let i = 0; i < n.length; i++) {
-          n[i] = objectDeepFreeze(n[i])
+          n[i] = objectDeepFreeze(n[i], newBefore)
         }
       } else {
         for (const key in n) {
-          n[key] = objectDeepFreeze(n[key])
+          n[key] = objectDeepFreeze(n[key], newBefore)
         }
       }
       return objectFreeze(n)

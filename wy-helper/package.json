@@ -17,6 +17,11 @@
       "import": "./dist/tokenParser.mjs",
       "require": "./dist/tokenParser.js"
     },
+    "./infixLang": {
+      "types": "./dist/infixLang/index.d.ts",
+      "import": "./dist/infixLang.mjs",
+      "require": "./dist/infixLang.js"
+    },
     "./kanren": {
       "types": "./dist/kanren.d.ts",
       "import": "./dist/kanren.mjs",

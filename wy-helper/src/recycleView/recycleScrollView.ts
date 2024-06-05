@@ -28,6 +28,22 @@ export function recicleScrollViewView(
   function aUpdate(value: number) {
     diffUpdate(value - initScrollHeight)
   }
+
+  function updateIndex(idx: number, getConfig: GetDeltaXAnimationConfig, e?: AnimateFrameEvent) {
+    const nValue = idx * rowHeight + initScrollHeight
+    transY.changeTo(nValue, getConfig, {
+      onProcess(v) {
+        aUpdate(v)
+        e?.onProcess?.(v)
+      },
+      onFinish(v) {
+        if (v) {
+          aUpdate(transY.get())
+        }
+        e?.onFinish?.(v)
+      },
+    })
+  }
   return {
     trans: transY,
     setInitScrollHeight(n: number) {
@@ -46,21 +62,9 @@ export function recicleScrollViewView(
     endMove(idealDistance: number,
       getConfig: GetDeltaXAnimationConfig
     ) {
-      // const fc = new FrictionalFactory()
-      // fc.getFromVelocity(v).maxDistance 
       const value = transY.get() + idealDistance - initScrollHeight
       const idx = Math.round(value / rowHeight)
-      const nValue = idx * rowHeight + initScrollHeight
-      transY.changeTo(nValue, getConfig, {
-        onProcess(v) {
-          aUpdate(v)
-        },
-        onFinish(v) {
-          if (v) {
-            aUpdate(transY.get())
-          }
-        },
-      })
+      updateIndex(idx, getConfig)
     },
     stopScroll(toCurrent?: boolean) {
       let ato = transY.getAnimateTo()
@@ -77,16 +81,10 @@ export function recicleScrollViewView(
     },
     wrapperAdd(n: number, config?: GetDeltaXAnimationConfig, event?: AnimateFrameEvent) {
       if (n) {
-        if (transY.getAnimateTo() || !config) {
-          addIndex(n)
+        if (config) {
+          updateIndex(-n, config,)
         } else {
-          transY.changeTo(initScrollHeight, config, {
-            ...event,
-            from: initScrollHeight + n * rowHeight
-          })
-          flushSync(() => {
-            addIndex(n)
-          })
+          addIndex(n)
         }
       }
     }
