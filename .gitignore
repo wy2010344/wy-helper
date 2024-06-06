@@ -5,4 +5,5 @@ dist
 wy-helper/kanren
 wy-helper/tokenParser
 wy-helper/Vue
+wy-helper/infixLang
 wy-dom-helper/contentEditable
