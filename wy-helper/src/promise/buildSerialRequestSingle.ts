@@ -85,7 +85,9 @@ export function buildSerialRequestSingle<Req extends any[], Res>(
     if (cacheList.length == 1) {
       //之前是空的
       circleRun()
+      return true
     }
+    return false
   }
 }
 
