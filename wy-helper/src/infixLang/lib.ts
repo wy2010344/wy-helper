@@ -132,12 +132,20 @@ function getOneRule(exp: IType) {
 }
 
 export function translateRule(
-  exp: IType
+  exp: IType,
+  before = defineRules
 ) {
-  return getRules(exp, defineRules)
+  return getRules(exp, before)
 }
-
-
+export function translateRuleList(exp: IType, rules: EvalRule[] = []) {
+  if (exp instanceof IPair && exp.type == ';') {
+    rules.push(getOneRule(exp.right))
+    return translateRuleList(exp.left, rules)
+  } else {
+    rules.push(getOneRule(exp))
+    return rules
+  }
+}
 function getRules(exp: IType, topRules: RuleScope) {
   if (exp instanceof IPair && exp.type == ';') {
     return getRules(exp.left, pair(getOneRule(exp.right), topRules))

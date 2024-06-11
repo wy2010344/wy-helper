@@ -1,19 +1,21 @@
 
+
+export type NullType = undefined | null | void;
 /**6种情况为false,NaN是数字类型*/
-export type FalseType = false | undefined | null | 0 | "" | void
+export type FalseType = false | 0 | "" | NullType
 export type EmptyFun = (...vs: any[]) => void
 export function quote<T>(v: T, ...vs: any[]) { return v }
 export function run<T extends AnyFunction>(
   fun: T
-) {
+): ReturnType<T> {
   return fun()
 }
 
 class FreezeError extends Error {
 }
-export const objectFreeze: <T extends Object>(v: T) => T = run(() => {
+export const objectFreeze = run((): <T extends Object>(v: T) => T => {
   if (globalThis.Proxy) {
-    return (a: object) => {
+    return (a: any) => {
       return new Proxy(a, {
         set(target, p, newValue, receiver) {
           throw new FreezeError("don't allow set value")

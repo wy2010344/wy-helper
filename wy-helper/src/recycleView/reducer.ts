@@ -1,6 +1,6 @@
 import { arrayFunToOneOrEmpty } from "../ArrayHelper"
 import { ReducerWithDispatch, ReducerWithDispatchResult, mapReducerDispatch } from "../ValueCenter"
-import { AnimateFrameAct, AnimateFrameModel, AnimationConfig, GetDeltaXAnimationConfig } from "../animation"
+import { AnimateFrameAct, AnimateFrameModel, FrictionalFactory, GetDeltaXAnimationConfig } from "../animation"
 
 export type RecycleListModel = {
   size: number
@@ -71,18 +71,57 @@ export type RecycleScrollAction = {
   getConfig: GetDeltaXAnimationConfig
 }
 
+export function getIdxWith(diff: number, rowHeight: number) {
+  // let idx = 0
+  // if (diff >= rowHeight) {
+  //   // idx = -Math.ceil(diff / rowHeight)
+  //   // idx = -Math.floor(diff / rowHeight)
+  //   idx = -Math.round(diff / rowHeight)
+  // } else if (diff <= -rowHeight) {
+  //   // idx = -Math.floor(diff / rowHeight)
+  //   //后面两个步进都是1,第1个步进是2,即1.1时就进2准备着,可以减少空白
+  //   // idx = -Math.ceil(diff / rowHeight)
+  //   idx = -Math.round(diff / rowHeight)
+  // }
+  // return idx
+  /**因为浮点误差,用四舍去五入最合适 */
+  return -Math.round(diff / rowHeight)
+}
 export function createRecycleScrollListReducer(
   animateNumberFrameReducer: ReducerWithDispatch<AnimateFrameModel, AnimateFrameAct>
 ): ReducerWithDispatch<RecycleListModel, RecycleScrollAction> {
+  function aUpdate(value: number, model: RecycleListModel): RecycleListModel {
+    const diff = value - model.initTransY
+    const idx = getIdxWith(diff, model.cellHeight)
+    if (idx) {
+      const [transY] = animateNumberFrameReducer(model.transY, {
+        type: "silentDiff",
+        value: idx * model.cellHeight
+      })
+      return {
+        ...model,
+        index: formatIndex(model.index + idx, model.size),
+        transY
+      }
+    }
+    return model
+  }
+
   function updateIndex(
     model: RecycleListModel,
     idx: number,
     getConfig: GetDeltaXAnimationConfig
   ): RecycleResult {
-    let nValue = model.initTransY + idx * model.cellHeight
+    // const animateToTarget = model.transY.animateTo?.target
+    // let from = model.transY.value
+    // if (typeof animateToTarget == 'number') {
+    //   model = aUpdate(animateToTarget, model)
+    //   from = animateToTarget
+    // }
     const [transY, act] = animateNumberFrameReducer(model.transY, {
       type: "changeTo",
-      target: nValue,
+      // from,
+      target: model.initTransY + idx * model.cellHeight,
       getConfig
     })
     return [{
@@ -91,27 +130,6 @@ export function createRecycleScrollListReducer(
     }, mapReducerDispatch(act, transNumberToScrollView)]
   }
 
-  function updateDiff(diff: number, model: RecycleListModel): RecycleResult {
-    let idx = 0
-    if (diff >= model.cellHeight) {
-      idx = -Math.floor(diff / model.cellHeight)
-    } else if (diff <= -model.cellHeight) {
-      idx = -Math.ceil(diff / model.cellHeight)
-    }
-    if (idx) {
-      const [transY, act] = animateNumberFrameReducer(model.transY, {
-        type: "silentDiff",
-        value: idx * model.cellHeight
-      })
-      return [{
-        ...model,
-        index: formatIndex(model.index + idx, model.size),
-        transY
-      },
-      mapReducerDispatch(act, transNumberToScrollView)]
-    }
-    return [model, undefined]
-  }
   return (model, action) => {
     if (action.type == 'init') {
       return [{
@@ -133,14 +151,14 @@ export function createRecycleScrollListReducer(
         index: formatIndex(action.value + model.index, model.size)
       }, undefined]
     } else if (action.type == "changeDiff") {
-      const diff = action.diff + model.transY.value - model.initTransY
-      return updateDiff(diff, {
+      const toValue = action.diff + model.transY.value
+      return [aUpdate(toValue, {
         ...model,
         transY: {
           version: model.transY.version,
-          value: diff + model.initTransY
+          value: toValue
         }
-      })
+      })]
     } else if (action.type == 'endMove') {
       const value = Math.round(action.idealDistance + model.transY.value - model.initTransY)
       const idx = Math.round(value / model.cellHeight)
@@ -154,9 +172,8 @@ export function createRecycleScrollListReducer(
       }
       const theAct = mapReducerDispatch(act, transNumberToScrollView)
       if (value.type == "tick" && newTransY.value != model.transY.value) {
-        const diff = newTransY.value - model.initTransY
-        const [value, nAct] = updateDiff(diff, newModel)
-        return [value, arrayFunToOneOrEmpty([theAct, nAct])]
+        const value = aUpdate(newTransY.value, newModel)
+        return [value, theAct]
       }
       return [newModel, theAct]
     }
