@@ -225,29 +225,39 @@ export function readArraySliceCircle<T>(list: ReadArray<T>, from: number = 0, en
   if (from > end) {
     throw new Error("from 必须小于 end")
   }
+  const n = list.length
+  if (end - from > n) {
+    throw new Error("必须在列表的长度区间!")
+  }
   if (from < 0) {
-    from = list.length + from
+    from = getAbsoulteIndex(n, from)
     if (end < 0) {
-      return readArraySlice(list, from, end + list.length)
+      return readArraySlice(list, from, getAbsoulteIndex(n, end))
     }
     const out: T[] = []
-    readArraySlice(list, from, list.length, out)
+    readArraySlice(list, from, n, out)
     readArraySlice(list, 0, end, out)
     return out
-  } else if (end >= list.length) {
-    end = end - list.length
-    if (from >= list.length) {
-      return readArraySlice(list, from - list.length, end)
+  } else if (end >= n) {
+    end = getAbsoulteIndex(n, end)
+    if (from >= n) {
+      return readArraySlice(list, getAbsoulteIndex(n, from), end)
     }
     const out: T[] = []
-    readArraySlice(list, from, list.length, out)
+    readArraySlice(list, from, n, out)
     readArraySlice(list, 0, end, out)
     return out
   }
   return readArraySlice(list, from, end)
 }
 
-
+export function getAbsoulteIndex(n: number, i: number) {
+  const at = i % n
+  if (at < 0) {
+    return at + n
+  }
+  return at
+}
 
 export class WrapperValue<T> {
   constructor(public readonly value: T) { }

@@ -160,7 +160,7 @@ export function createRecycleScrollListReducer(
         }
       })]
     } else if (action.type == 'endMove') {
-      const value = Math.round(action.idealDistance + model.transY.value - model.initTransY)
+      const value = action.idealDistance + model.transY.value - model.initTransY
       const idx = Math.round(value / model.cellHeight)
       return updateIndex(model, idx, action.getConfig)
     } else if (action.type == "changeTransY") {

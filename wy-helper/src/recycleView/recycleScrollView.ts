@@ -50,11 +50,11 @@ export function recicleScrollViewView(
       transY.changeTo(n)
     },
     /**
-     * 拖拽到当下的Y
+     * 偏移量
      * @param moveY 
      */
-    moveUpdate(moveY: number) {
-      const target = moveY + initScrollHeight
+    moveUpdate(diff: number) {
+      const target = diff + transY.get()
       transY.changeTo(target)
       aUpdate(target)
     },
@@ -68,7 +68,7 @@ export function recicleScrollViewView(
     },
     stopScroll(toCurrent?: boolean) {
       let ato = transY.getAnimateTo()
-      if (ato?.hasTarget()) {
+      if (ato) {
         let nValue = ato.target
         if (toCurrent) {
           const v = transY.get() - initScrollHeight

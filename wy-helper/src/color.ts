@@ -30,7 +30,7 @@ export function bgColorfromHex(v: string) {
  * @param v 
  */
 export function hexFromBgColor(v: BGColor) {
-	let color = `#${v.red.toString(16)}${v.green.toString(16)}${v.blue.toString(16)}`
+	let color = `#${Math.round(v.red).toString(16)}${Math.round(v.green).toString(16)}${Math.round(v.blue).toString(16)}`
 	if (v.alpha != GB_MAX_VALUE) {
 		color += v.alpha.toString(16)
 	}

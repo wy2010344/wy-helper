@@ -5,7 +5,7 @@ export type AnimateFrameModel = {
   version: number
   value: number
   animateTo?: {
-    target?: number
+    target: number
     from: number
     config: AnimationConfig
     startTime: number
@@ -21,10 +21,6 @@ export type AnimateFrameChangeTo = {
   target: number
   from?: number
   getConfig: GetDeltaXAnimationConfig
-} | {
-  type: "setAnimate"
-  from?: number
-  config: AnimationConfig
 }
 
 export type FrameTick = {
@@ -54,7 +50,7 @@ export function createAnimateFrameReducer(
     list: ReducerDispatch<FrameTick>[],
     oldValue: number,
     config: AnimationConfig,
-    target?: number
+    target: number
   ) {
 
     const version = old.version + 1
@@ -147,12 +143,6 @@ export function createAnimateFrameReducer(
         }
       }
       return buildAnimate(old, list, oldValue, config, act.target)
-    } else if (act.type == "setAnimate") {
-      let oldValue = old.value
-      if (typeof act.from != 'undefined') {
-        oldValue = act.from
-      }
-      return buildAnimate(old, list, oldValue, act.config)
     } else if (act.type == "silentDiff") {
       const diff = act.value
       const value = old.value + diff
