@@ -148,7 +148,7 @@ function subscribeEvent(div: any, type: string, fun: any, opt: any) {
   }
 }
 
-export function subscribeDragInit(div: Node, fun: (e: PagePoint | undefined, ole: Event) => void, capture?: boolean) {
+export function subscribeDragInit(div: Node, fun: (e: PagePoint, ole: Event) => void, capture?: boolean) {
   let cancelOption: AddEventListenerOptions = {
     capture
   }

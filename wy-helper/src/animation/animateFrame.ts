@@ -34,8 +34,8 @@ export type AnimateFrameEvent = {
 }
 
 export interface AnimateTo {
+  target: number
   from: number,
-  hasTarget(): this is AnimateToImplE
   config: AnimationConfig
 }
 
@@ -43,6 +43,7 @@ type AnimateSetValue = (v: number, onProcess?: boolean) => void
 class AnimateToImpl implements AnimateTo {
   constructor(
     public from: number,
+    public target: number,
     public config: AnimationConfig,
     private setValue: AnimateSetValue
   ) { }
@@ -57,28 +58,12 @@ class AnimateToImpl implements AnimateTo {
   reDo() {
     this.update(this.time)
   }
-  hasTarget(): this is AnimateToImplE {
-    return false
-  }
 }
-class AnimateToImplE extends AnimateToImpl {
-  constructor(
-    public target: number,
-    from: number,
-    config: AnimationConfig,
-    setValue: (v: number, onProcess?: boolean) => void
-  ) {
-    super(from, config, setValue)
-  }
-  hasTarget(): this is AnimateToImplE {
-    return true
-  }
-}
+
 
 export interface AnimateFrameValue extends ReadValueCenter<number> {
   slientDiff(n: number): void
   getAnimateTo(): AnimateTo | undefined
-  getAnimateToTarget(): number | undefined
   changeTo(target: number, getConfig?: GetDeltaXAnimationConfig, ext?: AnimateFrameEvent): "immediately" | "animate" | undefined
 }
 /**
@@ -101,30 +86,17 @@ export class AnimateFrameValueImpl implements AnimateFrameValue {
     return this.animateTo
   }
 
-  getAnimateToTarget() {
-    if (this.animateTo instanceof AnimateToImplE) {
-      return this.animateTo.target
-    }
-  }
-
   private lastCancel = emptyFun
 
   private clear() {
     this.lastCancel = emptyFun
     this.animateTo = undefined
   }
-  slientChange(target: number, from?: number) {
+  slientChange(target: number) {
     if (this.animateTo) {
-      if (this.animateTo instanceof AnimateToImplE) {
-        this.animateTo.from = typeof from == 'number'
-          ? from
-          : this.animateTo.from + target - this.animateTo.target
-        this.animateTo.target = target
-        this.animateTo.reDo()
-        return true
-      } else {
-        return false
-      }
+      this.animateTo.from = this.animateTo.from + target - this.animateTo.target
+      this.animateTo.target = target
+      this.animateTo.reDo()
     } else {
       this.value.set(target)
       return true
@@ -133,25 +105,11 @@ export class AnimateFrameValueImpl implements AnimateFrameValue {
   slientDiff(diff: number) {
     if (this.animateTo) {
       this.animateTo.from = this.animateTo.from + diff
-      if (this.animateTo instanceof AnimateToImplE) {
-        this.animateTo.target = this.animateTo.target + diff
-      }
+      this.animateTo.target = this.animateTo.target + diff
       this.animateTo.reDo()
     } else {
       this.value.set(this.value.get() + diff)
     }
-  }
-  setAnimate(config: AnimationConfig, {
-    from,
-    onProcess = emptyFun,
-    onFinish = emptyFun
-  }: AnimateFrameEvent = emptyObject) {
-    const { setValue, baseValue, needReset } = this.initConfig(from, onProcess)
-    const animateTo = new AnimateToImpl(
-      baseValue,
-      config,
-      setValue)
-    this.beginAnimate(animateTo, needReset, onFinish)
   }
   changeTo(target: number, getConfig?: GetDeltaXAnimationConfig, {
     from,
@@ -171,9 +129,9 @@ export class AnimateFrameValueImpl implements AnimateFrameValue {
       this.value.set(target)
       return 'immediately'
     }
-    const animateTo = new AnimateToImplE(
-      target,
+    const animateTo = new AnimateToImpl(
       baseValue,
+      target,
       config,
       setValue)
     this.beginAnimate(animateTo, needReset, onFinish)
