@@ -1,4 +1,5 @@
-import { KVar, List, Stream, fail, list, pair, streamAppendStream, streamBindGoal, success, } from "../kanren";
+import { arrayPushAll } from "../ArrayHelper";
+import { KPair, KVar, List, Stream, fail, list, pair, streamAppendStream, streamBindGoal, success, } from "../kanren";
 import { EvalRule, RuleScope, infixValue, stringify, toCustomRule, topEvalExp } from "./eval";
 import { IPair, ISubsitution, IType, toUnify } from "./rewrite";
 export const defineRules: RuleScope = list(
@@ -91,8 +92,28 @@ export const defineRules: RuleScope = list(
       return orReturnStream(left, exp.right, topRules)
     }
     return null
+  },
+  (exp, topRules) => {
+    if (exp instanceof IPair && exp.type.startsWith("都")) {
+      const nexp = toAllExp(exp.left, exp.type.slice(1), exp.right)
+      // console.log("dd", nexp)
+      return topEvalExp(null, topRules, nexp)
+    }
+    return null
   }
 )
+function toAllExp(left: IType, infix: string, right: IType): IType {
+  if (left instanceof IPair && left.type == ',') {
+    return infixValue(
+      toAllExp(left.left, infix, right),
+      ',',
+      infixValue(left.right, infix, right),
+    )
+  } else {
+    return infixValue(left, infix, right)
+  }
+}
+
 
 
 function orReturnStream(left: IType, exp: IType, topRules: RuleScope): Stream<ISubsitution> {
@@ -106,8 +127,18 @@ function orReturnStream(left: IType, exp: IType, topRules: RuleScope): Stream<IS
 }
 
 function getOneReturn(left: IType, exp: IType, topRules: RuleScope) {
-  const rule = getOneRule(left)
-  return rule(exp, topRules)
+  const vs = getTheRule(left)
+  const ls = list(...vs)!
+  return doRunStream(ls, exp, topRules)
+}
+
+function doRunStream(ls: List<EvalRule>, exp: IType, topRules: RuleScope): Stream<ISubsitution> {
+  if (ls) {
+    return streamAppendStream(ls.left(exp, topRules), () => {
+      return doRunStream(ls.right, exp, topRules)
+    })
+  }
+  return null
 }
 
 function getDeepType(left: IType) {
@@ -123,36 +154,56 @@ function getDeepType(left: IType) {
 }
 
 
-function getOneRule(exp: IType) {
-  if (exp instanceof IPair && exp.type == ':-') {
-    return toCustomRule(exp.left, exp.right)
+function getTheRule(exp: IType, list: EvalRule[] = []) {
+  if (exp instanceof IPair) {
+    if (exp.type == ':-') {
+      list.push(toCustomRule(exp.left, exp.right))
+      return list
+    } else if (exp.type.startsWith("都")) {
+      const infix = exp.type.slice(1)
+      toAllRule(list, exp.left, infix, exp.right)
+      return list
+    }
+  }
+  list.push(toCustomRule(exp))
+  return list
+}
+
+function toAllRule(list: EvalRule[], left: IType, infix: string, right: IType) {
+  if (left instanceof IPair && left.type == ',') {
+    list.unshift(toCustomRule(infixValue(left.right, infix, right)))
+    toAllRule(list, left.left, infix, right)
   } else {
-    return toCustomRule(exp)
+    list.unshift(toCustomRule(infixValue(left, infix, right)))
   }
 }
 
-export function translateRule(
-  exp: IType,
-  before = defineRules
-) {
-  return getRules(exp, before)
-}
+
+
 export function translateRuleList(exp: IType, rules: EvalRule[] = []) {
   if (exp instanceof IPair && exp.type == ';') {
-    rules.push(getOneRule(exp.right))
+    const list = getTheRule(exp.right)
+    arrayPushAll(rules, list)
     return translateRuleList(exp.left, rules)
   } else {
-    rules.push(getOneRule(exp))
+    const list = getTheRule(exp)
+    arrayPushAll(rules, list)
     return rules
   }
 }
-function getRules(exp: IType, topRules: RuleScope) {
-  if (exp instanceof IPair && exp.type == ';') {
-    return getRules(exp.left, pair(getOneRule(exp.right), topRules))
-  } else {
-    return pair(getOneRule(exp), topRules)
-  }
-}
+// export function translateRule(
+//   exp: IType,
+//   before = defineRules
+// ) {
+//   return getRules(exp, before)
+// }
+// function getRules(exp: IType, topRules: RuleScope) {
+//   if (exp instanceof IPair && exp.type == ';') {
+//     return getRules(exp.left, pair(getOneRule(exp.right), topRules))
+//   } else {
+//     return pair(getOneRule(exp), topRules)
+//   }
+// }
 export function runQuery(rules: List<EvalRule>, query: IType) {
   return topEvalExp(null, rules, query)
 }

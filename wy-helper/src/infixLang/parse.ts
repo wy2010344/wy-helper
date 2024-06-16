@@ -27,7 +27,8 @@ import {
   StringToken, NumberToken,
   SymbolToken, VarToken,
   ruleGetNumber, ruleGetString,
-  ruleGetSymbol, ruleGetVar
+  ruleGetSymbol, ruleGetVar,
+  skipWhiteOrComment
 } from "./relayParseRule";
 
 
@@ -119,8 +120,7 @@ export const infixLibArray = [
   ['*', '/', '%']
 ]
 
-
-export const { parseSentence, getInfixOrder } = buildInfix(infixLibArray, () => {
+export const { parseSentence, getInfixOrder } = buildInfix(infixLibArray, skipWhiteOrComment, () => {
   return or([
     ruleGetVar,
     ruleGetString,
@@ -131,7 +131,6 @@ export const { parseSentence, getInfixOrder } = buildInfix(infixLibArray, () => 
 
 type NNode = StringToken | SymbolToken | NumberToken | VarToken
 export type EndNode = NNode | InfixNode<NNode>
-
 
 
 

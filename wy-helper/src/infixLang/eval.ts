@@ -84,6 +84,15 @@ export function stringify(v: IType) {
 function evalEndNodeArg(n: EndNode, pool: VarPool): IType {
   if (n.type == 'infix') {
     const infix = n.infix.value
+    // if (infix == 'join@') {
+    //   const right = evalEndNodeArg(n.right, pool)
+    //   if (typeof right == 'string') {
+    //     const left = evalEndNodeArg(n.left, pool)
+    //     if (left instanceof IPair) {
+    //       return mapJoin(left.left, left.type, left.right, right)
+    //     }
+    //   }
+    // }
     return infixValue(
       evalEndNodeArg(n.left, pool),
       infix,
@@ -110,17 +119,46 @@ export function evalEndNode(n: EndNode, pool: VarPool): IType {
         evalEndNodeArg(n.left, newPool),
         infix,
         evalEndNode(n.right, newPool))
-    } else {
-      return infixValue(
-        evalEndNode(n.left, pool),
-        infix,
-        evalEndNode(n.right, pool))
     }
+    // else if (infix == 'join@') {
+    //   const right = evalEndNode(n.right, pool)
+    //   if (typeof right == 'string') {
+    //     const left = evalEndNode(n.left, pool)
+    //     if (left instanceof IPair) {
+    //       const v = mapJoin(left.left, left.type, left.right, right)
+    //       console.log("d", v)
+    //       return v
+    //     }
+    //   }
+    // }
+    return infixValue(
+      evalEndNode(n.left, pool),
+      infix,
+      evalEndNode(n.right, pool))
   } else if (n.type == 'var') {
     return pool.get(n.value)
   } else {
     return n.value
   }
+}
+
+function mapJoin(list: IType, infix: string, right: IType, split: string): IType {
+  if (list instanceof IPair && list.type == ',') {
+    return infixValue(
+      infixValue(
+        mapJoin(list.left, infix, right, split),
+        infix,
+        right
+      ),
+      split,
+      infixValue(
+        list.right,
+        infix,
+        right
+      )
+    )
+  }
+  return list
 }
 
 export type EvalRule = (

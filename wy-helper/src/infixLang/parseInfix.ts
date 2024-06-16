@@ -1,8 +1,7 @@
 import { List } from "../kanren"
-import { emptyFun } from "../util"
+import { EmptyFun, emptyFun } from "../util"
 import { or, parseGet } from "../tokenParser/parse"
 import { ParseFun, Que, matchAnyString } from "../tokenParser/tokenParser"
-import { skipWhiteSpace } from "../tokenParser/util"
 
 
 export interface InfixToken {
@@ -38,9 +37,10 @@ export type InfixConfig = Infix[] | RevInfix
 function parseInfixBB<F>(
   parseLeaf: () => F,
   infixes: Infix[],
+  skipWhiteSpace: EmptyFun
 ) {
   const first = parseLeaf()
-  const exts = parsePrefix(infixes, parseLeaf)
+  const exts = parsePrefix(infixes, parseLeaf, skipWhiteSpace)
   return { first, exts }
 }
 
@@ -70,7 +70,8 @@ function parseInfixStr(value: string) {
 }
 function parsePrefix<F>(
   infixes: Infix[],
-  parseLeaf: () => F
+  parseLeaf: () => F,
+  skipWhiteSpace: EmptyFun
 ) {
   const exts: {
     infix: InfixToken
@@ -118,7 +119,8 @@ function parsePrefix<F>(
  */
 export function parseSuffix<F>(
   infixes: Infix[],
-  parseLeaf: () => F
+  parseLeaf: () => F,
+  skipWhiteSpace: EmptyFun
 ) {
   const exts: {
     value: F
@@ -166,9 +168,10 @@ export function parseSuffix<F>(
 export function parseInfixBLeft<F, T>(
   parseLeaf: () => F,
   infixes: Infix[],
+  skipWhiteSpace: EmptyFun,
   build: (infix: InfixToken, left: F | T, right: F) => T
 ) {
-  const { first, exts } = parseInfixBB(parseLeaf, infixes)
+  const { first, exts } = parseInfixBB(parseLeaf, infixes, skipWhiteSpace)
   let value = first as F | T
   for (let i = 0; i < exts.length; i++) {
     const ext = exts[i]
@@ -184,9 +187,10 @@ export function parseInfixBLeft<F, T>(
 export function parseInfixBRight<F, T>(
   parseLeaf: () => F,
   infixes: Infix[],
+  skipWhiteSpace: EmptyFun,
   build: (infix: InfixToken, left: F, right: F | T) => T
 ) {
-  const { first, exts } = parseInfixBB(parseLeaf, infixes)
+  const { first, exts } = parseInfixBB(parseLeaf, infixes, skipWhiteSpace)
   if (exts.length) {
     let { value: tmpValue, infix } = exts[exts.length - 1]
     let value = tmpValue as F | T
@@ -209,17 +213,20 @@ export function parseInfixBRight<F, T>(
  */
 export function parseInfix<T>(
   infixes: List<InfixConfig>,
+
+  skipWhiteSpace: EmptyFun,
   parseNode: () => T
 ): InfixEndNode<T> {
   if (!infixes) {
     return parseNode()
   }
   const c = infixes.left
-  const parseLeaf = () => parseInfix(infixes.right, parseNode)
+  const parseLeaf = () => parseInfix(infixes.right, skipWhiteSpace, parseNode)
   if (Array.isArray(c)) {
     return parseInfixBLeft(
       parseLeaf,
       c,
+      skipWhiteSpace,
       (infix, left, right) => {
         return {
           type: "infix",
@@ -233,6 +240,7 @@ export function parseInfix<T>(
     return parseInfixBRight(
       parseLeaf,
       c.values,
+      skipWhiteSpace,
       (infix, left, right) => {
         return {
           type: "infix",

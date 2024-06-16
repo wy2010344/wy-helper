@@ -3,7 +3,9 @@ import {
   isFloat, isLowerEnglish,
   isNumber, isUpperEnglish, manyMatch,
   matchAnyString, orMatch,
-  parseGet, ruleStrBetweenGet1
+  parseGet, parseSkip, ruleStrBetween, ruleStrBetweenGet1,
+  whiteSpaceMatch,
+  whiteSpaceRule
 } from "../tokenParser";
 
 export const matchCommonExt = manyMatch(
@@ -57,6 +59,28 @@ export function ruleGetString() {
     end: end.i,
     errors: []
   } as StringToken
+}
+
+const ruleComment = ruleStrBetween('"'.charCodeAt(0))
+export const ruleSkipWhiteOrComment = manyMatch(
+  orMatch(
+    ruleComment,
+    whiteSpaceMatch
+  )
+)
+export const ruleSkipWhiteOrCommentMin1 = manyMatch(
+  orMatch(
+    ruleComment,
+    whiteSpaceMatch
+  ),
+  1
+)
+export function skipWhiteOrComment(atLeastOne?: boolean) {
+  if (atLeastOne) {
+    parseSkip(ruleSkipWhiteOrCommentMin1)
+  } else {
+    parseSkip(ruleSkipWhiteOrComment)
+  }
 }
 
 export function ruleGetSymbol() {
