@@ -1,11 +1,15 @@
 import { KVar, list } from "../kanren"
 import {
-  Que, or,
-  ruleGetString, skipAnyString,
-  skipMatchEnd, skipWhiteSpace
+  Que,
+  or,
+  ruleGetString,
+  skipAnyString,
+  skipMatchEnd
 } from "../tokenParser"
+import { EmptyFun } from "../util"
 import {
-  Infix, InfixConfig, InfixEndNode,
+  Infix, InfixConfig,
+  InfixEndNode,
   InfixNode, MatchGet, parseInfix,
 } from './parseInfix'
 
@@ -80,10 +84,10 @@ function buildInfixLibArray(array: InfixConfig[]) {
 
 export function buildInfix<T>(
   array: InfixConfig[],
-  parseLeafNode: () => T
+  skipWhiteSpace: EmptyFun,
+  parseLeafNode: () => T,
 ) {
   const newList = buildInfixLibArray(array)
-
   function parseEndNode(): InfixEndNode<T> | T {
     const node = or([
       parseLeafNode,
@@ -100,7 +104,7 @@ export function buildInfix<T>(
   }
   const neAs = list(...newList)
   function parseNode() {
-    return parseInfix(neAs, parseEndNode)
+    return parseInfix(neAs, skipWhiteSpace, parseEndNode)
   }
 
 
@@ -124,6 +128,7 @@ export function buildInfix<T>(
   }
 
   return {
+    parseNode,
     parseSentence() {
       skipWhiteSpace()
       let node = parseNode()

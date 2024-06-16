@@ -6984,11 +6984,6 @@ ws@^7.0.0:
   resolved "https://registry.npmjs.org/ws/-/ws-7.5.9.tgz"
   integrity sha512-F+P9Jil7UiSKSkppIiD94dN07AwvFixvLIj1Og1Rl9GGMuNipJnV9JzjD6XuqmAeiswGvUmNLjr5cFuXwNS77Q==
 
-wy-helper@^0.1.2:
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/wy-helper/-/wy-helper-0.1.2.tgz#2c8dcca904129a65b6491a4cbdb747d1515c42dc"
-  integrity sha512-wkUeJMtpMLsn68b/PnviE+sB6+csmTzlsCWxS/979PVTZhQQGJ/b9437tenjj9V9gLD9trRuo+4B9EenurVkWw==
-
 xml-name-validator@^3.0.0:
   version "3.0.0"
   resolved "https://registry.npmjs.org/xml-name-validator/-/xml-name-validator-3.0.0.tgz"

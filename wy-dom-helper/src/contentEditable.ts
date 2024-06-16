@@ -35,7 +35,6 @@ export function getCurrentRecord(editor: HTMLElement): EditRecord {
   }
 }
 
-
 export function contentEnter(editor: HTMLElement) {
   return contentInput(editor, '\n', 1)
 }
