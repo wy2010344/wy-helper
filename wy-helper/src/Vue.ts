@@ -9,7 +9,7 @@ if (!m[DepKey]) {
     id = Dep.uid++
     static target: Watcher | null
     static watcherCount = 0
-    subs: { [key: number]: Watcher } = {}
+    subs: { [key: string]: Watcher } = {}
     depend() {
       if (Dep.target) {
         this.subs[Dep.target.id] = Dep.target
@@ -19,8 +19,28 @@ if (!m[DepKey]) {
       const oldSubs = this.subs
       this.subs = {}
       for (const key in oldSubs) {
-        oldSubs[key].update()
+        if (!Dep.globalSubs.find(v => v.id == key)) {
+          Dep.globalSubs.push(oldSubs[key])
+        } else {
+          console.log("不重复注入watch")
+        }
       }
+      Dep.globalRun()
+    }
+
+
+    static globalSubs: Watcher[] = []
+    static globalIsRun = false
+    static globalRun() {
+      if (this.globalIsRun) {
+        return
+      }
+      this.globalIsRun = true
+      while (this.globalSubs) {
+        const first = this.globalSubs.shift()!
+        first.update()
+      }
+      this.globalIsRun = false
     }
   }
   m[DepKey] = Dep
@@ -72,7 +92,7 @@ class Watcher {
     this.didUpdate = this.didUpdate.bind(this)
   }
   static uid = 0
-  id = Watcher.uid++
+  id = "" + Watcher.uid++
   private enable = true
 
 

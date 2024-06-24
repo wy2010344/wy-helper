@@ -1,12 +1,13 @@
+import { Quote } from "./util";
 
 export type SetStateAction<T> = T | ((v: T) => T)
 export type SetValue<F> = (v: F, ...vs: any[]) => void;
 export type GetValue<F> = (...vs: any[]) => F;
 export type ReduceState<T> = SetValue<SetStateAction<T>>
 
-
+export type ParentSet<T> = SetValue<Quote<T>>
 export function buildSubSet<PARENT, CHILD>(
-  parentSet: ReduceState<PARENT>,
+  parentSet: ParentSet<PARENT>,
   getChild: (s: PARENT) => CHILD,
   buildParent: (s: PARENT, t: CHILD) => PARENT
 ) {
@@ -21,7 +22,7 @@ export function buildSubSet<PARENT, CHILD>(
 }
 
 export function buildSubSetObject<PARENT, K extends keyof PARENT>(
-  parentSet: ReduceState<PARENT>,
+  parentSet: ParentSet<PARENT>,
   key: K,
   callback?: (v: PARENT[K], parent: PARENT) => PARENT[K]
 ) {
@@ -41,7 +42,7 @@ export function buildSubSetObject<PARENT, K extends keyof PARENT>(
 
 export type ReduceRowState<T> = (() => void) & ((v: SetStateAction<T>) => void)
 export function buildSubSetArray<T>(
-  parentSet: ReduceState<T[]>,
+  parentSet: ParentSet<T[]>,
   equal: ((v: T) => boolean)
 ): ReduceRowState<T> {
   return function () {
@@ -67,6 +68,16 @@ export function buildSubSetArray<T>(
   }
 }
 
+
+export function buildSubSetArrayKey<T, K>(
+  parentSet: ParentSet<T[]>,
+  getKey: (v: T) => K,
+  row: T
+) {
+  return buildSubSetArray(parentSet, value => {
+    return getKey(value) == getKey(row)
+  })
+}
 
 export function serialEvent<T extends (...args: any[]) => any>(
   ..._vs: (T | undefined | null)[]

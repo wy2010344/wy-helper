@@ -1,5 +1,5 @@
-import { MbRange, browser, initRecord, mb } from "./mb"
-export * from './mb'
+import { MbRange, browser, initRecord, mb } from "../mb"
+export * from '../mb'
 
 export type EditRecord = {
   //选择区域是跟随的,但事实上也可能独立

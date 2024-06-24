@@ -8,9 +8,9 @@ export function subscribeRequestAnimationFrame(
   return superSubscribeRequestAnimationFrame(requestAnimationFrame, callback, init)
 }
 
-export function animateFrame(value: number, requestAnimateFrame = requestAnimationFrame) {
+export function animateFrame(value: number, requestAnimateFrame = globalThis.requestAnimationFrame) {
   return new AnimateFrameValueImpl(value, requestAnimateFrame)
 }
-export const animateFrameReducer = createAnimateFrameReducer(requestAnimationFrame)
+export const animateFrameReducer = createAnimateFrameReducer(globalThis.requestAnimationFrame)
 
 export const recycleScrollListReducer = createRecycleScrollListReducer(animateFrameReducer)

@@ -4,6 +4,7 @@ export type NullType = undefined | null | void;
 /**6种情况为false,NaN是数字类型*/
 export type FalseType = false | 0 | "" | NullType
 export type EmptyFun = (...vs: any[]) => void
+export type Quote<T> = (v: T, ...vs: any[]) => T
 export function quote<T>(v: T, ...vs: any[]) { return v }
 export function run<T extends AnyFunction>(
   fun: T
@@ -278,6 +279,37 @@ export function numberIntFillWithN0(n: number, x: number) {
   return nx
 }
 
+/**
+ * 删除小数点后的0
+ * @param nx 
+ * @returns 
+ */
+export function removeLastZero(nx: string) {
+  if (nx.includes('.')) {
+    let i = nx.length - 1;
+    while (nx[i] == "0") {
+      i--;
+    }
+    if (nx[i] == ".") {
+      i--;
+    }
+    return nx.slice(0, i + 1);
+  }
+  return nx
+}
+/**
+ * 保留fix位小数,如果后面为0,去掉
+ * @param n
+ * @param fix
+ * @returns
+ */
+export function numberFixRemoveZero(n: number, fix: number) {
+  if (fix > 0) {
+    const nx = n.toFixed(fix);
+    return removeLastZero(nx);
+  }
+  return n + "";
+}
 
 
 
@@ -303,4 +335,9 @@ export function mathMul(a: number, b: number) {
 
 export function mathDiv(a: number, b: number) {
   return a / b
+}
+
+
+export function trueAndS(a: any, left: string, right = '') {
+  return a ? left : right
 }
