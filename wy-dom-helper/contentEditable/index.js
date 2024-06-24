@@ -1,1 +1,1 @@
-export * from "../dist/esm/contentEditable";
+export * from "../dist/contentEditable";

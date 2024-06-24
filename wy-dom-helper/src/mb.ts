@@ -1,4 +1,4 @@
-import { cacheGet } from "wy-helper"
+import { asLazy, cacheGet } from "wy-helper"
 
 type MBKeyboard = {
   code?: string
@@ -248,6 +248,9 @@ export const browser = (function () {
   var ret: Browser = {
     type: "FF", version: 0, documentMode: ""
   };
+  if (!globalThis.navigator) {
+    return ret
+  }
   var userAgent = navigator.userAgent; //取得浏览器的userAgent字符串
   var isOpera = userAgent.indexOf("Opera") > -1; //判断是否Opera浏览器
   var isIE = userAgent.indexOf("compatible") > -1 && userAgent.indexOf("MSIE") > -1 && !isOpera; //判断是否IE浏览器
@@ -330,8 +333,8 @@ export function afterCursor(editor: HTMLElement) {
 
 
 
-var _elementStyle = document.createElement('div').style;
-var _vendor = (function () {
+var _vendor = asLazy(function () {
+  var _elementStyle = document.createElement('div').style;
   var vendors = ['t', 'webkitT', 'MozT', 'msT', 'OT'],
     transform,
     i = 0,
@@ -350,7 +353,8 @@ var _vendor = (function () {
  * @returns 
  */
 function prefixStyle(style: string) {
-  if (_vendor === false) return false;
-  if (_vendor === '') return style;
-  return _vendor + style.charAt(0).toUpperCase() + style.substr(1);
+  const v = _vendor()
+  if (v === false) return false;
+  if (v === '') return style;
+  return v + style.charAt(0).toUpperCase() + style.substr(1);
 }
