@@ -117,10 +117,7 @@ export function subscribeDragMove(
   arg?: OnMoveArg
 ) {
   const dm = subscribeMove(function (e, a) {
-    onMove(e, e)
-    if (a) {
-      onMove(undefined, e)
-    }
+    onMove(a ? undefined : e, e)
   }, 'mouse', arg)
   const dt = subscribeMove(function (e, a) {
     onMove(a ? undefined : e.touches[0], e)

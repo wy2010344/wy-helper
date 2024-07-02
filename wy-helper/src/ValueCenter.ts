@@ -156,6 +156,14 @@ export function createReduceValueCenter<T, A>(
 }
 
 
+export function subscribeOnce<T>(v: ReadValueCenter<T>, fun: EventChangeHandler<T>) {
+  const callback: EventChangeHandler<T> = (v, old) => {
+    fun(v, old)
+    destroy()
+  }
+  const destroy = v.subscribe(callback)
+}
+
 
 export type Reducer<T, A> = (v: T, a: A) => T
 export type ReducerWithDispatch<T, A> = (v: T, a: A) => ReducerWithDispatchResult<T, A>

@@ -265,6 +265,21 @@ export class WrapperValue<T> {
 }
 
 
+export type DelayCall = (
+  notify: EmptyFun
+) => EmptyFun
+
+
+export function timeoutDelayCall(time: number): DelayCall {
+  return function (notify) {
+    const inv = setTimeout(notify, time)
+    return function () {
+      clearTimeout(inv)
+    }
+  }
+}
+
+
 export function numberIntFillWithN0(n: number, x: number) {
   const nx = n + ''
 
@@ -309,15 +324,6 @@ export function numberFixRemoveZero(n: number, fix: number) {
     return removeLastZero(nx);
   }
   return n + "";
-}
-
-
-
-export function timeoutDelayCall(time: number, fun: EmptyFun) {
-  const inv = setTimeout(fun, time)
-  return function () {
-    clearTimeout(inv)
-  }
 }
 
 
