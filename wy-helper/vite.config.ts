@@ -14,6 +14,7 @@ export default defineConfig({
         tokenParser: resolve(__dirname, 'src/tokenParser/index.ts'),
         infixLang: resolve(__dirname, 'src/infixLang/index.ts'),
         Vue: resolve(__dirname, 'src/Vue.ts'),
+        ObserverCenter: resolve(__dirname, 'src/observerCenter/index.ts'),
       },
       formats: ["es", "cjs"]
     },

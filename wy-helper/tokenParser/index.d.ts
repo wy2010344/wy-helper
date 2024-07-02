@@ -1,1 +1,1 @@
-export * from "../dist/tokenParser/index";
+export * from "../dist/tokenParser";

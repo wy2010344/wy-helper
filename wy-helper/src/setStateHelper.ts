@@ -219,7 +219,7 @@ export function objectMap<M, F>(a: Record<string, M>, fun: (v: M, key: string) =
 export function getOutResolvePromise<T>() {
   let resolve: (v: T) => void
   let reject: (v?: any) => void
-  const promise = new Promise(function (_resolve, _reject) {
+  const promise = new Promise<T>(function (_resolve, _reject) {
     resolve = _resolve
     reject = _reject
   })

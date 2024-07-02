@@ -27,7 +27,14 @@ export function createAbortController() {
     return {
       signal: signal.signal,
       cancel() {
-        signal.abort();
+        try {
+          const out: any = signal.abort();
+          if (out instanceof Promise) {
+            out.catch(err => {
+
+            })
+          }
+        } catch (err) { }
       },
     };
   }

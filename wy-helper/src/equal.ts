@@ -24,9 +24,6 @@ export function arrayEqual<T>(a1: readonly T[], a2: readonly T[], equal: (x: T, 
   return false
 }
 
-export function arrayNotEqualDepsWithEmpty(a?: readonly any[], b?: readonly any[]) {
-  return !(a && b && arrayEqual(a, b, simpleEqual))
-}
 
 export function arrayNotEqual(a: readonly any[], b: readonly any[]) {
   return !arrayEqual(a, b, simpleEqual)
