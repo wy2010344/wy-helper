@@ -31,17 +31,22 @@ export function getYearMonthDays(year: number, month: number) {
   return 29;
 }
 
+export function formatFirstWeek(firstWeek: number) {
+  let i = firstWeek % 7;
+  if (i == 0) {
+    i = 7;
+  }
+  return i
+}
+
 export class YearMonthVirtualView {
+
   constructor(
     public readonly year: number,
     public readonly month: number,
     firstWeek: number
   ) {
-    let i = firstWeek % 7;
-    if (i == 0) {
-      i = 7;
-    }
-    this.firstWeek = i;
+    this.firstWeek = formatFirstWeek(firstWeek);
     this.days = getYearMonthDays(this.year, this.month);
 
     const date = new Date();
@@ -49,6 +54,14 @@ export class YearMonthVirtualView {
     date.setFullYear(year);
     date.setMonth(month - 1);
     this.firstDay = date.getDay();
+  }
+
+  private _keys!: number[]
+  getKeys() {
+    if (!this._keys) {
+      this._keys = [this.year, this.month, this.firstDay]
+    }
+    return this._keys
   }
   /**
    * 这个月的第一天是星期几
@@ -189,6 +202,9 @@ export class YearMonthVirtualView {
   }
 }
 
+export function yearMonthVirtualViewGetKey(a: YearMonthVirtualView) {
+  return a.getKeys()
+}
 
 export function yearMonthToNumber(year: number, month: number) {
   return year * 100 + month

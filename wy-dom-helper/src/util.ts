@@ -132,6 +132,7 @@ export function splitClassNames(names: string) {
 import * as CSS from 'csstype';
 import { EmptyFun, Point, SetValue, buildThrottle, quote, run } from 'wy-helper'
 export interface CSSProperties extends CSS.Properties<string | number> {
+  [key: `--${string}`]: string | number | undefined;
   /**
    * The index signature was removed to enable closed typing for style
    * using CSSType. You're able to use type assertion or module augmentation

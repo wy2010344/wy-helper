@@ -52,7 +52,7 @@ export function getScheduleAskTime({
     let lastRenderFinishTime = 0
     function finishWork() {
       onWork = false
-      lastRenderFinishTime = performance.now()
+      lastRenderFinishTime = getCurrentTimePerformance()
     }
     /**
      * 执行queue中的任务
@@ -116,7 +116,7 @@ export function getScheduleAskTime({
         if (realTime.get()) {
           runTaskSync(flush)
         } else {
-          const delay = minRenderGap - (performance.now() - lastRenderFinishTime)
+          const delay = minRenderGap - (getCurrentTimePerformance() - lastRenderFinishTime)
           if (delay > 0) {
             setTimeout(beginAsyncWork, delay)
           } else {

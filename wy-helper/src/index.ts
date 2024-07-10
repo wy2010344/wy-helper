@@ -25,5 +25,6 @@ export * from './promise/stopCall'
 export * from './LinkValue'
 export * from './recycleView'
 export * from './interpolate'
+export * from "./WeekVirtualView"
 // export * as kanren from './kanren'
 // export * as tokenParser from './tokenParser'
