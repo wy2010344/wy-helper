@@ -174,10 +174,7 @@ export class YearMonthVirtualView {
   fullDayOf(
     x: number,
     y: number
-  ): {
-    type: "last" | "this" | "next";
-    day: number;
-  } {
+  ): MonthFullDay {
     const d = this.dayOf(x, y);
     if (d < 1) {
       return {
@@ -200,6 +197,11 @@ export class YearMonthVirtualView {
   toNumber() {
     return yearMonthToNumber(this.year, this.month)
   }
+}
+
+export type MonthFullDay = {
+  type: "last" | "this" | "next";
+  day: number;
 }
 
 export function yearMonthVirtualViewGetKey(a: YearMonthVirtualView) {

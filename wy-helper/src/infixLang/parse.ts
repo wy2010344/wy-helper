@@ -11,8 +11,8 @@
  * 或者只用二元
  */
 
-import { InfixNode, MatchGet } from "./parseInfix"
-import { BaseDisplayT, buildInfix, endNotFillToToken } from "./tool"
+import { MatchGet } from "./parseInfix"
+import { BaseDisplayT, buildInfix, endNotFillToToken, InfixNode } from "./tool"
 import {
   Que, isParseSuccess, manyMatch,
   matchCharIn, ruleStrBetween,
@@ -120,14 +120,24 @@ export const infixLibArray = [
   ['*', '/', '%']
 ]
 
-export const { parseSentence, getInfixOrder } = buildInfix(infixLibArray, skipWhiteOrComment, () => {
-  return or([
-    ruleGetVar,
-    ruleGetString,
-    ruleGetSymbol,
-    ruleGetNumber,
-  ])
-})
+export const { parseSentence, getInfixOrder } = buildInfix<EndNode>(
+  infixLibArray,
+  skipWhiteOrComment,
+  () => {
+    return or([
+      ruleGetVar,
+      ruleGetString,
+      ruleGetSymbol,
+      ruleGetNumber,
+    ])
+  }, (infix, left, right) => {
+    return {
+      type: "infix",
+      infix,
+      left,
+      right
+    }
+  })
 
 type NNode = StringToken | SymbolToken | NumberToken | VarToken
 export type EndNode = NNode | InfixNode<NNode>
