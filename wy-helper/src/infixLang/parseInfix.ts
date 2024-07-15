@@ -9,15 +9,6 @@ export interface InfixToken {
   end: number
   value: string
 }
-export type InfixNode<T> = {
-  type: "infix"
-  infix: InfixToken
-  left: InfixEndNode<T>
-  right: InfixEndNode<T>
-}
-
-export type InfixEndNode<T> = T | InfixNode<T>
-
 export type MatchGet = {
   match: ParseFun<Que>
   get(begin: Que, end: Que): string
@@ -213,42 +204,28 @@ export function parseInfixBRight<F, T>(
  */
 export function parseInfix<T>(
   infixes: List<InfixConfig>,
-
   skipWhiteSpace: EmptyFun,
-  parseNode: () => T
-): InfixEndNode<T> {
+  parseNode: () => T,
+  build: (infix: InfixToken, left: T, right: T) => T
+): T {
   if (!infixes) {
     return parseNode()
   }
   const c = infixes.left
-  const parseLeaf = () => parseInfix(infixes.right, skipWhiteSpace, parseNode)
+  const parseLeaf = () => parseInfix(infixes.right, skipWhiteSpace, parseNode, build)
   if (Array.isArray(c)) {
     return parseInfixBLeft(
       parseLeaf,
       c,
       skipWhiteSpace,
-      (infix, left, right) => {
-        return {
-          type: "infix",
-          infix,
-          left,
-          right
-        }
-      }
+      build
     )
   } else {
     return parseInfixBRight(
       parseLeaf,
       c.values,
       skipWhiteSpace,
-      (infix, left, right) => {
-        return {
-          type: "infix",
-          infix,
-          left,
-          right
-        }
-      }
+      build
     )
   }
 }

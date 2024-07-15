@@ -8,9 +8,7 @@ import {
 } from "../tokenParser"
 import { EmptyFun } from "../util"
 import {
-  Infix, InfixConfig,
-  InfixEndNode,
-  InfixNode, MatchGet, parseInfix,
+  Infix, InfixConfig, InfixToken, MatchGet, parseInfix,
 } from './parseInfix'
 
 function manageInfixLib(
@@ -86,9 +84,10 @@ export function buildInfix<T>(
   array: InfixConfig[],
   skipWhiteSpace: EmptyFun,
   parseLeafNode: () => T,
+  build: (infix: InfixToken, left: T, right: T) => T
 ) {
   const newList = buildInfixLibArray(array)
-  function parseEndNode(): InfixEndNode<T> | T {
+  function parseEndNode(): T {
     const node = or([
       parseLeafNode,
       () => {
@@ -104,7 +103,7 @@ export function buildInfix<T>(
   }
   const neAs = list(...newList)
   function parseNode() {
-    return parseInfix(neAs, skipWhiteSpace, parseEndNode)
+    return parseInfix(neAs, skipWhiteSpace, parseEndNode, build)
   }
 
 
@@ -146,6 +145,15 @@ export type BaseDisplayT = {
   begin: number
   end: number
 }
+
+export type InfixNode<T> = {
+  type: "infix"
+  infix: InfixToken
+  left: InfixEndNode<T>
+  right: InfixEndNode<T>
+}
+
+export type InfixEndNode<T> = T | InfixNode<T>
 
 function isInfixNode<T extends { type: string }>(endNode: T | InfixNode<T>): endNode is InfixNode<T> {
   return endNode.type == 'infix'

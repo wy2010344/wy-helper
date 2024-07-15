@@ -73,8 +73,8 @@ function toList(files: FileList) {
 }
 
 
-export function cns(...vs: (string | null | undefined | boolean)[]) {
-  return vs.filter((v) => v).join(" ");
+export function cns(...vs: (string | FalseType)[]) {
+  return vs.filter(quote).join(" ");
 }
 
 
@@ -130,7 +130,7 @@ export function splitClassNames(names: string) {
 }
 
 import * as CSS from 'csstype';
-import { EmptyFun, Point, SetValue, buildThrottle, quote, run } from 'wy-helper'
+import { EmptyFun, FalseType, Point, SetValue, buildThrottle, quote, run } from 'wy-helper'
 export interface CSSProperties extends CSS.Properties<string | number> {
   [key: `--${string}`]: string | number | undefined;
   /**
