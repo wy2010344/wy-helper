@@ -56,8 +56,7 @@ export function ruleGetString() {
     value,
     originalValue,
     begin: begin.i,
-    end: end.i,
-    errors: []
+    end: end.i
   } as StringToken
 }
 
@@ -111,7 +110,6 @@ export function ruleGetVar() {
 export interface Token {
   begin: number
   end: number
-  errors: string[]
 }
 
 export interface StringToken extends Token {
