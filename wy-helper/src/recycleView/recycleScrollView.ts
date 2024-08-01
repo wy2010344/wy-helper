@@ -67,7 +67,7 @@ export function recicleScrollViewView(
       updateIndex(idx, getConfig)
     },
     stopScroll(toCurrent?: boolean) {
-      let ato = transY.getAnimateTo()
+      let ato = transY.getAnimateConfig()
       if (ato) {
         let nValue = ato.target
         if (toCurrent) {
