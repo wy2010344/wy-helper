@@ -179,6 +179,34 @@ export function findIndexFrom<T>(
 }
 
 
+/**
+ * 构建砖石布局的算法.考虑到长度的随机,
+ * @param list 
+ * @param count 
+ * @returns 
+ */
+export function masonryList<T>(list: T[], count: number) {
+  const columns: {
+    list: T[];
+    key: string;
+  }[] = [];
+  for (let i = 0; i < count; i++) {
+    columns[i] = {
+      list: [],
+      key: `${count}-${i}`,
+    };
+  }
+  let idx = 0;
+  for (let i = 0; i < list.length; i++) {
+    columns[idx].list.push(list[i]);
+    idx = idx + 1;
+    if (idx == count) {
+      idx = 0;
+    }
+  }
+  return columns;
+}
+
 export function groupToMap<T, F>(list: T[], getKey: (v: T) => F) {
   const map = new Map<F, T[]>()
   for (const row of list) {
