@@ -14,7 +14,9 @@ export function run<T extends AnyFunction>(
 
 class FreezeError extends Error {
 }
-export const objectFreeze = run((): <T extends Object>(v: T) => T => {
+
+export const objectFreeze = 'freeze' in Object ? Object.freeze.bind(Object) : quote
+export const objectFreezeThrow = run((): <T extends Object>(v: T) => T => {
   if (globalThis.Proxy) {
     return (a: any) => {
       return new Proxy(a, {
@@ -24,13 +26,13 @@ export const objectFreeze = run((): <T extends Object>(v: T) => T => {
       })
     }
   }
-  return 'freeze' in Object ? Object.freeze.bind(Object) : quote
+  return objectFreeze
 })
 // 检查对象是否是代理对象
 function isProxy(obj: any) {
   return !!obj && obj instanceof Object && !!obj.constructor && obj.constructor.name === 'Proxy';
 };
-export function objectDeepFreeze<T>(n: T, before: any[] = []) {
+export function objectDeepFreezeThrow<T>(n: T, before: any[] = []) {
   if (typeof n == 'object' && n) {
     if (isProxy(n) || Object.isFrozen(n)) {
       return n
@@ -42,14 +44,14 @@ export function objectDeepFreeze<T>(n: T, before: any[] = []) {
       const newBefore = before.concat(n)
       if (Array.isArray(n)) {
         for (let i = 0; i < n.length; i++) {
-          n[i] = objectDeepFreeze(n[i], newBefore)
+          n[i] = objectDeepFreezeThrow(n[i], newBefore)
         }
       } else {
         for (const key in n) {
-          n[key] = objectDeepFreeze(n[key], newBefore)
+          n[key] = objectDeepFreezeThrow(n[key], newBefore)
         }
       }
-      return objectFreeze(n)
+      return objectFreezeThrow(n)
     } catch (err) {
       if (err instanceof FreezeError) {
         //忽略
@@ -65,14 +67,14 @@ export function objectDeepFreeze<T>(n: T, before: any[] = []) {
 
 
 
-export const emptyArray = objectFreeze([]) as readonly any[]
+export const emptyArray = objectFreezeThrow([]) as readonly any[]
 export function getTheEmptyArray<T>() {
   return emptyArray as T[]
 }
 export function createEmptyArray<T>() {
   return [] as T[]
 }
-export const emptyObject = objectFreeze({})
+export const emptyObject = objectFreezeThrow({})
 
 export function getTheEmptyObject<T>() {
   return emptyObject as T
