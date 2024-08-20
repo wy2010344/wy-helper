@@ -349,3 +349,11 @@ export function mathDiv(a: number, b: number) {
 export function trueAndS(a: any, left: string, right = '') {
   return a ? left : right
 }
+
+
+/**
+ * ({ x: "ax" } | { x: "cc" }) & { y: 99 };
+ * 转化成
+ * { x: "ax"; y: 99 } | { x: "cc"; y: 99 };
+ */
+export type Flatten<T> = T extends T ? { [K in keyof T]: T[K] } : never;

@@ -1,5 +1,6 @@
 import { ReduceState, SetValue } from "../setStateHelper"
-import { EmptyFun, FalseType, emptyFun, messageChannelCallback, objectFreeze, run, supportMicrotask } from "../util"
+import { StoreRef } from "../storeRef"
+import { EmptyFun, FalseType, Flatten, emptyFun, messageChannelCallback, objectFreeze, run, supportMicrotask } from "../util"
 
 export type PromiseResult<T> = {
   type: "success",
@@ -13,10 +14,32 @@ export type PromiseResultSuccessValue<T> = T extends {
   type: "success"
   value: infer V
 } ? V : never
-export type VersionPromiseResult<T> = PromiseResult<T> & {
-  version: number
-}
 export type GetPromiseRequest<T> = (signal?: AbortSignal, ...vs: any[]) => Promise<T>;
+
+
+export type VersionPromiseResult<T> = Flatten<PromiseResult<T> & {
+  version: number
+}>
+export type RequestPromiseResult<T> = Flatten<PromiseResult<T> & {
+  request: GetPromiseRequest<T>;
+}>
+export type RequestPromiseFinally<T> = (data: RequestPromiseResult<T>, ...vs: any[]) => void
+
+
+export type RequestVersionPromiseReulst<T> = Flatten<RequestPromiseResult<T> & VersionPromiseResult<T>>
+export type RequestVersionPromiseFinally<T> = (data: RequestVersionPromiseReulst<T>, ...vs: any[]) => void
+
+
+export function createRequestPromise<T>(request: GetPromiseRequest<T>, onFinally: RequestPromiseFinally<T>) {
+  const signal = createAbortController();
+  request(signal.signal).then(data => {
+    onFinally({ type: "success", value: data, request })
+  }).catch(err => {
+    onFinally({ type: "error", value: err, request })
+  })
+  return signal.cancel
+}
+
 export type OnVersionPromiseFinally<T> = (
   data: VersionPromiseResult<T>,
   ...vs: any[]
@@ -30,9 +53,7 @@ export function createAbortController() {
         try {
           const out: any = signal.abort();
           if (out instanceof Promise) {
-            out.catch(err => {
-
-            })
+            out.catch(emptyFun)
           }
         } catch (err) { }
       },
@@ -44,8 +65,26 @@ export function createAbortController() {
   };
 }
 
-export type OutPromiseOrFalse<T> = (GetPromiseRequest<T>) | FalseType;
 
+export function createAndFlushAbortController() {
+  let last: EmptyFun = emptyFun
+  return function () {
+    const controller = createAbortController()
+    last()
+    last = controller.cancel
+    return controller.signal
+  }
+}
+
+export type OutPromiseOrFalse<T> = (GetPromiseRequest<T>) | FalseType;
+/**
+ * 串行挪
+ * @param callback 执行体
+ * @param effect 执行完成后回调
+ * @param cacheList 缓存请求参数
+ * @param delay 如何延迟下一场请求
+ * @returns 
+ */
 export function buildSerialRequestSingle<Req extends any[], Res>(
   callback: (...vs: Req) => Promise<Res>,
   effect: (res: PromiseResult<Res>, req: Req) => void = emptyFun,

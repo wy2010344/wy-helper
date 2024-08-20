@@ -18,17 +18,17 @@ interface ObserverCell<M> {
 }
 
 
-interface PromiseWait<T> {
+export interface PromiseWait<T> {
   resolve: SetValue<T>,
   reject: EmptyFun
 }
 
-function resolveAll<T>(list: PromiseWait<T>[], value: T) {
+export function resolveAll<T>(list: PromiseWait<T>[], value: T) {
   list.forEach(row => {
     row.resolve(value)
   })
 }
-function rejectAll<T>(list: PromiseWait<T>[], err: any) {
+export function rejectAll<T>(list: PromiseWait<T>[], err: any) {
   list.forEach(row => {
     row.reject(err)
   })

@@ -26,5 +26,6 @@ export * from './LinkValue'
 export * from './recycleView'
 export * from './interpolate'
 export * from "./WeekVirtualView"
+export * from './promise/resourceCenter'
 // export * as kanren from './kanren'
 // export * as tokenParser from './tokenParser'
