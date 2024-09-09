@@ -15,6 +15,7 @@ export class PromiseStopCall<T> {
   ) {
     objectFreeze(this)
   }
+  static empty = new PromiseStopCall()
   didLoad() {
     return this.requestVersion == this.data?.version
   }
@@ -76,6 +77,36 @@ export class PromiseStopCall<T> {
   }
 }
 
+export type PromiseStopCallAction<T> = {
+  type: "reload",
+  getFun(abortSignal?: AbortSignal): Promise<T>
+} | {
+  type: "reloadBack"
+  value: VersionPromiseResult<T>
+}
+export function reducePromiseStopCall<T>(
+  old: PromiseStopCall<T>,
+  action: PromiseStopCallAction<T>
+): ReducerWithDispatchResult<PromiseStopCall<T>, PromiseStopCallAction<T>> {
+  if (action.type == 'reload') {
+    const [data, act] = old.reload(action.getFun)
+    return [data, mapReducerDispatch(act, act => {
+      return {
+        type: "reloadBack",
+        value: act
+      }
+    })]
+  } else if (action.type == "reloadBack") {
+    return [old.reloadBack(action.value), undefined]
+  }
+  return [old, undefined]
+}
+
+export function valueCenterPromiseStopCall<T>() {
+  return createReduceValueCenter<PromiseStopCall<T>, PromiseStopCallAction<T>>(
+    reducePromiseStopCall,
+    PromiseStopCall.empty as any)
+}
 
 
 export type AutoLoadMoreCore<T, K> = {
@@ -85,12 +116,12 @@ export type AutoLoadMoreCore<T, K> = {
 }
 export class PromiseAutoLoadMore<T, K> {
   constructor(
-    public readonly data = new PromiseStopCall<{
+    public readonly data = PromiseStopCall.empty as PromiseStopCall<{
       nextKey: K,
       list: T[]
       loadMoreError?: any
       hasMore: boolean
-    }>(),
+    }>,
     private readonly getFun: ((k: K, abort?: AbortSignal) => Promise<AutoLoadMoreCore<T, K>>) | undefined = undefined,
     private readonly getKey: (n: T) => any = quote,
     public readonly isLoadingMore = false,
