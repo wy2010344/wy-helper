@@ -150,6 +150,13 @@ export function delay(n: number) {
   })
 }
 
+
+export function getTimeoutPromise(time: number, then = emptyFun) {
+  return function () {
+    return delay(time).then(then)
+  }
+}
+
 export const supportMicrotask = !!globalThis.queueMicrotask
 export const supportMessageChannel = typeof MessageChannel !== 'undefined'
 
@@ -281,7 +288,15 @@ export function timeoutDelayCall(time: number): DelayCall {
   }
 }
 
-
+export function subscribeTimeout(callback: EmptyFun, time: number) {
+  /**
+   * 需要取消订阅,因为开发者模式useEffect执行多次,不取消会造成问题
+   */
+  const inv = setTimeout(callback, time)
+  return function () {
+    clearTimeout(inv)
+  }
+}
 export function numberIntFillWithN0(n: number, x: number) {
   const nx = n + ''
 
