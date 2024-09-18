@@ -6,18 +6,30 @@ export type GetValue<F> = (...vs: any[]) => F;
 export type ReduceState<T> = SetValue<SetStateAction<T>>
 
 export type ParentSet<T> = SetValue<Quote<T>>
+
+
+export function applySetStateAction<T>(
+  v: SetStateAction<T>,
+  old: T
+): T {
+  if (typeof v == 'function') {
+    return (v as any)(old)
+  }
+  return v
+}
+
 export function buildSubSet<PARENT, CHILD>(
   parentSet: ParentSet<PARENT>,
   getChild: (s: PARENT) => CHILD,
   buildParent: (s: PARENT, t: CHILD) => PARENT
 ) {
   return function (setChild: SetStateAction<CHILD>) {
-    if (typeof (setChild) == 'function') {
-      const call = setChild as (v: CHILD) => CHILD
-      parentSet(x => buildParent(x, call(getChild(x))))
-    } else {
-      parentSet(x => buildParent(x, setChild))
-    }
+    parentSet(x => buildParent(x,
+      applySetStateAction(
+        setChild,
+        getChild(x)
+      )
+    ))
   }
 }
 
@@ -57,11 +69,11 @@ export function buildSubSetArray<T>(
       if (isRemove) {
         ts.splice(idx, 1)
       } else {
-        if (typeof (v) == 'function') {
-          ts.splice(idx, 1, v(ts[idx]))
-        } else {
-          ts.splice(idx, 1, v)
-        }
+        ts.splice(
+          idx,
+          1,
+          applySetStateAction(v, ts[idx])
+        )
       }
       return ts
     })

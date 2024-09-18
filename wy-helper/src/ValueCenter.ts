@@ -1,4 +1,4 @@
-import { SetValue } from "./setStateHelper"
+import { applySetStateAction, SetStateAction, SetValue } from "./setStateHelper"
 import { EmptyFun, alawaysTrue, emptyFun, quote, run } from "./util"
 
 type EventHandler<T> = (v: T) => void
@@ -27,12 +27,8 @@ export class EventCenter<T> {
 
 }
 export function toReduceState<T>(set: (v: T) => void, get: () => T,) {
-  return function (v: T | ((prev: T) => T)) {
-    if (typeof (v) == 'function') {
-      set((v as any)(get()))
-    } else {
-      set(v)
-    }
+  return function (v: SetStateAction<T>) {
+    set(applySetStateAction(v, get()))
   }
 }
 
