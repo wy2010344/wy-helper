@@ -45,7 +45,7 @@ export type ReorderAction<K, E> = {
   scrollTop: number
 } | {
   type: "end",
-  point: number
+  point?: number
   getConfig: GetDeltaXAnimationConfig
 
   gap?: number
@@ -288,7 +288,7 @@ export function createReorderReducer<T, K, E>(
         const info = model.onMove.info
         if (model.version == action.version) {
           const index = model.onMove.key
-          const diffY = action.point - info.lastPoint
+          const diffY = typeof action.point == 'number' ? action.point - info.lastPoint : 0
           const diffYM = action.scrollTop - model.scrollTop
           return didEnd(model, index, diffY + diffYM, action)
         } else {

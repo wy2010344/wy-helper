@@ -41,6 +41,11 @@
       "types": "./dist/observerCenter/index.d.ts",
       "import": "./dist/observerCenter.mjs",
       "require": "./dist/observerCenter.js"
+    },
+    "./router": {
+      "types": "./dist/router/index.d.ts",
+      "import": "./dist/router.mjs",
+      "require": "./dist/router.js"
     }
   },
   "files": [
@@ -48,7 +53,8 @@
     "src",
     "tokenParser",
     "kanren",
-    "Vue"
+    "Vue",
+    "router"
   ],
   "scripts": {
     "build": "tsc && vite build",

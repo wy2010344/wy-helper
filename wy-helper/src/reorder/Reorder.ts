@@ -44,11 +44,6 @@ export class Reorder<K> {
       const [index, targetIndex] = item
       this.moveItem(key, this.layoutList[targetIndex].value)
       arrayMove(this.layoutList, index, targetIndex)
-      // const diffHeight = this.layoutList[targetIndex].layout[this.direction].min - this.layoutList[index].layout[this.direction].min
-      // rangeBetween(index, targetIndex, i => {
-      //   const layout = this.layoutList[i].layout
-      //   layout[this.direction].min
-      // })
       return true
     }
   }
@@ -194,6 +189,15 @@ export class ReorderChild<K> {
       }
     }
   }
+
+  /**
+   * @todo
+   * 不应该使用lock
+   * 而应该使用更新后的最新定位
+   * 不使用requestAnimateFrame
+   * 而应该使用实时的状态
+   * 如果位置更新,则进行相应的diff减少
+   */
   private lock = false
   setMoveDiff(diff: Point) {
     const trans = this.getTrans()
