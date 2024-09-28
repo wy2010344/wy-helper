@@ -15,6 +15,7 @@ export default defineConfig({
         infixLang: resolve(__dirname, 'src/infixLang/index.ts'),
         Vue: resolve(__dirname, 'src/Vue.ts'),
         ObserverCenter: resolve(__dirname, 'src/observerCenter/index.ts'),
+        router: resolve(__dirname, 'src/router/index.ts'),
       },
       formats: ["es", "cjs"]
     },
