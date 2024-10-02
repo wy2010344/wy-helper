@@ -37,8 +37,10 @@ export class Reorder<K> {
       index,
       getSize[this.direction],
       offset[this.direction],
-      diff[this.direction],
-      this.gap
+      {
+        delta: diff[this.direction],
+        gap: this.gap
+      }
     )
     if (item) {
       const [index, targetIndex] = item
@@ -136,10 +138,12 @@ export class Reorder<K> {
       return true
     }
   }
-  end(loc: Point) {
+  end(loc?: Point) {
     const mv = this.moveV
     if (mv) {
-      this.didMove(mv, loc)
+      if (loc) {
+        this.didMove(mv, loc)
+      }
       this.moveV = undefined
       mv.onFinish()
       return true

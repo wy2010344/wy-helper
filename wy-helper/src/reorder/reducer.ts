@@ -156,8 +156,7 @@ export function createReorderReducer<T, K, E>(
       currentIndex,
       getElementHeight,
       ty,
-      diffY,
-      gap
+      { delta: diffY, gap }
     )
     if (target) {
       const [idx, idx1] = target
