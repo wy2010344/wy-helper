@@ -144,8 +144,10 @@ function changeDiff<K>(
     currentIndex,
     getElementHeight,
     ty,
-    diffY,
-    gap
+    {
+      delta: diffY,
+      gap
+    }
   )
 
   if (target) {

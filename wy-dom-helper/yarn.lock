@@ -834,10 +834,10 @@ vue-tsc@^1.8.27:
     "@vue/language-core" "1.8.27"
     semver "^7.5.4"
 
-wy-helper@^0.1.6:
-  version "0.1.6"
-  resolved "https://registry.yarnpkg.com/wy-helper/-/wy-helper-0.1.6.tgz#19ffc90ba682b6e6f1d8ebbcaeecc6350b8f58aa"
-  integrity sha512-E7vrX1/M40BaBG8TMg3lpASwaLjcSikqdUJExAz56O8ivDLXIfbTo0bJ0LQrmgCamgxVkuhsE3zgGQeHQ1gOxg==
+wy-helper@^0.1.8:
+  version "0.1.8"
+  resolved "https://registry.yarnpkg.com/wy-helper/-/wy-helper-0.1.8.tgz#3142690f7b8cc4e61a8e947a8d1f7cede3b2de65"
+  integrity sha512-7705iB592OcTgDN2NMbbOQ+XBTjtOpfW94p4bJ4RlvijbUwQVQe7j8dd0j32oIkXM1MP1Nap2coLByjl9EyVTA==
 
 yallist@^4.0.0:
   version "4.0.0"

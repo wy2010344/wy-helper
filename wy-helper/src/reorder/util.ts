@@ -1,7 +1,8 @@
+import { emptyObject } from "../util";
 
 
 /**
- * 
+ * 实时的靠速度来判断
  * @param order 
  * @param getKey 
  * @param getHeight 
@@ -15,16 +16,22 @@ export function reorderCheckTarget<T>(
   index: number,
   getHeight: (n: T, i: number) => number,
   offset: number,
-  speed: number,
-  gap = 0
+  {
+    delta = offset,
+    gap = 0
+  }: {
+    /**单位位移,否则不靠位移 */
+    delta?: number,
+    gap?: number
+  } = emptyObject as any
 ) {
   'worklet';
   gap = Math.abs(gap)
   //速度为0时,不调整
-  if (!speed) {
+  if (!delta) {
     return
   }
-  const nextOffset = speed > 0 ? 1 : -1
+  const nextOffset = delta > 0 ? 1 : -1
 
   let nextHeightOffset = gap * nextOffset
   let flagIndex = index
@@ -52,10 +59,10 @@ export function reorderCheckTarget<T>(
   }
 }
 
-
-
-
-
+/**
+ * 从位置1变化到位置2
+ */
+export type MoveIndex = readonly [number, number]
 
 export function rangeBetweenLeft(idx: number, idx1: number, callback: (i: number) => void) {
   if (idx < idx1) {

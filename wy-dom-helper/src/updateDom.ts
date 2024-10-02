@@ -176,7 +176,8 @@ export const svgTagNames: SvgElementType[] = [
   "textPath",
   "tspan",
   "use",
-  "view"
+  "view",
+  "title"
 ]
 
 export const domTagNames: DomElementType[] = [
@@ -288,7 +289,6 @@ export const domTagNames: DomElementType[] = [
   "th",
   "thead",
   "time",
-  "title",
   "tr",
   "track",
   "u",

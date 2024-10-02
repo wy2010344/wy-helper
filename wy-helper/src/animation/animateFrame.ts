@@ -65,6 +65,14 @@ export interface AnimateFrameValue extends ReadValueCenter<number> {
   slientDiff(n: number): void
   getAnimateConfig(): AnimateConfig | undefined
   changeTo(target: number, getConfig?: GetDeltaXAnimationConfig, ext?: AnimateFrameEvent): "immediately" | "animate" | undefined
+  animateTo(
+    target: number,
+    config: GetDeltaXAnimationConfig,
+    c?: {
+      from?: number,
+      onProcess?: EmptyFun
+    }): Promise<boolean>
+  getTargetValue(): number
 }
 /**
  * 使用react的render,可能不平滑,因为react是异步的,生成值到渲染到视图上,可能有时间间隔
@@ -84,6 +92,12 @@ export class AnimateFrameValueImpl implements AnimateFrameValue {
   private animateConfig: AnimateToImpl | undefined = undefined
   getAnimateConfig() {
     return this.animateConfig
+  }
+  getTargetValue(): number {
+    if (this.animateConfig) {
+      return this.animateConfig.target
+    }
+    return this.value.get()
   }
 
   private lastCancel = emptyFun

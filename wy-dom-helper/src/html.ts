@@ -1774,7 +1774,6 @@ type DomElements = {
   th: React.DetailedHTMLProps<React.ThHTMLAttributes<HTMLTableHeaderCellElement>, HTMLTableHeaderCellElement>;
   thead: React.DetailedHTMLProps<React.HTMLAttributes<HTMLTableSectionElement>, HTMLTableSectionElement>;
   time: React.DetailedHTMLProps<React.TimeHTMLAttributes<HTMLElement>, HTMLElement>;
-  title: React.DetailedHTMLProps<React.HTMLAttributes<HTMLTitleElement>, HTMLTitleElement>;
   tr: React.DetailedHTMLProps<React.HTMLAttributes<HTMLTableRowElement>, HTMLTableRowElement>;
   track: React.DetailedHTMLProps<React.TrackHTMLAttributes<HTMLTrackElement>, HTMLTrackElement>;
   u: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
@@ -1859,6 +1858,7 @@ type SvgElements = {
   tspan: React.SVGProps<SVGTSpanElement>;
   use: React.SVGProps<SVGUseElement>;
   view: React.SVGProps<SVGViewElement>;
+  title: React.SVGProps<SVGTitleElement>;
 }
 
 export type SvgElementType = keyof SvgElements
