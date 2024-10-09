@@ -601,24 +601,24 @@ export namespace React {
 
   type ReactEventHandler<T = Element> = EventHandler<SyntheticEvent<T>>;
 
-  type ClipboardEventHandler<T = Element> = EventHandler<ClipboardEvent<T>>;
-  type CompositionEventHandler<T = Element> = EventHandler<CompositionEvent<T>>;
-  type DragEventHandler<T = Element> = EventHandler<DragEvent>;
-  type FocusEventHandler<T = Element> = EventHandler<FocusEvent<T>>;
-  type FormEventHandler<T = Element> = EventHandler<FormEvent<T>>;
-  type ChangeEventHandler<T = Element> = EventHandler<ChangeEvent<T>>;
-  type KeyboardEventHandler<T = Element> = EventHandler<KeyboardEvent<T>>;
-  type MouseEventHandler<T = Element> = EventHandler<MouseEvent & {
+  export type ClipboardEventHandler<T = Element> = EventHandler<ClipboardEvent<T>>;
+  export type CompositionEventHandler<T = Element> = EventHandler<CompositionEvent<T>>;
+  export type DragEventHandler<T = Element> = EventHandler<DragEvent>;
+  export type FocusEventHandler<T = Element> = EventHandler<FocusEvent<T>>;
+  export type FormEventHandler<T = Element> = EventHandler<FormEvent<T>>;
+  export type ChangeEventHandler<T = Element> = EventHandler<ChangeEvent<T>>;
+  export type KeyboardEventHandler<T = Element> = EventHandler<KeyboardEvent<T>>;
+  export type MouseEventHandler<T = Element> = EventHandler<MouseEvent & {
     currentTarget: T
   }>;
-  type TouchEventHandler<T = Element> = EventHandler<TouchEvent & {
+  export type TouchEventHandler<T = Element> = EventHandler<TouchEvent & {
     currentTarget: T
   }>;
-  type PointerEventHandler<T = Element> = EventHandler<PointerEvent & {
+  export type PointerEventHandler<T = Element> = EventHandler<PointerEvent & {
     currentTarget: T
   }>;
   type UIEventHandler<T = Element> = EventHandler<UIEvent<T>>;
-  type WheelEventHandler<T = Element> = EventHandler<WheelEvent & {
+  export type WheelEventHandler<T = Element> = EventHandler<WheelEvent & {
     currentTarget: T
   }>;
   type AnimationEventHandler<T = Element> = EventHandler<AnimationEvent<T>>;
