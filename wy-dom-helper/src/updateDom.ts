@@ -112,6 +112,10 @@ function isEvent(key: string) {
  * @returns 
  */
 function isProperty(key: string) {
+  if (key == 'children' || key == 'ref' || key == 'key') {
+    //兼容考虑tsx里的情形
+    return false
+  }
   return true
 }
 
