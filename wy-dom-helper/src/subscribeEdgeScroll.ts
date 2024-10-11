@@ -1,5 +1,5 @@
 import { Axis, EdgeScrollConfig, PointKey, edgeScrollChange, emptyObject } from "wy-helper"
-import { subscribeAnimationFrame } from "./animation"
+import { subscribeRequestAnimationFrame } from "./animation"
 
 
 
@@ -14,7 +14,7 @@ export function subscribeEdgeScroll(get: () => {
     scrollDiffTop?(d: number): void
   }
 } | void) {
-  return subscribeAnimationFrame(function () {
+  return subscribeRequestAnimationFrame(function () {
     const v = get()
     if (!v) {
       return
