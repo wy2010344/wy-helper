@@ -2,28 +2,35 @@ import { AnimationConfig, GetDeltaXAnimationConfig } from "./AnimationConfig"
 import { ReadValueCenter, ValueCenter, valueCenterOf } from "../ValueCenter"
 import { SetValue } from "../setStateHelper"
 import { EmptyFun, emptyFun, emptyObject } from '../util'
-export function superSubscribeRequestAnimationFrame(
-  requestAnimationFrame: (fun: SetValue<number>) => void,
-  callback: (time: number, isInit: boolean) => void,
-  init?: boolean
+export function createSubscribeAnimationFrame(
+  requestAnimationFrame: (fun: SetValue<number>) => number,
+  cancelAnimationFrame: (v: number) => void
 ) {
-  let canceled = false
-  function request(time: number) {
-    if (canceled) {
-      return
+  return function (
+    callback: (time: number, isInit: boolean) => void,
+    init?: boolean
+  ) {
+    let canceled = false
+    let lastID: number = undefined!
+    function request(time: number) {
+      if (canceled) {
+        return
+      }
+      callback(time, false)
+      lastID = requestAnimationFrame(request)
     }
-    callback(time, false)
-    requestAnimationFrame(request)
-  }
-  if (init) {
-    callback(performance.now(), true)
-  }
-  requestAnimationFrame(request)
-  return function () {
-    canceled = true
+    if (init) {
+      callback(performance.now(), true)
+    }
+    lastID = requestAnimationFrame(request)
+    return function () {
+      cancelAnimationFrame(lastID)
+      canceled = true
+    }
   }
 }
 
+export type SubscribeAnimationFrame = ReturnType<typeof createSubscribeAnimationFrame>
 
 
 
@@ -82,7 +89,7 @@ export class AnimateFrameValueImpl implements AnimateFrameValue {
   private value: ValueCenter<number>
   constructor(
     initValue: number,
-    private requestAnimateFrame: (fun: SetValue<number>) => void,
+    private subscribeAnimationFrame: SubscribeAnimationFrame
   ) {
     this.value = valueCenterOf(initValue)
   }
@@ -167,6 +174,11 @@ export class AnimateFrameValueImpl implements AnimateFrameValue {
     return 'animate'
   }
 
+  stop() {
+    if (this.animateConfig) {
+      this.changeTo(this.get())
+    }
+  }
   private initConfig(from: number | undefined, onProcess: SetValue<number>) {
     const that = this
     let needReset = false
@@ -197,8 +209,7 @@ export class AnimateFrameValueImpl implements AnimateFrameValue {
     if (needReset) {
       animateTo.reDo()
     }
-    const cancel = superSubscribeRequestAnimationFrame(
-      this.requestAnimateFrame,
+    const cancel = this.subscribeAnimationFrame(
       function (date) {
         const diffTime = date - timePeriod
         if (diffTime > 0) {
