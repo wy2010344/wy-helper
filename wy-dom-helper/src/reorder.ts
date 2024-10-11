@@ -3,7 +3,7 @@
 
 import { pointZero, ReorderChild, Box, Point, emptyFun } from "wy-helper"
 import { getPageOffset } from "./util"
-import { subscribeRequestAnimationFrame } from "./animation"
+import { subscribeAnimationFrame } from "./animation"
 
 export function getChangeOnScroll(change: (p: Point) => any) {
   let lastScroll = pointZero
@@ -49,7 +49,7 @@ export function reorderChildChangeIndex<K>(
   //index改变,即触发布局改变,显式调用一下.
   animateFrmae()
   child.releaseLock()
-  return subscribeRequestAnimationFrame(animateFrmae)
+  return subscribeAnimationFrame(animateFrmae)
 }
 
 
