@@ -33,13 +33,23 @@ export function updateStyle(
     node.style[key] = ''
   })
   for (const key in style) {
+
     const value = style[key as keyof CSSProperties]
     const oldValue = oldStyle[key as keyof CSSProperties]
     if (value != oldValue) {
-      node.style[key] = value
+      if (key.startsWith('--')) {
+        if (typeof value == 'undefined') {
+          node.style.removeProperty(key)
+        } else {
+          node.style.setProperty(key, value)
+        }
+      } else {
+        node.style[key] = value
+      }
     }
   }
 }
+
 
 /**
  * 更新节点
