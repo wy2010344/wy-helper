@@ -167,6 +167,11 @@ export class AnimateFrameValueImpl implements AnimateFrameValue {
     return 'animate'
   }
 
+  stop() {
+    if (this.animateConfig) {
+      this.changeTo(this.get())
+    }
+  }
   private initConfig(from: number | undefined, onProcess: SetValue<number>) {
     const that = this
     let needReset = false
