@@ -1,6 +1,6 @@
 import { EaseFn } from "../scroller"
-import { FalseType, emptyObject } from "../util"
-import { SpringBaseArg, springBase, springIsStop } from "./spring"
+import { FalseType, Quote, alawaysFalse, emptyObject } from "../util"
+import { SpringBaseArg, SpringOutValue, springBase, springIsStop } from "./spring"
 
 
 
@@ -46,6 +46,22 @@ export function tweenAnimationConfig(
     }
   }
 }
+
+export function tweenAnimationConfigNoEnd(
+  deltaX: number,
+  duration: number,
+  fn: EaseFn,
+  edge = Infinity
+): Quote<number> {
+  return function (diffTime) {
+    const pc = diffTime / duration
+    if (pc < edge) {
+      return deltaX * fn(pc)
+    }
+    return deltaX
+  }
+}
+
 export function getTweenAnimationConfig(
   duration: number,
   fn: EaseFn
@@ -80,6 +96,30 @@ export function springBaseAnimationConfig(deltaX: number, {
     }
   }
 }
+
+export function springBaseAnimationConfigNoEnd(
+  deltaX: number,
+  {
+    initialVelocity = 0,
+    config,
+    shouldStop = alawaysFalse
+  }: {
+    initialVelocity?: number
+    config?: SpringBaseArg
+    shouldStop?(v: SpringOutValue): boolean
+  } = emptyObject
+): Quote<number> {
+  return function (diffTime) {
+    const out = springBase(diffTime / 1000, deltaX, initialVelocity, config)
+    const stop = shouldStop(out)
+    if (stop) {
+      return deltaX
+    } else {
+      return deltaX - out.displacement
+    }
+  }
+}
+
 export function getSpringBaseAnimationConfig(arg?: SpringBaseAnimationConfigArg): GetDeltaXAnimationConfig {
   return function (deltaX) {
     return springBaseAnimationConfig(deltaX, arg)

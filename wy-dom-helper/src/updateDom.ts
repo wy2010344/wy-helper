@@ -1,4 +1,4 @@
-import { emptyObject, objectDiffDeleteKey } from "wy-helper"
+import { emptyObject, objectDiffDeleteKey, ReadValueCenter, run, syncMergeCenter } from "wy-helper"
 import { DomElementType, SvgElementType } from "./html"
 import { CSSProperties } from "./util"
 export type Props = { [key: string]: any }
@@ -22,32 +22,67 @@ function mergeEvent(node: Node, key: string, oldValue: any, newValue?: any) {
 }
 
 
+function runAndDelete(map: any, key: string) {
+  map[key]()
+  delete map[key]
+}
+
+export type WithCenterMap<T extends {}> = {
+  [key in keyof T]: (T[key] | ReadValueCenter<T[key]>)
+}
+
 export function updateStyle(
   node: Node & {
     style: any
   },
-  style: CSSProperties,
-  oldStyle: CSSProperties
+  style: WithCenterMap<CSSProperties>,
+  oldStyle: WithCenterMap<CSSProperties>,
+  styleMap: Props
 ) {
+  //先克隆,在effect操作,也许并不需要克隆
+  styleMap = { ...styleMap }
   objectDiffDeleteKey(oldStyle as any, style as any, function (key) {
+    const oldValue = oldStyle[key as any]
+    if (isValueCenter(oldValue)) {
+      runAndDelete(styleMap, key)
+    }
     node.style[key] = ''
   })
   for (const key in style) {
-
     const value = style[key as keyof CSSProperties]
     const oldValue = oldStyle[key as keyof CSSProperties]
     if (value != oldValue) {
-      if (key.startsWith('--')) {
-        if (typeof value == 'undefined') {
-          node.style.removeProperty(key)
+      if (isValueCenter(oldValue)) {
+        runAndDelete(styleMap, key)
+      }
+      if (isValueCenter(value)) {
+        if (key.startsWith('--')) {
+          styleMap[key] = syncMergeCenter(value, v => {
+            if (typeof value == 'undefined') {
+              node.style.removeProperty(key)
+            } else {
+              node.style.setProperty(key, v)
+            }
+          })
         } else {
-          node.style.setProperty(key, value)
+          styleMap[key] = syncMergeCenter(value, v => {
+            node.style[key] = v
+          })
         }
       } else {
-        node.style[key] = value
+        if (key.startsWith('--')) {
+          if (typeof value == 'undefined') {
+            node.style.removeProperty(key)
+          } else {
+            node.style.setProperty(key, value)
+          }
+        } else {
+          node.style[key] = value
+        }
       }
     }
   }
+  return styleMap
 }
 
 
@@ -61,17 +96,31 @@ export function updateDom(
   node: Node,
   updateProp: (node: Node, key: string, value?: any) => void,
   props: Props,
-  oldProps: Props
+  oldProps: Props,
+  /**最后销毁绑定*/
+  oldMap: Props
 ) {
+  const newMap: any = {
+    ...oldMap
+  }
   //移除旧事件：新属性中不存在相应事件，或者事件不一样
   objectDiffDeleteKey(oldProps, props, function (key: string) {
     if (isEvent(key)) {
       mergeEvent(node, key, oldProps[key])
     } else if (isProperty(key)) {
       updateProp(node, key, undefined)
+      const del = newMap[key]
+      if (del) {
+        //如果存在,则销毁
+        if (typeof del == 'function') {
+          del()
+        } else {
+          Object.values(del).forEach(run as any)
+        }
+        delete newMap[key]
+      }
     }
   })
-
   for (const key in props) {
     const value = props[key]
     const oldValue = oldProps[key]
@@ -79,32 +128,75 @@ export function updateDom(
       if (key == 'style') {
         const n = node as unknown as Node & { style: any }
         if (oldValue && typeof oldValue == 'object') {
+          //存在旧
+          let oldStyleProps = oldValue
+          let styleProps = newMap[key]
+          if (isValueCenter(oldValue)) {
+            //旧是一个单值的valueCenter
+            styleProps()
+            delete newMap[key]
+            oldStyleProps = emptyObject
+            styleProps = emptyObject
+          }
           if (value && typeof value == 'object') {
-            updateStyle(n, value, oldValue)
+            if (isValueCenter(value)) {
+              //新的是一个单值的valueCenter
+              newMap.style = syncMergeCenter(value, v => {
+                //其实可能是string,可能是object
+                n.style = v
+              })
+            } else {
+              //新为object
+              newMap.style = updateStyle(n, value, oldStyleProps, styleProps)
+            }
           } else {
-            //旧是object,新是string
+            //新是string
             n.style = value
           }
         } else {
+          //不存在旧
           if (value && typeof value == 'object') {
-            //旧是string,新是object
-            n.style = undefined
-            updateStyle(n, value, emptyObject)
+            if (isValueCenter(value)) {
+              //新的是一个单值的valueCenter
+              newMap.style = syncMergeCenter(value, v => {
+                //其实可能是string,可能是object
+                n.style = v
+              })
+            } else {
+              //新是object
+              n.style = undefined
+              newMap.style = updateStyle(n, value, emptyObject, emptyObject)
+            }
           } else {
-            //旧是string,新是string
+            //新是string
             n.style = value
           }
         }
       } else if (isEvent(key)) {
         mergeEvent(node, key, oldValue, value)
       } else if (isProperty(key)) {
-        updateProp(node, key, value)
+        if (isValueCenter(oldValue)) {
+          //旧属性删除
+          newMap[key]()
+          delete newMap[key]
+        }
+        if (isValueCenter(value)) {
+          newMap[key] = syncMergeCenter(value, v => {
+            updateProp(node, key, v)
+          })
+        } else {
+          updateProp(node, key, value)
+        }
       }
     }
   }
+  return newMap
 }
 
 
+function isValueCenter(n: any): n is ReadValueCenter<any> {//是
+  return ('get' in n && 'subscribe' in n)
+}
 
 const Capture = "capture"
 

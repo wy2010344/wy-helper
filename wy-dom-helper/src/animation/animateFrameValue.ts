@@ -1,8 +1,8 @@
-import { AnimateFrameValueImpl, createAnimateFrameReducer, superSubscribeRequestAnimationFrame, createRecycleScrollListReducer } from "wy-helper"
+import { AnimateFrameValueImpl, createAnimateFrameReducer, superSubscribeRequestAnimationFrame, createRecycleScrollListReducer, AnimationFrameArg } from "wy-helper"
 
 
 export function subscribeRequestAnimationFrame(
-  callback: (time: number, isInit: boolean) => void,
+  callback: (time: number, arg: AnimationFrameArg) => void,
   init?: boolean
 ) {
   return superSubscribeRequestAnimationFrame(requestAnimationFrame, callback, init)

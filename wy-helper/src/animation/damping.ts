@@ -5,6 +5,7 @@ import { SpringOutValue } from "./spring"
 
 
 /**
+ * 阻尼
  * 效果始终不好,待定
  */
 export class DammpingFactory {
