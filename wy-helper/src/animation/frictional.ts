@@ -4,7 +4,9 @@ import { AnimationConfig } from "./AnimationConfig"
 import { SpringOutValue } from "./spring"
 
 
-
+/**
+ * 摩擦
+ */
 export class FrictionalFactory {
   constructor(
     /**

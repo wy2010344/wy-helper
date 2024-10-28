@@ -20,6 +20,8 @@ Warning: all of these interfaces are empty. If you want type definitions for var
 // interface UIEvent extends Event { }
 // interface WheelEvent extends Event { }
 
+import { ReadValueCenter } from "wy-helper";
+import { WithCenterMap } from "./updateDom";
 import { CSSProperties } from "./util";
 
 
@@ -624,7 +626,7 @@ export namespace React {
   type AnimationEventHandler<T = Element> = EventHandler<AnimationEvent<T>>;
   type TransitionEventHandler<T = Element> = EventHandler<TransitionEvent<T>>;
 
-  type DOMAttributes<T> = {
+  export interface DOMAttributes<T> {
     // Clipboard Events
     onCopy?: ClipboardEventHandler<T> | undefined;
     onCopyCapture?: ClipboardEventHandler<T> | undefined;
@@ -839,7 +841,7 @@ export namespace React {
   //   - "number | string"
   //   - "string"
   //   - union of string literals
-  export type SVGAttributes<T> = AriaAttributes & DOMAttributes<T> & {
+  export interface SVGAttributes<T> extends AriaAttributes {
     // Attributes which also defined in HTMLAttributes
     // See comment in SVGDOMPropertyConfig.js
     className?: string | undefined;
@@ -852,7 +854,6 @@ export namespace React {
     method?: string | undefined;
     min?: number | string | undefined;
     name?: string | undefined;
-    style?: undefined | string;
     target?: string | undefined;
     type?: string | undefined;
     width?: number | string | undefined;
@@ -1105,13 +1106,13 @@ export namespace React {
     y?: number | string | undefined;
     yChannelSelector?: string | undefined;
     z?: number | string | undefined;
-    zoomAndPan?: string | undefined;
+    zoomAndPan?: string | undefined
   }
-  export type SVGProps<T> = {
-    attributes: SVGAttributes<T>
+  export interface SVGProps<T, E extends {} = {}> {
+    attributes: E & SVGAttributes<T>
     element: T
   }
-  export interface HTMLAttributes<T> extends AriaAttributes, DOMAttributes<T> {
+  export interface HTMLAttributes<T> extends AriaAttributes {
     // React-specific Attributes
     // defaultChecked?: boolean | undefined;
     // defaultValue?: string | number | ReadonlyArray<string> | undefined;
@@ -1131,8 +1132,6 @@ export namespace React {
     placeholder?: string | undefined;
     slot?: string | undefined;
     spellcheck?: Booleanish | undefined;
-    //增加一个string类型
-    style?: undefined | string;
     tabIndex?: number | undefined;
     title?: string | undefined;
     translate?: 'yes' | 'no' | undefined;
@@ -1785,16 +1784,19 @@ type DomElements = {
 }
 
 export type DomElementType = keyof DomElements
-export type DomAttribute<T extends DomElementType> = DomElements[T]['attributes']
-export type DomAttributeS<T extends DomElementType> = Omit<DomElements[T]['attributes'], 'style'> & {
-  style: CSSProperties
-}
-export type DomAttributeSO<T extends DomElementType> = Omit<DomElements[T]['attributes'], 'style'> & {
-  style?: CSSProperties
-}
 export type DomElement<T extends DomElementType> = DomElements[T]['element']
+type BDomAttribute<T extends DomElementType> = DomElements[T]['attributes']
+export type DomAttribute<T extends DomElementType> = WithCenterMap<BDomAttribute<T>> & React.DOMAttributes<DomElement<T>> & {
+  style?: string | ReadValueCenter<string | undefined>
+}
+export type DomAttributeS<T extends DomElementType> = WithCenterMap<BDomAttribute<T>> & React.DOMAttributes<DomElement<T>> & {
+  style: WithCenterMap<CSSProperties>
+}
+export type DomAttributeSO<T extends DomElementType> = WithCenterMap<BDomAttribute<T>> & React.DOMAttributes<DomElement<T>> & {
+  style?: WithCenterMap<CSSProperties>
+}
 //58个svg
-type SvgElements = {
+interface SvgElements {
   svg: React.SVGProps<SVGSVGElement>;
   animate: React.SVGProps<SVGElement>; // TODO: It is SVGAnimateElement but is not in TypeScript's lib.dom.d.ts for now.
   animateMotion: React.SVGProps<SVGElement>;
@@ -1848,26 +1850,31 @@ type SvgElements = {
   stop: React.SVGProps<SVGStopElement>;
   switch: React.SVGProps<SVGSwitchElement>;
   symbol: React.SVGProps<SVGSymbolElement>;
-  text: {
-    attributes: React.SVGAttributes<SVGTextElement> & {
-      textContent?: string
-    },
-    element: SVGTextElement
-  };
-  textPath: React.SVGProps<SVGTextPathElement>;
-  tspan: React.SVGProps<SVGTSpanElement>;
+  text: React.SVGProps<SVGTextElement, {
+    textContent?: string
+  }>;
+  textPath: React.SVGProps<SVGTextPathElement, {
+    textContent?: string
+  }>;
+  tspan: React.SVGProps<SVGTSpanElement, {
+    textContent?: string
+  }>;
   use: React.SVGProps<SVGUseElement>;
   view: React.SVGProps<SVGViewElement>;
   title: React.SVGProps<SVGTitleElement>;
 }
 
 export type SvgElementType = keyof SvgElements
-export type SvgAttribute<T extends SvgElementType> = SvgElements[T]['attributes']
-export type SvgAttributeS<T extends SvgElementType> = Omit<SvgElements[T]['attributes'], 'style'> & {
-  style: CSSProperties
-}
-export type SvgAttributeSO<T extends SvgElementType> = Omit<SvgElements[T]['attributes'], 'style'> & {
-  style?: CSSProperties
-}
 export type SvgElement<T extends SvgElementType> = SvgElements[T]['element']
 
+
+type BSvgAttribute<T extends SvgElementType> = SvgElements[T]['attributes']
+export type SvgAttribute<T extends SvgElementType> = WithCenterMap<BSvgAttribute<T>> & React.DOMAttributes<SvgElement<T>> & {
+  style?: string | ReadValueCenter<string | undefined>
+}
+export type SvgAttributeS<T extends SvgElementType> = WithCenterMap<BSvgAttribute<T>> & React.DOMAttributes<SvgElement<T>> & {
+  style: WithCenterMap<CSSProperties>
+}
+export type SvgAttributeSO<T extends SvgElementType> = WithCenterMap<BSvgAttribute<T>> & React.DOMAttributes<SvgElement<T>> & {
+  style?: WithCenterMap<CSSProperties>
+}

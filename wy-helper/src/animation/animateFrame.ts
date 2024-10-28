@@ -2,26 +2,35 @@ import { AnimationConfig, GetDeltaXAnimationConfig } from "./AnimationConfig"
 import { ReadValueCenter, ValueCenter, valueCenterOf } from "../ValueCenter"
 import { SetValue } from "../setStateHelper"
 import { EmptyFun, emptyFun, emptyObject } from '../util'
+/**
+ * 或者视着实例而非消息,即是可变的,只在事件中不变
+ */
+export type AnimationFrameArg = {
+  isInit: boolean,
+  cancel: EmptyFun
+}
 export function superSubscribeRequestAnimationFrame(
   requestAnimationFrame: (fun: SetValue<number>) => void,
-  callback: (time: number, isInit: boolean) => void,
+  callback: (time: number, arg: AnimationFrameArg) => void,
   init?: boolean
 ) {
   let canceled = false
+  function cancel() {
+    canceled = true
+  }
+  const req = { isInit: false, cancel }
   function request(time: number) {
     if (canceled) {
       return
     }
-    callback(time, false)
+    callback(time, req)
     requestAnimationFrame(request)
   }
   if (init) {
-    callback(performance.now(), true)
+    callback(performance.now(), { isInit: true, cancel })
   }
   requestAnimationFrame(request)
-  return function () {
-    canceled = true
-  }
+  return cancel
 }
 
 
