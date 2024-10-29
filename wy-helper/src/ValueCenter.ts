@@ -1,6 +1,8 @@
 import { applySetStateAction, SetStateAction, SetValue } from "./setStateHelper"
 import { EmptyFun, alawaysTrue, emptyFun, quote, run } from "./util"
-
+/**
+ * @deprecated 还是使用signal吧
+ */
 type EventHandler<T> = (v: T) => void
 type EventChangeHandler<T> = (v: T, old: T) => void
 export interface VirtualEventCenter<T> {
@@ -37,7 +39,6 @@ export interface ReadValueCenter<T> extends VirtualEventCenter<T> {
 }
 export interface ValueCenter<T> extends ReadValueCenter<T> {
   set(v: T): void
-  poolSize(): number
 }
 
 export class ReadValueCenterProxyImpl<T> implements ReadValueCenter<T> {
@@ -79,7 +80,6 @@ export class ValueCenterDefaultImpl<T> implements ValueCenter<T> {
     return this.rv
   }
 }
-
 
 export function valueCenterOf<T>(value: T) {
   return new ValueCenterDefaultImpl(value)

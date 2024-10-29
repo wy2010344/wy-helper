@@ -1,8 +1,7 @@
 import { PromiseWait, rejectAll, resolveAll } from "../observerCenter";
 import { getOutResolvePromise } from "../setStateHelper";
-import { EmptyFun, run } from "../util";
 import { valueCenterOf } from "../ValueCenter";
-import { createAbortController, createAndFlushAbortController } from "./buildSerialRequestSingle";
+import { createAndFlushAbortController } from "./buildSerialRequestSingle";
 
 /**
  * 始终依最新的请求,旧请求将被cancel掉

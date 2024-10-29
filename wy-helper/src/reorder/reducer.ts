@@ -1,7 +1,7 @@
 import { arrayMove } from "../ArrayHelper"
 import { ReducerDispatch, ReducerWithDispatch, ReducerWithDispatchResult, mapReducerDispatchListA } from "../ValueCenter"
 import { AnimateFrameAct, AnimateFrameModel } from "../animation"
-import { AnimationConfig, GetDeltaXAnimationConfig } from "../animation/AnimationConfig"
+import { GetDeltaXAnimationConfig } from "../animation/AnimationConfig"
 import { rangeBetweenLeft, rangeBetweenRight, reorderCheckTarget } from "./util"
 export type ReorderModelRow<T> = {
   transY: AnimateFrameModel
