@@ -1,6 +1,5 @@
-import { arrayFunToOneOrEmpty } from "../ArrayHelper"
 import { ReducerWithDispatch, ReducerWithDispatchResult, mapReducerDispatch } from "../ValueCenter"
-import { AnimateFrameAct, AnimateFrameModel, FrictionalFactory, GetDeltaXAnimationConfig } from "../animation"
+import { AnimateFrameAct, AnimateFrameModel, GetDeltaXAnimationConfig } from "../animation"
 
 export type RecycleListModel = {
   size: number

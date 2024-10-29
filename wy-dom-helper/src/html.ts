@@ -20,7 +20,7 @@ Warning: all of these interfaces are empty. If you want type definitions for var
 // interface UIEvent extends Event { }
 // interface WheelEvent extends Event { }
 
-import { ReadValueCenter } from "wy-helper";
+import { GetValue } from "wy-helper";
 import { WithCenterMap } from "./updateDom";
 import { CSSProperties } from "./util";
 
@@ -1787,7 +1787,7 @@ export type DomElementType = keyof DomElements
 export type DomElement<T extends DomElementType> = DomElements[T]['element']
 type BDomAttribute<T extends DomElementType> = DomElements[T]['attributes']
 export type DomAttribute<T extends DomElementType> = WithCenterMap<BDomAttribute<T>> & React.DOMAttributes<DomElement<T>> & {
-  style?: string | ReadValueCenter<string | undefined>
+  style?: string | GetValue<string | undefined>
 }
 export type DomAttributeS<T extends DomElementType> = WithCenterMap<BDomAttribute<T>> & React.DOMAttributes<DomElement<T>> & {
   style: WithCenterMap<CSSProperties>
@@ -1870,7 +1870,7 @@ export type SvgElement<T extends SvgElementType> = SvgElements[T]['element']
 
 type BSvgAttribute<T extends SvgElementType> = SvgElements[T]['attributes']
 export type SvgAttribute<T extends SvgElementType> = WithCenterMap<BSvgAttribute<T>> & React.DOMAttributes<SvgElement<T>> & {
-  style?: string | ReadValueCenter<string | undefined>
+  style?: string | GetValue<string | undefined>
 }
 export type SvgAttributeS<T extends SvgElementType> = WithCenterMap<BSvgAttribute<T>> & React.DOMAttributes<SvgElement<T>> & {
   style: WithCenterMap<CSSProperties>

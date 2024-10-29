@@ -1,3 +1,4 @@
+import { GetValue } from "./setStateHelper";
 
 
 export type NullType = undefined | null | void;
@@ -372,3 +373,35 @@ export function trueAndS(a: any, left: string, right = '') {
  * { x: "ax"; y: 99 } | { x: "cc"; y: 99 };
  */
 export type Flatten<T> = T extends T ? { [K in keyof T]: T[K] } : never;
+
+
+
+
+
+
+export function genTemplateStringS1(ts: TemplateStringsArray, vs: (string | number)[]) {
+  const xs: any[] = []
+  for (let i = 0; i < vs.length; i++) {
+    xs.push(ts[i])
+    xs.push(vs[i])
+  }
+  xs.push(ts[vs.length])
+  return xs.join('')
+}
+
+
+
+export type VType = string | number | GetValue<number | string>
+function toSingleValue(v: VType) {
+  if (typeof v == 'function') {
+    return v()
+  }
+  return v
+}
+
+export function genTemplateStringS2(
+  ts: TemplateStringsArray,
+  vs: VType[]
+) {
+  return genTemplateStringS1(ts, vs.map(toSingleValue))
+}

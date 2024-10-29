@@ -32,11 +32,6 @@
       "import": "./dist/kanren.mjs",
       "require": "./dist/kanren.js"
     },
-    "./Vue": {
-      "types": "./dist/Vue.d.ts",
-      "import": "./dist/Vue.mjs",
-      "require": "./dist/Vue.js"
-    },
     "./ObserverCenter": {
       "types": "./dist/observerCenter/index.d.ts",
       "import": "./dist/observerCenter.mjs",
