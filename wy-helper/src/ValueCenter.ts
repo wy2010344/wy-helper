@@ -1,4 +1,6 @@
 import { applySetStateAction, SetStateAction, SetValue } from "./setStateHelper"
+import { Signal, SyncFun } from "./signal"
+import { StoreRef } from "./storeRef"
 import { EmptyFun, alawaysTrue, emptyFun, quote, run } from "./util"
 /**
  * @deprecated 还是使用signal吧
@@ -41,6 +43,21 @@ export interface ValueCenter<T> extends ReadValueCenter<T> {
   set(v: T): void
 }
 
+const __sync__ = "__SYNC__"
+export function getCenterSync<T>(v: ReadValueCenter<T>) {
+  const vx = v as any
+  if (!vx[__sync__]) {
+    vx[__sync__] = function () {
+      const [set, a, b, c] = arguments
+      set(v.get(), a, b, c)
+      return v.subscribe(n => {
+        set(n, a, b, c)
+      })
+    }
+  }
+  return vx[__sync__] as SyncFun<T>
+}
+
 export class ReadValueCenterProxyImpl<T> implements ReadValueCenter<T> {
   constructor(
     private center: ValueCenter<T>
@@ -53,20 +70,24 @@ export class ReadValueCenterProxyImpl<T> implements ReadValueCenter<T> {
   }
 }
 export class ValueCenterDefaultImpl<T> implements ValueCenter<T> {
+  private value: StoreRef<T>
   constructor(
-    private value: T
-  ) { }
+    value: T
+  ) {
+    //这样兼容了signal
+    this.value = Signal(value)
+  }
   private ec = new EventCenter<T>()
   set(v: T): void {
-    const oldValue = this.value
-    this.value = v
+    const oldValue = this.value.get()
+    this.value.set(v)
     this.ec.notify(v, oldValue)
   }
   poolSize(): number {
     return this.ec.poolSize()
   }
   get(): T {
-    return this.value
+    return this.value.get()
   }
   subscribe(ev: EventChangeHandler<T>) {
     return this.ec.subscribe(ev)

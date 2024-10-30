@@ -1,22 +1,23 @@
 import { Compare, simpleNotEqual } from "./equal";
 import { GetValue, SetValue } from "./setStateHelper";
+import { StoreRef } from "./storeRef";
 import { EmptyFun, run } from "./util";
 const m = globalThis as any
 const DepKey = 'wy-helper-signal-cache'
 if (!m[DepKey]) {
-  m[DepKey] = {}
+  m[DepKey] = {
+    cacheBatchListener: new Set()
+  }
 }
 const signalCache = m[DepKey] as {
   currentFun?: EmptyFun | undefined,
   batchListeners?: Set<EmptyFun>
   onUpdate?: boolean
+  cacheBatchListener: Set<EmptyFun>
+  onBatch?: boolean
 }
 function addListener(listener: EmptyFun) {
   signalCache.batchListeners!.add(listener)
-}
-export interface SignalValue<T> {
-  (v: T): void
-  (): T
 }
 /**
  * 信号
@@ -24,23 +25,22 @@ export interface SignalValue<T> {
  * @param shouldChange 
  * @returns 
  */
-export function signal<T>(value: T, shouldChange: Compare<T> = simpleNotEqual): SignalValue<T> {
-  let listeners = new Set<EmptyFun>()
-  return function () {
-    if (arguments.length == 0) {
+export function Signal<T>(value: T, shouldChange: Compare<T> = simpleNotEqual): StoreRef<T> {
+  let listeners = [new Set<EmptyFun>(), new Set<EmptyFun>()]  //可以回收使用吧
+  return {
+    get() {
       if (signalCache.currentFun) {
-        listeners.add(signalCache.currentFun)
+        listeners[0].add(signalCache.currentFun)
       }
       return value
-    } else {
-      const newValue = arguments[0]
+    },
+    set(newValue) {
       if (signalCache.currentFun) {
         throw '计算期间不允许修改值'
       }
       if (shouldChange(newValue, value)) {
         value = newValue
-        const oldListener = listeners
-        listeners = new Set()
+        const oldListener = listeners.shift()!
         if (signalCache.batchListeners) {
           oldListener.forEach(addListener)
         } else {
@@ -48,18 +48,11 @@ export function signal<T>(value: T, shouldChange: Compare<T> = simpleNotEqual): 
           oldListener.forEach(run)
           signalCache.onUpdate = undefined
         }
+        oldListener.clear()
+        listeners.push(oldListener)
       }
-    }
-  } as any
-}
-
-const safeGetKey = '__SAFE_GET__'
-export function safeSignalGet<T>(v: SignalValue<T>): GetValue<T> {
-  const m = v as any
-  if (!m[safeGetKey]) {
-    m[safeGetKey] = () => v()
+    },
   }
-  return m[safeGetKey]
 }
 
 function checkUpdate() {
@@ -68,18 +61,39 @@ function checkUpdate() {
   }
   signalCache.onUpdate = true
 }
+
+export interface SyncFun<T> {
+  (set: SetValue<T>): void
+  <A>(set: (t: T, a: A) => void, a: A): void
+  <A, B>(set: (t: T, a: A, b: B) => void, a: A, b: B): void
+  <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): void
+}
+
 /**
  * 批量
  * @param fun 
  */
-export function batchSignal(fun: EmptyFun) {
-  const listeners = new Set<EmptyFun>()
+export function batchSignal(set: EmptyFun): void
+export function batchSignal<A>(set: (a: A) => void, a: A): void
+export function batchSignal<A, B>(set: (a: A, b: B) => void, a: A, b: B): void
+export function batchSignal<A, B, C>(set: (a: A, b: B, c: C) => void, a: A, b: B, c: C): void
+export function batchSignal(set: any) {
+  if (signalCache.onBatch) {
+    throw "批量更新内不能再批量更新"
+  }
+  signalCache.onBatch = true
+  const listeners = signalCache.cacheBatchListener//可以回收使用吧
   signalCache.batchListeners = listeners
-  fun()
+  const a = arguments[1]
+  const b = arguments[2]
+  const c = arguments[3]
+  set(a, b, c)
   signalCache.batchListeners = undefined
   checkUpdate()
   listeners.forEach(run)
   signalCache.onUpdate = undefined
+  listeners.clear()
+  signalCache.onBatch = false
 }
 /**
  * 跟踪信号
@@ -116,7 +130,7 @@ export function trackSignal(get: any, set: any): EmptyFun {
  * @returns 
  */
 export function cacheSignal<T>(get: GetValue<T>) {
-  const fun = signal(get())
-  const destroy = trackSignal(get, fun)
-  return [safeSignalGet(fun), destroy] as const
+  const signal = Signal(get())
+  const destroy = trackSignal(get, signal.set)
+  return [signal.get, destroy] as const
 }

@@ -2,6 +2,7 @@
  * 大转盘
  */
 
+import { StoreRef } from "../storeRef";
 import { EmptyFun, emptyObject, Quote } from "../util";
 import { ReadValueCenter, valueCenterOf } from "../ValueCenter";
 import { SpringBaseAnimationConfigArg, springBaseAnimationConfigNoEnd } from "./AnimationConfig";
@@ -59,10 +60,7 @@ export function createBigSpin({
   /**开始时怎么迭代升级 */
   beginConfig: Quote<number>;
   endConfig: EndConfig;
-  value: {
-    set(n: number): void;
-    get(): number;
-  }
+  value: StoreRef<number>
   cycle: number
   onFinish(): void
   timeout?: number

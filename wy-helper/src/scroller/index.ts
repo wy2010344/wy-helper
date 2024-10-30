@@ -1,4 +1,4 @@
-import { AnimateFrameEvent, AnimateFrameValue, AnimateFrameValueImpl, AnimationConfig, GetDeltaXAnimationConfig } from "../animation"
+import { AnimateFrameEvent, AnimateFrameValue, AnimationConfig, GetDeltaXAnimationConfig } from "../animation"
 import { FalseType, emptyObject } from "../util"
 export * from './bscroll'
 export * from './iscroll'

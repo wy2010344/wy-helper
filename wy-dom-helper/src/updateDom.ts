@@ -1,4 +1,4 @@
-import { emptyObject, GetValue, objectDiffDeleteKey, run, trackSignal } from "wy-helper"
+import { emptyObject, objectDiffDeleteKey, run, SetValue, SyncFun } from "wy-helper"
 import { DomElementType, SvgElementType } from "./html"
 import { CSSProperties } from "./util"
 export type Props = { [key: string]: any }
@@ -28,9 +28,8 @@ function runAndDelete(map: any, key: string) {
 }
 
 export type WithCenterMap<T extends {}> = {
-  [key in keyof T]: (T[key] | GetValue<T[key]>)
+  [key in keyof T]: (T[key] | SyncFun<T[key]>)
 }
-
 
 export function updateStyle(
   node: Node & {
@@ -56,9 +55,9 @@ export function updateStyle(
       }
       if (isSyncFun(value)) {
         if (key.startsWith('--')) {
-          styleMap[key] = trackSignal(value, setStyleP, node, key)
+          styleMap[key] = (value as any)(setStyleP, node, key)
         } else {
-          styleMap[key] = trackSignal(value, setStyle, node, key)
+          styleMap[key] = (value as any)(setStyle, node, key)
         }
       } else {
         if (key.startsWith('--')) {
@@ -143,7 +142,7 @@ export function updateDom(
           keepMap.style = updateStyle(n, value, oldStyleProps || emptyObject, styleProps || {})
         } else if (isSyncFun(value)) {
           //新的是一个单值的valueCenter
-          keepMap.style = trackSignal(value, setStyleS, n)
+          keepMap.style = value(setStyleS, n)
         } else {
           //新是string
           n.style = value
@@ -156,7 +155,7 @@ export function updateDom(
           runAndDelete(keepMap, key)
         }
         if (isSyncFun(value)) {
-          keepMap[key] = trackSignal(value, setProp, node, key, updateProp)
+          keepMap[key] = value(setProp, node, key, updateProp)
         } else {
           updateProp(node, key, value)
         }
@@ -170,7 +169,7 @@ function setProp(v: string, node: any, key: string, updateProp: any) {
   updateProp(node, key, v)
 }
 
-function isSyncFun(n: any): n is GetValue<any> {//是
+function isSyncFun(n: any): n is SyncFun<any> {//是
   return typeof n == 'function'
 }
 

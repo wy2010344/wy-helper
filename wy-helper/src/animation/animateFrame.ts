@@ -1,7 +1,8 @@
 import { AnimationConfig, GetDeltaXAnimationConfig } from "./AnimationConfig"
-import { ReadValueCenter, ValueCenter, valueCenterOf } from "../ValueCenter"
 import { SetValue } from "../setStateHelper"
 import { EmptyFun, emptyFun, emptyObject } from '../util'
+import { StoreRef } from "../storeRef"
+import { ReadValueCenter, ValueCenter, valueCenterOf } from "../ValueCenter"
 /**
  * 或者视着实例而非消息,即是可变的,只在事件中不变
  */
@@ -68,32 +69,17 @@ class AnimateToImpl implements AnimateConfig {
     this.update(this.time)
   }
 }
-
-
-export interface AnimateFrameValue extends ReadValueCenter<number> {
-  slientDiff(n: number): void
-  getAnimateConfig(): AnimateConfig | undefined
-  changeTo(target: number, getConfig?: GetDeltaXAnimationConfig, ext?: AnimateFrameEvent): "immediately" | "animate" | undefined
-  animateTo(
-    target: number,
-    config: GetDeltaXAnimationConfig,
-    c?: {
-      from?: number,
-      onProcess?: EmptyFun
-    }): Promise<boolean>
-  getTargetValue(): number
-}
 /**
  * 使用react的render,可能不平滑,因为react是异步的,生成值到渲染到视图上,可能有时间间隔
  * 或者总是使用flushSync.
  */
-export class AnimateFrameValueImpl implements AnimateFrameValue {
+export class AnimateFrameValue implements ReadValueCenter<number> {
   private value: ValueCenter<number>
   constructor(
-    initValue: number,
+    value: number,
     private requestAnimateFrame: (fun: SetValue<number>) => void,
   ) {
-    this.value = valueCenterOf(initValue)
+    this.value = valueCenterOf(value)
   }
   /**
    * 如果正在发生动画,这个值存在
@@ -235,7 +221,7 @@ export class AnimateFrameValueImpl implements AnimateFrameValue {
   get() {
     return this.value.get()
   }
-  subscribe(fun: SetValue<number>) {
-    return this.value.subscribe(fun)
+  subscribe(notify: (v: number, old: number) => void): EmptyFun {
+    return this.value.subscribe(notify)
   }
 }
