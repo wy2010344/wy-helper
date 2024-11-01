@@ -20,8 +20,8 @@ Warning: all of these interfaces are empty. If you want type definitions for var
 // interface UIEvent extends Event { }
 // interface WheelEvent extends Event { }
 
-import { GetValue } from "wy-helper";
-import { WithCenterMap } from "./updateDom";
+import { SyncFun } from "wy-helper";
+import { UpdateFun, WithCenterMap } from "./updateDom";
 import { CSSProperties } from "./util";
 
 
@@ -1785,9 +1785,10 @@ type DomElements = {
 
 export type DomElementType = keyof DomElements
 export type DomElement<T extends DomElementType> = DomElements[T]['element']
-type BDomAttribute<T extends DomElementType> = DomElements[T]['attributes']
+export type BDomAttribute<T extends DomElementType> = DomElements[T]['attributes']
+
 export type DomAttribute<T extends DomElementType> = WithCenterMap<BDomAttribute<T>> & React.DOMAttributes<DomElement<T>> & {
-  style?: string | GetValue<string | undefined>
+  style?: string | SyncFun<string | undefined> | UpdateFun<string | undefined>
 }
 export type DomAttributeS<T extends DomElementType> = WithCenterMap<BDomAttribute<T>> & React.DOMAttributes<DomElement<T>> & {
   style: WithCenterMap<CSSProperties>
@@ -1866,11 +1867,11 @@ interface SvgElements {
 
 export type SvgElementType = keyof SvgElements
 export type SvgElement<T extends SvgElementType> = SvgElements[T]['element']
+export type BSvgAttribute<T extends SvgElementType> = SvgElements[T]['attributes']
 
 
-type BSvgAttribute<T extends SvgElementType> = SvgElements[T]['attributes']
 export type SvgAttribute<T extends SvgElementType> = WithCenterMap<BSvgAttribute<T>> & React.DOMAttributes<SvgElement<T>> & {
-  style?: string | GetValue<string | undefined>
+  style?: string | UpdateFun<string | undefined> | SyncFun<string | undefined>
 }
 export type SvgAttributeS<T extends SvgElementType> = WithCenterMap<BSvgAttribute<T>> & React.DOMAttributes<SvgElement<T>> & {
   style: WithCenterMap<CSSProperties>

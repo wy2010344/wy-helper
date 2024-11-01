@@ -63,12 +63,36 @@ function checkUpdate() {
 }
 
 export interface SyncFun<T> {
-  (set: SetValue<T>): void
-  <A>(set: (t: T, a: A) => void, a: A): void
-  <A, B>(set: (t: T, a: A, b: B) => void, a: A, b: B): void
-  <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): void
+  (set: SetValue<T>): EmptyFun;
+  <A>(set: (t: T, a: A) => void, a: A): EmptyFun;
+  <A, B>(set: (t: T, a: A, b: B) => void, a: A, b: B): EmptyFun;
+  <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): EmptyFun;
 }
 
+
+export function batchSignalBegin() {
+  if (signalCache.onBatch) {
+    throw "批量更新内不能再批量更新"
+  }
+  signalCache.onBatch = true
+  const listeners = signalCache.cacheBatchListener//可以回收使用吧
+  signalCache.batchListeners = listeners
+
+}
+
+export function batchSignalEnd() {
+  const listeners = signalCache.batchListeners
+  if (listeners) {
+    signalCache.batchListeners = undefined
+    checkUpdate()
+    listeners.forEach(run)
+    signalCache.onUpdate = undefined
+    listeners.clear()
+    signalCache.onBatch = false
+  } else {
+    console.log("未在批量任务中,没必要更新")
+  }
+}
 /**
  * 批量
  * @param fun 
@@ -78,22 +102,12 @@ export function batchSignal<A>(set: (a: A) => void, a: A): void
 export function batchSignal<A, B>(set: (a: A, b: B) => void, a: A, b: B): void
 export function batchSignal<A, B, C>(set: (a: A, b: B, c: C) => void, a: A, b: B, c: C): void
 export function batchSignal(set: any) {
-  if (signalCache.onBatch) {
-    throw "批量更新内不能再批量更新"
-  }
-  signalCache.onBatch = true
-  const listeners = signalCache.cacheBatchListener//可以回收使用吧
-  signalCache.batchListeners = listeners
+  batchSignalBegin()
   const a = arguments[1]
   const b = arguments[2]
   const c = arguments[3]
   set(a, b, c)
-  signalCache.batchListeners = undefined
-  checkUpdate()
-  listeners.forEach(run)
-  signalCache.onUpdate = undefined
-  listeners.clear()
-  signalCache.onBatch = false
+  batchSignalEnd()
 }
 /**
  * 跟踪信号
@@ -126,6 +140,7 @@ export function trackSignal(get: any, set: any): EmptyFun {
 }
 /**
  * 缓存信号
+ * @deprecated 不使用这种,使用幂等函数来memo
  * @param get 
  * @returns 
  */
