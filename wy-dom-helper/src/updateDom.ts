@@ -1,4 +1,4 @@
-import { emptyObject, objectDiffDeleteKey, run, SetValue, SyncFun } from "wy-helper"
+import { emptyObject, GetValue, objectDiffDeleteKey, run, SetValue, SyncFun } from "wy-helper"
 import { DomElementType, SvgElementType } from "./html"
 import { CSSProperties } from "./util"
 export type Props = { [key: string]: any }
@@ -26,9 +26,15 @@ function runAndDelete(map: any, key: string) {
   map[key]()
   delete map[key]
 }
+export interface UpdateFun<T> {
+  (set: SetValue<T>): void;
+  <A>(set: (t: T, a: A) => void, a: A): void;
+  <A, B>(set: (t: T, a: A, b: B) => void, a: A, b: B): void;
+  <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): void;
+}
 
 export type WithCenterMap<T extends {}> = {
-  [key in keyof T]: (T[key] | SyncFun<T[key]>)
+  [key in keyof T]: (T[key] | SyncFun<T[key]> | UpdateFun<T[key]>)
 }
 
 export function updateStyle(
@@ -172,7 +178,6 @@ function setProp(v: string, node: any, key: string, updateProp: any) {
 function isSyncFun(n: any): n is SyncFun<any> {//是
   return typeof n == 'function'
 }
-
 const Capture = "capture"
 
 /**

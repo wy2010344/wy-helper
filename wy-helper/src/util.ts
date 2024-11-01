@@ -392,6 +392,10 @@ export function genTemplateStringS1(ts: TemplateStringsArray, vs: (string | numb
 
 
 export type VType = string | number | GetValue<number | string>
+export function vTypeisGetValue(v: VType): v is GetValue<number | string> {
+  return typeof v == 'function'
+}
+
 function toSingleValue(v: VType) {
   if (typeof v == 'function') {
     return v()
