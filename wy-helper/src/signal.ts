@@ -1,7 +1,7 @@
 import { Compare, simpleNotEqual } from "./equal";
 import { GetValue, SetValue } from "./setStateHelper";
 import { StoreRef } from "./storeRef";
-import { EmptyFun, run } from "./util";
+import { EmptyFun, messageChannelCallback, run } from "./util";
 const m = globalThis as any
 const DepKey = 'wy-helper-signal-cache'
 if (!m[DepKey]) {
@@ -41,13 +41,11 @@ export function Signal<T>(value: T, shouldChange: Compare<T> = simpleNotEqual): 
       if (shouldChange(newValue, value)) {
         value = newValue
         const oldListener = listeners.shift()!
-        if (signalCache.batchListeners) {
-          oldListener.forEach(addListener)
-        } else {
-          checkUpdate()
-          oldListener.forEach(run)
-          signalCache.onUpdate = undefined
+        if (!signalCache.batchListeners) {
+          batchSignalBegin()
+          messageChannelCallback(batchSignalEnd)
         }
+        oldListener.forEach(addListener)
         oldListener.clear()
         listeners.push(oldListener)
       }
@@ -70,7 +68,7 @@ export interface SyncFun<T> {
 }
 
 
-export function batchSignalBegin() {
+function batchSignalBegin() {
   if (signalCache.onBatch) {
     throw "批量更新内不能再批量更新"
   }
@@ -92,22 +90,6 @@ export function batchSignalEnd() {
   } else {
     console.log("未在批量任务中,没必要更新")
   }
-}
-/**
- * 批量
- * @param fun 
- */
-export function batchSignal(set: EmptyFun): void
-export function batchSignal<A>(set: (a: A) => void, a: A): void
-export function batchSignal<A, B>(set: (a: A, b: B) => void, a: A, b: B): void
-export function batchSignal<A, B, C>(set: (a: A, b: B, c: C) => void, a: A, b: B, c: C): void
-export function batchSignal(set: any) {
-  batchSignalBegin()
-  const a = arguments[1]
-  const b = arguments[2]
-  const c = arguments[3]
-  set(a, b, c)
-  batchSignalEnd()
 }
 /**
  * 跟踪信号

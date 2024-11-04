@@ -1,4 +1,4 @@
-import { EmptyFun, FalseType, GetDeltaXAnimationConfig, Point, batchSignal, emptyObject, pointEqual, run, trackSignal } from "wy-helper";
+import { EmptyFun, FalseType, GetDeltaXAnimationConfig, Point, emptyObject, pointEqual, run, trackSignal } from "wy-helper";
 import { animateFrame } from "./animateFrameValue";
 import { getPageOffset } from "../util";
 
@@ -36,7 +36,7 @@ export function layoutFrameAnimation({
       const ps = getPageOffset(div)
       if (lastPS) {
         if (!pointEqual(lastPS, ps)) {
-          batchSignal(locationChange, ps, lastPS)
+          locationChange(ps, lastPS)
           setLastPs(ps)
         }
       } else {
