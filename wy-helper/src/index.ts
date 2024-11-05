@@ -28,5 +28,6 @@ export * from './interpolate'
 export * from "./WeekVirtualView"
 export * from './signal'
 export * from './promise/resourceCenter'
+export * from './mapKV'
 // export * as kanren from './kanren'
 // export * as tokenParser from './tokenParser'

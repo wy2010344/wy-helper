@@ -1,39 +1,63 @@
 import { Compare, simpleNotEqual } from "./equal";
 import { GetValue, SetValue } from "./setStateHelper";
 import { StoreRef } from "./storeRef";
-import { EmptyFun, messageChannelCallback, run } from "./util";
+import { EmptyFun, iterableToList, messageChannelCallback, run } from "./util";
+
+
 const m = globalThis as any
 const DepKey = 'wy-helper-signal-cache'
 if (!m[DepKey]) {
   m[DepKey] = {
-    cacheBatchListener: new Set()
+    cacheBatchListener: new Set(),
+    effects: new Map()
   }
 }
+
 const signalCache = m[DepKey] as {
   currentFun?: EmptyFun | undefined,
   batchListeners?: Set<EmptyFun>
   onUpdate?: boolean
   cacheBatchListener: Set<EmptyFun>
   onBatch?: boolean
+  currentRelay?: Map<GetValue<any>, any>
+  effects: Map<number, EmptyFun[]>
+}
+
+export function addEffect(effect: EmptyFun, level = 0) {
+  let olds = signalCache.effects.get(level)
+  if (!olds) {
+    olds = []
+    signalCache.effects.set(level, olds)
+  }
+  olds.push(effect)
+}
+
+function addRelay(get: GetValue<any>, value: any) {
+  signalCache.currentRelay?.set(get, value)
 }
 function addListener(listener: EmptyFun) {
   signalCache.batchListeners!.add(listener)
 }
+
+
 /**
  * 信号
  * @param value 
  * @param shouldChange 
  * @returns 
  */
-export function Signal<T>(value: T, shouldChange: Compare<T> = simpleNotEqual): StoreRef<T> {
+export function createSignal<T>(value: T, shouldChange: Compare<T> = simpleNotEqual): StoreRef<T> {
   let listeners = [new Set<EmptyFun>(), new Set<EmptyFun>()]  //可以回收使用吧
+
+  function get() {
+    addRelay(get, value)
+    if (signalCache.currentFun) {
+      listeners[0].add(signalCache.currentFun)
+    }
+    return value
+  }
   return {
-    get() {
-      if (signalCache.currentFun) {
-        listeners[0].add(signalCache.currentFun)
-      }
-      return value
-    },
+    get,
     set(newValue) {
       if (signalCache.currentFun) {
         throw '计算期间不允许修改值'
@@ -86,7 +110,13 @@ export function batchSignalEnd() {
     listeners.forEach(run)
     signalCache.onUpdate = undefined
     listeners.clear()
-    signalCache.onBatch = false
+    signalCache.onBatch = undefined
+    const effects = signalCache.effects
+    const keys = iterableToList(effects.keys()).sort()
+    for (const key of keys) {
+      effects.get(key)?.forEach(run)
+    }
+    effects.clear()
   } else {
     console.log("未在批量任务中,没必要更新")
   }
@@ -120,14 +150,48 @@ export function trackSignal(get: any, set: any): EmptyFun {
     disabled = true
   }
 }
-/**
- * 缓存信号
- * @deprecated 不使用这种,使用幂等函数来memo
- * @param get 
- * @returns 
- */
-export function cacheSignal<T>(get: GetValue<T>) {
-  const signal = Signal(get())
-  const destroy = trackSignal(get, signal.set)
-  return [signal.get, destroy] as const
+
+
+
+function relayChange(relays: Map<GetValue<any>, any>) {
+  for (const [get, old] of relays) {
+    const v = get()
+    if (v != old) {
+      return true
+    }
+  }
+  return false
 }
+function memoGet<T>(relays: Map<GetValue<any>, any>, get: GetValue<T>) {
+  relays.clear()
+  const last = signalCache.currentRelay
+  signalCache.currentRelay = relays
+  const v = get()
+  signalCache.currentRelay = last
+  return v
+}
+export function memo<T>(
+  get: GetValue<T>,
+  shouldChange: Compare<T> = simpleNotEqual
+) {
+  const relays = new Map<GetValue<any>, any>()
+  let lastValue!: T
+  let init = false
+  const myGet = function () {
+    if (init) {
+      if (relayChange(relays)) {
+        const value = memoGet(relays, get)
+        if (shouldChange(value, lastValue)) {
+          lastValue = value
+        }
+      }
+    } else {
+      lastValue = memoGet(relays, get)
+      init = true
+    }
+    addRelay(myGet, lastValue)
+    return lastValue
+  }
+  return myGet
+}
+

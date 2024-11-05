@@ -1,5 +1,5 @@
 import { applySetStateAction, SetStateAction, SetValue } from "./setStateHelper"
-import { Signal, SyncFun } from "./signal"
+import { createSignal, SyncFun } from "./signal"
 import { StoreRef } from "./storeRef"
 import { EmptyFun, alawaysTrue, emptyFun, quote, run } from "./util"
 /**
@@ -75,7 +75,7 @@ export class ValueCenterDefaultImpl<T> implements ValueCenter<T> {
     value: T
   ) {
     //这样兼容了signal
-    this.value = Signal(value)
+    this.value = createSignal(value)
   }
   private ec = new EventCenter<T>()
   set(v: T): void {
