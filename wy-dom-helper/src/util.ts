@@ -172,16 +172,19 @@ export function getCommonParentNode(oNode1: Element | null, oNode2: Element) {
   }
 }
 
-export function requestBatchAnimationFrame(fun: EmptyFun) {
-  cacheList.push(fun)
-  if (cacheList.length == 1) {
+export function requestBatchAnimationFrame(fun: SetValue<number>) {
+  const list = cacheList[0]
+  list.push(fun)
+  if (list.length == 1) {
     requestAnimationFrame(clearCacheList)
   }
 }
-const cacheList: EmptyFun[] = []
-function clearCacheList() {
-  cacheList.forEach(run)
-  cacheList.length = 0
+const cacheList: [SetValue<number>[], SetValue<number>[]] = [[], []]
+function clearCacheList(n: number) {
+  const list = cacheList.shift()!
+  cacheList.push(list)
+  list.forEach(run => run(n))
+  list.length = 0
 }
 
 

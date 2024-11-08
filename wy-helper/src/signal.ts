@@ -8,26 +8,33 @@ const m = globalThis as any
 const DepKey = 'wy-helper-signal-cache'
 if (!m[DepKey]) {
   m[DepKey] = {
-    cacheBatchListener: new Set(),
-    effects: new Map()
+    batchListeners: new Set(),
+    effects: new Map(),
+    recycleBatches: []
   }
+}
+
+
+type CurrentBatch = {
+  listeners: Set<EmptyFun>
+  effects: Map<number, EmptyFun[]>
 }
 
 const signalCache = m[DepKey] as {
   currentFun?: EmptyFun | undefined,
-  batchListeners?: Set<EmptyFun>
+  currentBatch?: CurrentBatch
+  recycleBatches: CurrentBatch[]
   onUpdate?: boolean
-  cacheBatchListener: Set<EmptyFun>
-  onBatch?: boolean
   currentRelay?: Map<GetValue<any>, any>
-  effects: Map<number, EmptyFun[]>
 }
 
 export function addEffect(effect: EmptyFun, level = 0) {
-  let olds = signalCache.effects.get(level)
+  beginCurrentBatch()
+  const effects = signalCache.currentBatch!.effects
+  let olds = effects.get(level)
   if (!olds) {
     olds = []
-    signalCache.effects.set(level, olds)
+    effects.set(level, olds)
   }
   olds.push(effect)
 }
@@ -36,7 +43,7 @@ function addRelay(get: GetValue<any>, value: any) {
   signalCache.currentRelay?.set(get, value)
 }
 function addListener(listener: EmptyFun) {
-  signalCache.batchListeners!.add(listener)
+  signalCache.currentBatch!.listeners.add(listener)
 }
 
 
@@ -64,16 +71,24 @@ export function createSignal<T>(value: T, shouldChange: Compare<T> = simpleNotEq
       }
       if (shouldChange(newValue, value)) {
         value = newValue
+        beginCurrentBatch()
+        //组装到batch里面
         const oldListener = listeners.shift()!
-        if (!signalCache.batchListeners) {
-          batchSignalBegin()
-          messageChannelCallback(batchSignalEnd)
-        }
         oldListener.forEach(addListener)
         oldListener.clear()
         listeners.push(oldListener)
       }
     },
+  }
+}
+
+function beginCurrentBatch() {
+  if (!signalCache.currentBatch) {
+    signalCache.currentBatch = signalCache.recycleBatches.shift() || {
+      listeners: new Set(),
+      effects: new Map()
+    }
+    messageChannelCallback(batchSignalEnd)
   }
 }
 
@@ -90,35 +105,30 @@ export interface SyncFun<T> {
   <A, B>(set: (t: T, a: A, b: B) => void, a: A, b: B): EmptyFun;
   <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): EmptyFun;
 }
-
-
-function batchSignalBegin() {
-  if (signalCache.onBatch) {
-    throw "批量更新内不能再批量更新"
-  }
-  signalCache.onBatch = true
-  const listeners = signalCache.cacheBatchListener//可以回收使用吧
-  signalCache.batchListeners = listeners
-
-}
-
 export function batchSignalEnd() {
-  const listeners = signalCache.batchListeners
-  if (listeners) {
-    signalCache.batchListeners = undefined
+  const currentBatch = signalCache.currentBatch
+  if (currentBatch) {
+    signalCache.currentBatch = undefined
     checkUpdate()
+
+    const listeners = currentBatch.listeners
     listeners.forEach(run)
     signalCache.onUpdate = undefined
     listeners.clear()
-    signalCache.onBatch = undefined
-    const effects = signalCache.effects
+
+    const effects = currentBatch.effects
     const keys = iterableToList(effects.keys()).sort()
     for (const key of keys) {
       effects.get(key)?.forEach(run)
     }
     effects.clear()
+
+    signalCache.recycleBatches.push(currentBatch)
+    if (signalCache.recycleBatches.length > 2) {
+      console.log("出现多个recycleBatches", signalCache.recycleBatches.length)
+    }
   } else {
-    console.log("未在批量任务中,没必要更新")
+    // console.log("未在批量任务中,没必要更新")
   }
 }
 /**

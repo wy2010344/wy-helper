@@ -1,7 +1,7 @@
 import { emptyObject } from "../util"
 
 export type SpringBaseArg = {
-  /**自由振荡角频率 */
+  /**自由振荡角频率,默认8 */
   omega0?: number
   /**阻尼比:0~1~无穷,0~1是欠阻尼,即会来回,1~无穷不会来回*/
   zta?: number

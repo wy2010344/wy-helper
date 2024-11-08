@@ -3,7 +3,7 @@ import { createSignal, SyncFun } from "./signal"
 import { StoreRef } from "./storeRef"
 import { EmptyFun, alawaysTrue, emptyFun, quote, run } from "./util"
 /**
- * @deprecated 还是使用signal吧
+ * 还是使用signal吧
  */
 type EventHandler<T> = (v: T) => void
 type EventChangeHandler<T> = (v: T, old: T) => void
@@ -113,10 +113,14 @@ export function syncMergeCenter<T>(c: ReadValueCenter<T>, cb: EventHandler<T>) {
 
 // 定义将元素类型映射成另一种类型的映射函数
 type MapTo<T> = { [K in keyof T]: ValueCenter<T[K]> };
-type ExtractValues<T> = {
-  -readonly [K in keyof T]: T[K] extends ReadValueCenter<infer U> ? U : never;
+
+// type ExtractValues<T> = {
+//   -readonly [K in keyof T]: T[K] extends ReadValueCenter<infer U> ? U : never;
+// }
+export type BuildValueCenters<T> = {
+  readonly [K in keyof T]: ReadValueCenter<T[K]>
 };
-function baseCenterArray<VS extends readonly ReadValueCenter<any>[]>(vs: any, list: VS, cb: EventHandler<ExtractValues<VS>>, delay = run) {
+function baseCenterArray<VS extends readonly any[]>(vs: any, list: BuildValueCenters<VS>, cb: EventHandler<VS>, delay = run) {
   function callback() {
     cb(vs)
   }
@@ -131,12 +135,12 @@ function baseCenterArray<VS extends readonly ReadValueCenter<any>[]>(vs: any, li
     destroys.forEach(run)
   }
 }
-export function subscribeCenterArray<VS extends readonly ReadValueCenter<any>[]>(list: VS, cb: EventHandler<ExtractValues<VS>>, delay = run) {
+export function subscribeCenterArray<VS extends readonly any[]>(list: BuildValueCenters<VS>, cb: EventHandler<VS>, delay = run) {
   const vs = [] as any
   return baseCenterArray(vs, list, cb, delay)
 }
 
-export function syncMergeCenterArray<VS extends readonly ReadValueCenter<any>[]>(list: VS, cb: EventHandler<ExtractValues<VS>>, delay = run) {
+export function syncMergeCenterArray<VS extends readonly any[]>(list: BuildValueCenters<VS>, cb: EventHandler<VS>, delay = run) {
   const vs = [] as unknown as any
   const destroy = baseCenterArray(vs, list, cb, delay)
   cb(vs)
