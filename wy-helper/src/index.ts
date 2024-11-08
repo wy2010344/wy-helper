@@ -29,5 +29,6 @@ export * from "./WeekVirtualView"
 export * from './signal'
 export * from './promise/resourceCenter'
 export * from './mapKV'
+export * from './signal+animation'
 // export * as kanren from './kanren'
 // export * as tokenParser from './tokenParser'

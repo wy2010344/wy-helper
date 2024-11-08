@@ -1,4 +1,4 @@
-import { AnimationConfig, GetDeltaXAnimationConfig } from "./AnimationConfig"
+import { AnimationConfig, defaultSpringBaseAnimationConfig, GetDeltaXAnimationConfig } from "./AnimationConfig"
 import { SetValue } from "../setStateHelper"
 import { EmptyFun, emptyFun, emptyObject } from '../util'
 import { StoreRef } from "../storeRef"
@@ -25,6 +25,9 @@ export function superSubscribeRequestAnimationFrame(
       return
     }
     callback(time, req)
+    if (canceled) {
+      return
+    }
     requestAnimationFrame(request)
   }
   if (init) {
@@ -122,7 +125,7 @@ export class AnimateFrameValue implements ReadValueCenter<number> {
   }
   animateTo(
     target: number,
-    config: GetDeltaXAnimationConfig,
+    config: GetDeltaXAnimationConfig = defaultSpringBaseAnimationConfig,
     c: {
       from?: number,
       onProcess?: EmptyFun
@@ -151,6 +154,7 @@ export class AnimateFrameValue implements ReadValueCenter<number> {
     if (!config) {
       //超越检测动画
       this.value.set(target)
+      onFinish(true)
       return 'immediately'
     }
     const animateTo = new AnimateToImpl(

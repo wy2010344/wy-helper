@@ -125,3 +125,5 @@ export function getSpringBaseAnimationConfig(arg?: SpringBaseAnimationConfigArg)
     return springBaseAnimationConfig(deltaX, arg)
   }
 }
+
+export const defaultSpringBaseAnimationConfig = getSpringBaseAnimationConfig()
