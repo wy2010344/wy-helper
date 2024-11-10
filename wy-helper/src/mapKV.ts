@@ -6,7 +6,7 @@ export interface RMap<K, V> {
   forEach(fun: (value: V, key: K) => void): void
 }
 
-class ArrayMap<K, V> implements RMap<K, V> {
+class ArrayOrOneMap<K, V> implements RMap<K, V> {
   constructor(
     private map: {
       key: any[],
@@ -54,10 +54,51 @@ class ArrayMap<K, V> implements RMap<K, V> {
 
 
 export function arrayOrOneMapCreater<K, V>() {
-  return new ArrayMap<K, V>()
+  return new ArrayOrOneMap<K, V>()
 }
 
 
 export function normalMapCreater<K, V>() {
   return new Map<K, V>()
+}
+
+class ArrayMap<K extends readonly any[], V> implements RMap<K, V> {
+  constructor(
+    private map: {
+      key: K,
+      value: V
+    }[] = [],
+    private equal = simpleEqual
+  ) { }
+  private getValue(key: K) {
+    for (let i = 0; i < this.map.length; i++) {
+      const kv = this.map[i]
+      if (arrayEqual(kv.key, key, this.equal)) {
+        return kv
+      }
+    }
+  }
+  get(key: K) {
+    return this.getValue(key)?.value
+  }
+  set(key: K, value: V) {
+    const kv = this.getValue(key)
+    if (kv) {
+      kv.value = value
+    } else {
+      this.map.push({
+        key,
+        value
+      })
+    }
+  }
+  forEach(fun: (value: V, key: K) => void): void {
+    this.map.forEach(function (item) {
+      fun(item.value, item.key)
+    })
+  }
+}
+
+export function arrayMapCreater<K extends readonly any[], V>() {
+  return new ArrayMap<K, V>()
 }
