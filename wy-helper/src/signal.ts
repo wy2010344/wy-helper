@@ -205,3 +205,13 @@ export function memo<T>(
   return myGet
 }
 
+
+
+export type ValueOrGet<T> = T | GetValue<T>
+export function getValueOrGet<T>(o: ValueOrGet<T>) {
+  if (typeof o == 'function') {
+    return (o as GetValue<T>)()
+  } else {
+    return o
+  }
+}
