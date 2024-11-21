@@ -1,7 +1,7 @@
 import { Compare, simpleNotEqual } from "./equal";
 import { GetValue, SetValue } from "./setStateHelper";
 import { StoreRef } from "./storeRef";
-import { EmptyFun, iterableToList, messageChannelCallback, run } from "./util";
+import { asLazy, EmptyFun, iterableToList, messageChannelCallback, run } from "./util";
 
 
 const m = globalThis as any
@@ -213,5 +213,22 @@ export function getValueOrGet<T>(o: ValueOrGet<T>) {
     return (o as GetValue<T>)()
   } else {
     return o
+  }
+}
+/**
+ * 转化成信号
+ * @param o 
+ * @param toMemo 
+ * @param shouldChange 
+ * @returns 
+ */
+export function valueOrGetToGet<T>(o: ValueOrGet<T>, toMemo?: boolean, shouldChange?: Compare<T>): GetValue<T> {
+  if (typeof o == 'function') {
+    if (toMemo) {
+      return memo(o as any, shouldChange)
+    }
+    return o as any
+  } else {
+    return asLazy(o)
   }
 }
