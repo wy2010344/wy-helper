@@ -162,6 +162,11 @@ export function trackSignal(get: any, set: any): EmptyFun {
 }
 
 
+export const trackSignalMemo: typeof trackSignal = function (...vs: any[]) {
+  vs[0] = memo(vs[0])
+  return trackSignal.apply(undefined, vs as any)
+}
+
 
 function relayChange(relays: Map<GetValue<any>, any>) {
   for (const [get, old] of relays) {
