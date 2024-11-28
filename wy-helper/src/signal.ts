@@ -28,6 +28,23 @@ const signalCache = m[DepKey] as {
   currentRelay?: Map<GetValue<any>, any>
 }
 
+/**
+ * 在memo里执行
+ * @param fun 
+ */
+export function memoKeep(fun: EmptyFun) {
+  const oldCurrent = signalCache.currentFun //在memo时存在
+  const oldCurrentRelay = signalCache.currentRelay //在memo时存在
+  const oldOnUpdate = signalCache.onUpdate //在memo时是true
+  signalCache.currentFun = undefined
+  signalCache.currentRelay = undefined
+  signalCache.onUpdate = false
+  fun()
+  signalCache.onUpdate = oldOnUpdate
+  signalCache.currentFun = oldCurrent
+  signalCache.currentRelay = oldCurrentRelay
+}
+
 export function addEffect(effect: EmptyFun, level = 0) {
   beginCurrentBatch()
   const effects = signalCache.currentBatch!.effects
