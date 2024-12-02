@@ -131,7 +131,8 @@ export function splitClassNames(names: string) {
 
 import * as CSS from 'csstype';
 import { EmptyFun, FalseType, Point, SetValue, buildThrottle, quote, run } from 'wy-helper'
-export interface CSSProperties extends CSS.Properties<string | number> {
+export type PureCSSProperties = CSS.Properties<string | number>
+export interface CSSProperties extends PureCSSProperties {
   [key: `--${string}`]: string | number | undefined;
   /**
    * The index signature was removed to enable closed typing for style
