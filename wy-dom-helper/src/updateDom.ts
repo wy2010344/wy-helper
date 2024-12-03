@@ -1,41 +1,68 @@
 import { emptyObject, GetValue, objectDiffDeleteKey, run, SetValue, SyncFun } from "wy-helper"
-import { DomElementType, SvgElementType } from "./html"
+import { BDomAttribute, BDomEvent, BSvgAttribute, BSvgEvent, DomElementType, React, SvgElementType } from "./html"
 import { CSSProperties } from "./util"
+import { isEvent, mergeEvent } from "./fx"
 export type Props = { [key: string]: any }
-
-
-function mergeEvent(node: Node, key: string, oldValue: any, newValue?: any) {
-  let eventType = key.toLowerCase().substring(2)
-  let capture = false
-  if (eventType.endsWith(Capture)) {
-    eventType = eventType.slice(0, eventType.length - Capture.length)
-    capture = true
-  }
-  if (newValue) {
-    if (oldValue) {
-      node.removeEventListener(eventType, oldValue, capture)
-    }
-    node.addEventListener(eventType, newValue, capture)
-  } else {
-    node.removeEventListener(eventType, oldValue, capture)
-  }
-}
-
 
 function runAndDelete(map: any, key: string) {
   map[key]()
   delete map[key]
 }
-export interface UpdateFun<T> {
-  (set: SetValue<T>): void;
-  <A>(set: (t: T, a: A) => void, a: A): void;
-  <A, B>(set: (t: T, a: A, b: B) => void, a: A, b: B): void;
-  <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): void;
+/**
+ * 存在意义是什么???
+ */
+// export interface UpdateFun<T> {
+//   (set: SetValue<T>): void;
+//   <A>(set: (t: T, a: A) => void, a: A): void;
+//   <A, B>(set: (t: T, a: A, b: B) => void, a: A, b: B): void;
+//   <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): void;
+// }
+export type WithCenterMap<T extends {}> = {
+  [key in keyof T]: (T[key] | SyncFun<T[key]>)
 }
 
-export type WithCenterMap<T extends {}> = {
-  [key in keyof T]: (T[key] | SyncFun<T[key]> | UpdateFun<T[key]>)
+
+export type DataAttr = {
+  [key in `data-${string}`]?: string | number | boolean
 }
+
+
+
+
+
+export type DomAttribute<T extends DomElementType> = WithCenterMap<BDomAttribute<T>
+  & React.AriaAttributes
+  & DataAttr> & BDomEvent<T>
+
+export type DomAttributeS<T extends DomElementType> = DomAttribute<T> & {
+  style: WithCenterMap<CSSProperties>
+}
+
+export type DomAttributeSO<T extends DomElementType> = DomAttribute<T> & {
+  style?: string | SyncFun<string | undefined> | WithCenterMap<CSSProperties>
+}
+
+
+
+
+
+export type SvgAttribute<T extends SvgElementType> = WithCenterMap<BSvgAttribute<T>
+  & React.AriaAttributes
+  & DataAttr> & BSvgEvent<T>
+
+export type SvgAttributeS<T extends SvgElementType> = SvgAttribute<T> & {
+  style: WithCenterMap<CSSProperties>
+}
+
+export type SvgAttributeSO<T extends SvgElementType> = SvgAttribute<T> & {
+  style?: string | SyncFun<string | undefined> | WithCenterMap<CSSProperties>
+}
+
+
+
+
+
+
 
 export function updateStyle(
   node: Node & {
@@ -177,16 +204,6 @@ function setProp(v: string, node: any, key: string, updateProp: any) {
 
 function isSyncFun(n: any): n is SyncFun<any> {//是
   return typeof n == 'function'
-}
-const Capture = "capture"
-
-/**
- * 是否是事件
- * @param key 
- * @returns 
- */
-function isEvent(key: string) {
-  return key.startsWith("on")
 }
 /**
  * 是否是属性，非child且非事件

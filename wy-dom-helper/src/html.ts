@@ -24,6 +24,7 @@ Warning: all of these interfaces are empty. If you want type definitions for var
 // interface DataTransfer { }
 // interface StyleMedia { }
 
+
 // interface DocumentFragment { }
 
 
@@ -1874,3 +1875,4 @@ export type BSvgEvent<T extends SvgElementType> = SvgElements[T]['events']
 // export type SvgAttributeSO<T extends SvgElementType> = WithCenterMap<BSvgAttribute<T>> & React.DOMAttributes<SvgElement<T>> & {
 //   style?: WithCenterMap<CSSProperties>
 // }
+
