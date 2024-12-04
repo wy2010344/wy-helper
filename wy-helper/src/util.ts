@@ -77,6 +77,9 @@ export function createEmptyArray<T>() {
 }
 export const emptyObject = objectFreezeThrow({})
 
+export function createEmptyObject<T>() {
+  return {} as T
+}
 export function getTheEmptyObject<T>() {
   return emptyObject as T
 }

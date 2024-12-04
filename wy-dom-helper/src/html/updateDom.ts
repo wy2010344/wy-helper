@@ -1,7 +1,8 @@
 import { emptyObject, GetValue, objectDiffDeleteKey, run, SetValue, SyncFun } from "wy-helper"
 import { BDomAttribute, BDomEvent, BSvgAttribute, BSvgEvent, DomElementType, React, SvgElementType } from "./html"
-import { CSSProperties } from "./util"
+import { CSSProperties } from "../util"
 import { isEvent, mergeEvent } from "./fx"
+import { getAttributeAlias } from "../getAttributeAlias"
 export type Props = { [key: string]: any }
 
 function runAndDelete(map: any, key: string) {
@@ -123,26 +124,58 @@ function setStyleS(v: string | undefined, node: any) {
   node.style = v
 }
 
+
+const emptyKeys = ['href', 'className']
+function updateDomProps(node: any, key: string, value?: any) {
+  if (key.includes('-')) {
+    node.setAttribute(key, value)
+  } else {
+    if (emptyKeys.includes(key) && !value) {
+      node[key] = ''
+    } else {
+      node[key] = value
+    }
+  }
+}
+function updateSvgProps(node: any, key: string, value?: any) {
+  if (key == 'innerHTML' || key == 'textContent') {
+    updateDomProps(node, key, value)
+  } else {
+    if (key == 'className') {
+      node.setAttribute('class', value || '')
+    } else {
+      key = getAttributeAlias(key)
+      if (value) {
+        node.setAttribute(key, value)
+      } else {
+        node.removeAttribute(key)
+      }
+    }
+  }
+}
+
+export type DomType = "svg" | "dom"
 /**
  * 更新节点
  * @param dom 
  * @param oldProps 
  * @param props 
  */
-export function updateDom(
+export function mergeDomAttr(
   node: Node,
-  updateProp: (node: Node, key: string, value?: any) => void,
   props: Props,
   oldProps: Props,
   /**最后销毁绑定*/
-  keepMap: Props
+  keepMap: Props,
+  type: DomType
 ) {
+  const updateProps = type == 'svg' ? updateSvgProps : updateDomProps
   //移除旧事件：新属性中不存在相应事件，或者事件不一样
   objectDiffDeleteKey(oldProps, props, function (key: string) {
     if (isEvent(key)) {
       mergeEvent(node, key, oldProps[key])
     } else if (isProperty(key)) {
-      updateProp(node, key, undefined)
+      updateProps(node, key, undefined)
       const del = keepMap[key]
       if (del) {
         //如果存在,则销毁
@@ -188,9 +221,9 @@ export function updateDom(
           runAndDelete(keepMap, key)
         }
         if (isSyncFun(value)) {
-          keepMap[key] = value(setProp, node, key, updateProp)
+          keepMap[key] = value(setProp, node, key, updateProps)
         } else {
-          updateProp(node, key, value)
+          updateProps(node, key, value)
         }
       }
     }
@@ -202,7 +235,7 @@ function setProp(v: string, node: any, key: string, updateProp: any) {
   updateProp(node, key, v)
 }
 
-function isSyncFun(n: any): n is SyncFun<any> {//是
+export function isSyncFun(n: any): n is SyncFun<any> {//是
   return typeof n == 'function'
 }
 /**
@@ -210,7 +243,7 @@ function isSyncFun(n: any): n is SyncFun<any> {//是
  * @param key 
  * @returns 
  */
-function isProperty(key: string) {
+export function isProperty(key: string) {
   if (key == 'children' || key == 'ref' || key == 'key') {
     //兼容考虑tsx里的情形
     return false

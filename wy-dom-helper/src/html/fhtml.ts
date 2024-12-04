@@ -1,9 +1,10 @@
 
 
-import { GetValue, SetValue } from "wy-helper";
-import { PureCSSProperties } from "./util";
+import { emptyFun, GetValue, objectDiffDeleteKey, SetValue, SyncFun } from "wy-helper";
+import { PureCSSProperties } from "../util";
 import { DomElementType, React, SvgElementType } from "./html";
-import { addEvent, FDomAttributeC, FSvgAttributeC, isEvent, setClassName, setHtml, setText, updateAttr, updateCssVariable, updateDataSet, updateDom, updateStyle, updateSvg } from "./fx";
+import { addEvent, FDomAttributeC, FSvgAttributeC, isEvent, mergeEvent, setClassName, setHtml, setText, updateAttr, updateCssVariable, updateDataSet, updateDom, updateStyle, updateSvg } from "./fx";
+import { DomType, isProperty, isSyncFun, Props } from "./updateDom";
 
 type FDataAttr = {
   [key in `data_${string}`]?: string | number | boolean
@@ -54,7 +55,7 @@ export type FSvgAttribute<T extends SvgElementType> = {
   & FStyleProps
   & FCssVaribute
 
-export type FChildAttr<T> = {
+export type FGetChildAttr<T> = {
   childrenType: "text"
   children: string | GetValue<string>
 } | {
@@ -66,6 +67,16 @@ export type FChildAttr<T> = {
 }
 
 
+export type FChildAttr<T> = {
+  childrenType: "text"
+  children: string | SyncFun<string>
+} | {
+  childrenType: "html"
+  children: string | SyncFun<string>
+} | {
+  childrenType?: never
+  children?: SetValue<T>
+}
 
 export interface MergeValue {
   (
@@ -90,7 +101,7 @@ const CSS_PREFIX = "css_"
 export function renderFNodeAttr(
   node: Node,
   arg: any,
-  type: "svg" | "dom",
+  type: DomType,
   mergeValue: MergeValue,
   renderPortal: (n: Node, children: SetValue<Node>) => void
 ) {
@@ -125,4 +136,87 @@ export function renderFNodeAttr(
   } else if (arg.children) {
     renderPortal(node, arg.children)
   }
+}
+
+export const mergeValueDes: MergeValue = function (node, value, setValue) {
+  const ext = arguments[3]
+  if (isSyncFun(value)) {
+    return value(setValue, node, ext)
+  } else {
+    setValue(value, node, ext)
+  }
+}
+export const mergeValueSkipDes: MergeValue = function (node, value, setValue) {
+  const ext = arguments[3]
+  if (isSyncFun(value)) {
+    return value(setValue, node, ext)
+  }
+}
+function updateProp(
+  node: any,
+  key: string,
+  value: any,
+  oldDes: any,
+  updateMAttr: (value: any, node: any, key: string) => void,
+  mergeValueDes: MergeValue
+) {
+  oldDes[key]?.()
+  if (key == 'className') {
+    oldDes[key] = mergeValueDes(node, value, setClassName)
+  } else if (key.startsWith(ATTR_PREFIX)) {
+    const attrKey = key.slice(ATTR_PREFIX.length)
+    oldDes[key] = mergeValueDes(node, value, updateMAttr, attrKey)
+  } else if (key.startsWith(DATA_PREFIX)) {
+    const dataAttr = key.slice(DATA_PREFIX.length)
+    oldDes[key] = mergeValueDes(node, value, updateDataSet, dataAttr)
+  } else if (key.startsWith(ARIA_PREFIX)) {
+    const ariaKey = key.slice(ARIA_PREFIX.length)
+    oldDes[key] = mergeValueDes(node, value, updateAttr, `aria-${ariaKey}`)
+  } else if (key.startsWith(S_PREFIX)) {
+    const styleKey = key.slice(S_PREFIX.length)
+    oldDes[key] = mergeValueDes(node, value, updateStyle, styleKey)
+  } else if (key.startsWith(CSS_PREFIX)) {
+    const cssVariable = key.slice(CSS_PREFIX.length)
+    oldDes[key] = mergeValueDes(node, value, updateCssVariable, `--${cssVariable}`)
+  }
+}
+
+export function mergeFNodeAttr(
+  node: Node,
+  attrs: Props,
+  oldAttrs: Props,
+  oldDes: any,
+  type: DomType,
+  /**
+   * 专为react的事件合并
+   */
+  skipEvent?: boolean
+
+) {
+  let mevent = mergeEvent
+  let mergeValue = mergeValueDes
+  if (skipEvent) {
+    mevent = emptyFun
+    mergeValue = mergeValueSkipDes
+  }
+  const updateMAttr = type == 'svg' ? updateSvg : updateDom
+  objectDiffDeleteKey(oldAttrs, attrs, function (key) {
+    if (isEvent(key)) {
+      mevent(node, key, oldAttrs[key])
+    } else {
+      updateProp(node, key, undefined, oldDes, updateMAttr, mergeValue)
+    }
+  })
+  for (const key in attrs) {
+    const value = attrs[key]
+    const oldValue = oldAttrs[key]
+    if (value != oldValue) {
+      if (isEvent(key)) {
+        mevent(node, key, oldAttrs[key], attrs[key])
+      } else {
+        updateProp(node, key, value, oldDes, updateMAttr, mergeValue)
+      }
+    }
+  }
+  return oldDes
 }
