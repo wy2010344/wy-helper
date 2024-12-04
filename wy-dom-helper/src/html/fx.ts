@@ -1,4 +1,4 @@
-import { getAttributeAlias } from "./getAttributeAlias"
+import { getAttributeAlias } from "../getAttributeAlias"
 import { BDomAttribute, BSvgAttribute, DomElementType, SvgElementType } from "./html"
 
 export type FDomAttributeC<T extends DomElementType> = Omit<BDomAttribute<T>, 'className'>
