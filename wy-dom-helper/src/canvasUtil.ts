@@ -127,9 +127,6 @@ export type Path2DOperate = {
   style: CanvasStyle,
   rule?: CanvasFillRule
 } | {
-  type: "clip",
-  rule?: CanvasFillRule
-} | {
   type: "draw"
   callback(ctx: CanvasRenderingContext2D): void
 }
@@ -151,9 +148,6 @@ export function path2DOperate(ctx: CanvasRenderingContext2D, path: Path2D, ops: 
           ctx.stroke(path)
         }
       }
-    } else if (op.type == 'clip') {
-      //会依之前的stroke范围
-      ctx.clip(path, op.rule)
     } else if (op.type == 'draw') {
       op.callback(ctx)
     }
