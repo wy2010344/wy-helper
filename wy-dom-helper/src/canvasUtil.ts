@@ -58,7 +58,7 @@ export function roundRectInline(a: RoundedRectParam, s: number, y: number) {
 
 
 
-function getCanvasStyle(ctx: CanvasRenderingContext2D, v: CanvasStyle) {
+export function getCanvasStyle(ctx: CanvasRenderingContext2D, v: CanvasStyle) {
   if (typeof v == 'string') {
     return v
   } else if (v.type == 'pattern') {

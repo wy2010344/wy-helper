@@ -1,7 +1,7 @@
 import { Compare, simpleNotEqual } from "./equal";
 import { GetValue, SetValue } from "./setStateHelper";
 import { StoreRef } from "./storeRef";
-import { asLazy, EmptyFun, iterableToList, messageChannelCallback, run } from "./util";
+import { asLazy, EmptyFun, iterableToList, messageChannelCallback, numberSortAsc, run } from "./util";
 
 
 const m = globalThis as any
@@ -122,6 +122,7 @@ export interface SyncFun<T> {
   <A, B>(set: (t: T, a: A, b: B) => void, a: A, b: B): EmptyFun;
   <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): EmptyFun;
 }
+
 export function batchSignalEnd() {
   const currentBatch = signalCache.currentBatch
   if (currentBatch) {
@@ -134,7 +135,7 @@ export function batchSignalEnd() {
     listeners.clear()
 
     const effects = currentBatch.effects
-    const keys = iterableToList(effects.keys()).sort()
+    const keys = iterableToList(effects.keys()).sort(numberSortAsc)
     for (const key of keys) {
       effects.get(key)?.forEach(run)
     }

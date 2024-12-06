@@ -370,6 +370,12 @@ export function trueAndS(a: any, left: string, right = '') {
 }
 
 
+export function numberSortAsc(a: number, b: number) {
+  return a - b
+}
+export function numberSortDesc(a: number, b: number) {
+  return b - a
+}
 /**
  * ({ x: "ax" } | { x: "cc" }) & { y: 99 };
  * 转化成
