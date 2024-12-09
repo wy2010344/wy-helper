@@ -37,8 +37,8 @@ export function memoKeep(fun: EmptyFun) {
   const oldCurrentRelay = signalCache.currentRelay //在memo时存在
   const oldOnUpdate = signalCache.onUpdate //在memo时是true
   signalCache.currentFun = undefined
-  signalCache.currentRelay = undefined
   signalCache.onUpdate = false
+  signalCache.currentRelay = undefined
   fun()
   signalCache.onUpdate = oldOnUpdate
   signalCache.currentFun = oldCurrent

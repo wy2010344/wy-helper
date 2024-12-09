@@ -1,7 +1,7 @@
 import { arrayFunToOneOrEmpty } from "../ArrayHelper"
 import { ReducerDispatch, ReducerWithDispatchResult, createReduceValueCenter, mapReducerDispatch } from "../ValueCenter"
 import { EmptyFun, emptyFun, objectFreeze, quote } from "../util"
-import { VersionPromiseResult, createAbortController } from "./buildSerialRequestSingle"
+import { VersionPromiseResult, createAbortController, hookSetAbortSignal } from "./buildSerialRequestSingle"
 
 /**
  * 如果使用valueCenter的reducer,将其集中到一个更大的状态
@@ -30,12 +30,15 @@ export class PromiseStopCall<T> {
     return this
   }
   reload(
-    getFun: (abortSignal?: AbortSignal) => Promise<T>
+    getFun: () => Promise<T>
   ) {
     const lc = this.lastCancel
     const act: ReducerDispatch<VersionPromiseResult<T>> = function (dispatch) {
       lc()
-      getFun(c.signal).then(value => {
+      hookSetAbortSignal(c.signal)
+      const p = getFun()
+      hookSetAbortSignal()
+      p.then(value => {
         dispatch({
           type: "success",
           value,
@@ -79,7 +82,7 @@ export class PromiseStopCall<T> {
 
 export type PromiseStopCallAction<T> = {
   type: "reload",
-  getFun(abortSignal?: AbortSignal): Promise<T>
+  getFun(): Promise<T>
 } | {
   type: "reloadBack"
   value: VersionPromiseResult<T>
@@ -122,7 +125,7 @@ export class PromiseAutoLoadMore<T, K> {
       loadMoreError?: any
       hasMore: boolean
     }>,
-    private readonly getFun: ((k: K, abort?: AbortSignal) => Promise<AutoLoadMoreCore<T, K>>) | undefined = undefined,
+    private readonly getFun: ((k: K) => Promise<AutoLoadMoreCore<T, K>>) | undefined = undefined,
     private readonly getKey: (n: T) => any = quote,
     public readonly isLoadingMore = false,
     private readonly loadMoreCancel = emptyFun
@@ -131,13 +134,13 @@ export class PromiseAutoLoadMore<T, K> {
   }
   static empty = new PromiseAutoLoadMore()
   reload(
-    getFun: (k: K, abort?: AbortSignal) => Promise<AutoLoadMoreCore<T, K>>,
+    getFun: (k: K) => Promise<AutoLoadMoreCore<T, K>>,
     first: K,
     getKey: (v: T) => any = quote
   ) {
     const that = this
-    const [data, act] = this.data.reload(function (signal) {
-      return getFun(first, signal)
+    const [data, act] = this.data.reload(function () {
+      return getFun(first)
     })
     return [
       new PromiseAutoLoadMore(
@@ -190,7 +193,10 @@ export class PromiseAutoLoadMore<T, K> {
     const that = this
 
     list.push(function (dispatch) {
-      that.getFun!(that.data.data!.value.nextKey, c.signal).then(value => {
+      hookSetAbortSignal(c.signal)
+      const p = that.getFun!(that.data.data!.value.nextKey)
+      hookSetAbortSignal()
+      p.then(value => {
         dispatch({
           value,
           version,
@@ -275,12 +281,10 @@ export class PromiseAutoLoadMore<T, K> {
 
 
   refresh(
-    getFun: (abort?: AbortSignal) => Promise<AutoLoadMoreCore<T, K>>
+    getFun: () => Promise<AutoLoadMoreCore<T, K>>
   ) {
     const that = this
-    const [data, act] = this.data.reload(function (signal) {
-      return getFun(signal)
-    })
+    const [data, act] = this.data.reload(getFun)
     return [
       new PromiseAutoLoadMore(
         data,
@@ -301,7 +305,7 @@ export class PromiseAutoLoadMore<T, K> {
 export type AutoLoadMoreAction<T, K> =
   {
     type: "reload";
-    getAfter(k: K, abort?: AbortSignal): Promise<AutoLoadMoreCore<T, K>>
+    getAfter(k: K): Promise<AutoLoadMoreCore<T, K>>
     first: K
     getKey?(v: T): any
   } | {
@@ -315,7 +319,7 @@ export type AutoLoadMoreAction<T, K> =
     value: VersionPromiseResult<AutoLoadMoreCore<T, K>>
   } | {
     type: "refersh",
-    call(abort?: AbortSignal): Promise<AutoLoadMoreCore<T, K>>
+    call(): Promise<AutoLoadMoreCore<T, K>>
   }
   | Update<T>;
 
