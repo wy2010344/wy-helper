@@ -14,7 +14,7 @@ export type PromiseResultSuccessValue<T> = T extends {
   type: "success"
   value: infer V
 } ? V : never
-export type GetPromiseRequest<T> = (signal?: AbortSignal, ...vs: any[]) => Promise<T>;
+export type GetPromiseRequest<T> = () => Promise<T>;
 
 
 export type VersionPromiseResult<T> = Flatten<PromiseResult<T> & {
@@ -32,7 +32,10 @@ export type RequestVersionPromiseFinally<T> = (data: RequestVersionPromiseReulst
 
 export function createRequestPromise<T>(request: GetPromiseRequest<T>, onFinally: RequestPromiseFinally<T>) {
   const signal = createAbortController();
-  request(signal.signal).then(data => {
+  hookSetAbortSignal(signal.signal)
+  const promise = request()
+  hookSetAbortSignal()
+  promise.then(data => {
     onFinally({ type: "success", value: data, request })
   }).catch(err => {
     onFinally({ type: "error", value: err, request })
@@ -40,6 +43,15 @@ export function createRequestPromise<T>(request: GetPromiseRequest<T>, onFinally
   return signal.cancel
 }
 
+const w = globalThis as {
+  __abort_signal__?: AbortSignal
+}
+export function hookSetAbortSignal(signal?: AbortSignal) {
+  w.__abort_signal__ = signal
+}
+export function hookGetAbortSignal() {
+  return w.__abort_signal__
+}
 export type OnVersionPromiseFinally<T> = (
   data: VersionPromiseResult<T>,
   ...vs: any[]

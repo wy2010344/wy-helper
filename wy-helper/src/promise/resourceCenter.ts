@@ -1,7 +1,7 @@
 import { PromiseWait, rejectAll, resolveAll } from "../observerCenter";
 import { getOutResolvePromise } from "../setStateHelper";
 import { valueCenterOf } from "../ValueCenter";
-import { createAndFlushAbortController } from "./buildSerialRequestSingle";
+import { createAndFlushAbortController, hookSetAbortSignal } from "./buildSerialRequestSingle";
 
 /**
  * 始终依最新的请求,旧请求将被cancel掉
@@ -11,8 +11,7 @@ import { createAndFlushAbortController } from "./buildSerialRequestSingle";
  * @returns 
  */
 export function resourceCenter<A, D>(callback: (
-  arg: A,
-  signal?: AbortSignal
+  arg: A
 ) => Promise<D>, init: D) {
   const valueCenter = valueCenterOf(init)
   const list: PromiseWait<D>[] = []
@@ -20,20 +19,21 @@ export function resourceCenter<A, D>(callback: (
   let uidVersion = 1
   return [valueCenter.readonly(), function (arg: A) {
     const version = uidVersion++
-    callback(arg, flushAbort())
-      .then(value => {
-        if (version == uidVersion) {
-          valueCenter.set(value)
-          resolveAll(list, value)
-          list.length = 0
-        }
-      })
-      .catch(err => {
-        if (version == uidVersion) {
-          rejectAll(list, err)
-          list.length = 0
-        }
-      })
+    hookSetAbortSignal(flushAbort())
+    const p = callback(arg)
+    hookSetAbortSignal()
+    p.then(value => {
+      if (version == uidVersion) {
+        valueCenter.set(value)
+        resolveAll(list, value)
+        list.length = 0
+      }
+    }).catch(err => {
+      if (version == uidVersion) {
+        rejectAll(list, err)
+        list.length = 0
+      }
+    })
     const [promise, resolve, reject] = getOutResolvePromise<D>()
     list.push({
       resolve,
