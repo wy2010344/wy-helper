@@ -21,33 +21,37 @@ type CurrentBatch = {
 }
 
 const signalCache = m[DepKey] as {
-  currentFun?: EmptyFun | undefined,
+  currentFun?: EmptyFun
   currentBatch?: CurrentBatch
+  //在更新期间,放置effects
+  currentEffects?: Map<number, EmptyFun[]>
   recycleBatches: CurrentBatch[]
-  onUpdate?: boolean
   currentRelay?: Map<GetValue<any>, any>
 }
 
 /**
  * 在memo里执行
+ * 方便构造时新建立观察
  * @param fun 
  */
 export function memoKeep(fun: EmptyFun) {
   const oldCurrent = signalCache.currentFun //在memo时存在
   const oldCurrentRelay = signalCache.currentRelay //在memo时存在
-  const oldOnUpdate = signalCache.onUpdate //在memo时是true
   signalCache.currentFun = undefined
-  signalCache.onUpdate = false
   signalCache.currentRelay = undefined
   fun()
-  signalCache.onUpdate = oldOnUpdate
   signalCache.currentFun = oldCurrent
   signalCache.currentRelay = oldCurrentRelay
 }
 
 export function addEffect(effect: EmptyFun, level = 0) {
-  beginCurrentBatch()
-  const effects = signalCache.currentBatch!.effects
+  let effects: Map<number, EmptyFun[]>
+  if (signalCache.currentEffects) {
+    effects = signalCache.currentEffects
+  } else {
+    beginCurrentBatch()
+    effects = signalCache.currentBatch!.effects
+  }
   let olds = effects.get(level)
   if (!olds) {
     olds = []
@@ -86,6 +90,10 @@ export function createSignal<T>(value: T, shouldChange: Compare<T> = simpleNotEq
       if (signalCache.currentFun) {
         throw '计算期间不允许修改值'
       }
+      if (signalCache.currentEffects) {
+        //forEach的构造,不能直接set值
+        throw '计算期间不允许修改值'
+      }
       if (shouldChange(newValue, value)) {
         value = newValue
         beginCurrentBatch()
@@ -108,14 +116,6 @@ function beginCurrentBatch() {
     messageChannelCallback(batchSignalEnd)
   }
 }
-
-function checkUpdate() {
-  if (signalCache.onUpdate) {
-    throw "更新期间重复更新"
-  }
-  signalCache.onUpdate = true
-}
-
 export interface SyncFun<T> {
   (set: SetValue<T>): EmptyFun;
   <A>(set: (t: T, a: A) => void, a: A): EmptyFun;
@@ -124,15 +124,18 @@ export interface SyncFun<T> {
 }
 
 export function batchSignalEnd() {
+  if (signalCache.currentEffects) {
+    console.warn("更新期间重复更新")
+    return
+  }
   const currentBatch = signalCache.currentBatch
   if (currentBatch) {
     signalCache.currentBatch = undefined
-    checkUpdate()
-
+    signalCache.currentEffects = currentBatch.effects
     const listeners = currentBatch.listeners
     listeners.forEach(run)
-    signalCache.onUpdate = undefined
     listeners.clear()
+    signalCache.currentEffects = undefined
 
     const effects = currentBatch.effects
     const keys = iterableToList(effects.keys()).sort(numberSortAsc)

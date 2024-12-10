@@ -489,6 +489,7 @@ export namespace React {
   }
 
   export interface FormEvent<T = Element> extends SyntheticEvent<T> {
+    isComposing: boolean
   }
 
   interface InvalidEvent<T = Element> extends SyntheticEvent<T> {
