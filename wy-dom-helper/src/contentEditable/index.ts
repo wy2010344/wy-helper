@@ -217,6 +217,9 @@ export function fixScroll(div: HTMLElement, current: EditRecord) {
   div.scrollTop = current.scrollTop
   div.scrollLeft = current.scrollLeft
   // 获取光标位置
+  if (!selection.rangeCount) {
+    return
+  }
   const range = selection.getRangeAt(0);
   const rgag = range.endContainer == div ? div.lastElementChild : range
   if (rgag) {
