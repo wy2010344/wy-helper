@@ -62,7 +62,8 @@ export class KVPair<T> {
 
 export function kvPair<T>(
   key: string,
-  value: T
+  value: T,
+  parent?: KVPair<T>
 ) {
-  return new KVPair(key, value)
+  return new KVPair(key, value, parent)
 }
