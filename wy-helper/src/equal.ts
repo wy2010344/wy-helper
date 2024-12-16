@@ -24,11 +24,6 @@ export function arrayEqual<T>(a1: readonly T[], a2: readonly T[], equal: (x: T, 
   return false
 }
 
-
-export function arrayNotEqual(a: readonly any[], b: readonly any[]) {
-  return !arrayEqual(a, b, simpleEqual)
-}
-
 /**
  * 两个单值相同,不变更,
  * 两个数组相同,不变更

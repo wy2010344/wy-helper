@@ -1,6 +1,6 @@
 import { AnimateFrameValue, GetDeltaXAnimationConfig } from "./animation"
 import { GetValue } from "./setStateHelper"
-import { trackSignal } from "./signal"
+import { addEffect, trackSignal } from "./signal"
 
 export function createAnimateSignal(
   create: (v: number) => AnimateFrameValue,
@@ -11,8 +11,10 @@ export function createAnimateSignal(
   const destroy = trackSignal(get, v => {
     const to = value.getTargetValue()
     if (to != v) {
-      value.changeTo(v, config, {
-        from: to
+      addEffect(() => {
+        value.changeTo(v, config, {
+          from: to
+        })
       })
     }
   })
