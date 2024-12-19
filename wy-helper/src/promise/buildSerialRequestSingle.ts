@@ -36,8 +36,14 @@ export function createRequestPromise<T>(request: GetPromiseRequest<T>, onFinally
   const promise = request()
   hookSetAbortSignal()
   promise.then(data => {
+    if (signal.canceled) {
+      return
+    }
     onFinally({ type: "success", value: data, request })
   }).catch(err => {
+    if (signal.canceled) {
+      return
+    }
     onFinally({ type: "error", value: err, request })
   })
   return signal.cancel
@@ -59,8 +65,12 @@ export type OnVersionPromiseFinally<T> = (
 export function createAbortController() {
   if ("AbortController" in globalThis) {
     const signal = new AbortController();
-    return {
+    signal.signal.addEventListener("abort", e => {
+      r.canceled = true
+    })
+    const r = {
       signal: signal.signal,
+      canceled: false,
       cancel() {
         try {
           const out: any = signal.abort();
@@ -70,9 +80,11 @@ export function createAbortController() {
         } catch (err) { }
       },
     };
+    return r
   }
   return {
     signal: undefined,
+    canceled: false,
     cancel: emptyFun,
   };
 }
