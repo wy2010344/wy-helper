@@ -1,4 +1,4 @@
-import { ReduceState, SetValue } from "../setStateHelper"
+import { GetValue, ReduceState, SetValue } from "../setStateHelper"
 import { StoreRef } from "../storeRef"
 import { EmptyFun, FalseType, Flatten, emptyFun, messageChannelCallback, objectFreeze, run, supportMicrotask } from "../util"
 
@@ -29,31 +29,34 @@ export type RequestPromiseFinally<T> = (data: RequestPromiseResult<T>, ...vs: an
 export type RequestVersionPromiseReulst<T> = Flatten<RequestPromiseResult<T> & VersionPromiseResult<T>>
 export type RequestVersionPromiseFinally<T> = (data: RequestVersionPromiseReulst<T>, ...vs: any[]) => void
 
-
-export function createRequestPromise<T>(request: GetPromiseRequest<T>, onFinally: RequestPromiseFinally<T>) {
-  const signal = createAbortController();
-  hookSetAbortSignal(signal.signal)
-  const promise = request()
-  hookSetAbortSignal()
-  promise.then(data => {
-    if (signal.canceled) {
-      return
-    }
-    onFinally({ type: "success", value: data, request })
-  }).catch(err => {
-    if (signal.canceled) {
-      return
-    }
-    onFinally({ type: "error", value: err, request })
-  })
-  return signal.cancel
-}
-
 const w = globalThis as {
   __abort_signal__?: AbortSignal
 }
-export function hookSetAbortSignal(signal?: AbortSignal) {
+export function hookAbortSignalPromise<T>(
+  signal: AbortSignal,
+  fun: GetValue<Promise<T>>,
+  callback: SetValue<PromiseResult<T>>
+) {
   w.__abort_signal__ = signal
+  const p = fun()
+  w.__abort_signal__ = undefined
+  p.then(v => {
+    if (signal?.aborted) {
+      return
+    }
+    callback({
+      type: "success",
+      value: v
+    })
+  }).catch(err => {
+    if (signal?.aborted) {
+      return
+    }
+    callback({
+      type: "error",
+      value: err
+    })
+  })
 }
 export function hookGetAbortSignal() {
   return w.__abort_signal__
@@ -62,41 +65,16 @@ export type OnVersionPromiseFinally<T> = (
   data: VersionPromiseResult<T>,
   ...vs: any[]
 ) => void
-export function createAbortController() {
-  if ("AbortController" in globalThis) {
-    const signal = new AbortController();
-    signal.signal.addEventListener("abort", e => {
-      r.canceled = true
-    })
-    const r = {
-      signal: signal.signal,
-      canceled: false,
-      cancel() {
-        try {
-          const out: any = signal.abort();
-          if (out instanceof Promise) {
-            out.catch(emptyFun)
-          }
-        } catch (err) { }
-      },
-    };
-    return r
-  }
-  return {
-    signal: undefined,
-    canceled: false,
-    cancel: emptyFun,
-  };
-}
-
 
 export function createAndFlushAbortController() {
-  let last: EmptyFun = emptyFun
-  return function () {
-    const controller = createAbortController()
-    last()
-    last = controller.cancel
-    return controller.signal
+  let last: AbortController | undefined = undefined
+  let lastSet: SetValue<boolean> = emptyFun
+  return function (setValue: SetValue<boolean> = emptyFun) {
+    last?.abort()
+    lastSet(false)
+    last = new AbortController()
+    lastSet = setValue
+    return last.signal
   }
 }
 

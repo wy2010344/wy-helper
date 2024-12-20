@@ -1,7 +1,7 @@
 import { PromiseWait, rejectAll, resolveAll } from "../observerCenter";
 import { getOutResolvePromise } from "../setStateHelper";
 import { valueCenterOf } from "../ValueCenter";
-import { createAndFlushAbortController, hookSetAbortSignal } from "./buildSerialRequestSingle";
+import { createAndFlushAbortController, hookAbortSignalPromise } from "./buildSerialRequestSingle";
 
 /**
  * 始终依最新的请求,旧请求将被cancel掉
@@ -19,18 +19,16 @@ export function resourceCenter<A, D>(callback: (
   let uidVersion = 1
   return [valueCenter.readonly(), function (arg: A) {
     const version = uidVersion++
-    hookSetAbortSignal(flushAbort())
-    const p = callback(arg)
-    hookSetAbortSignal()
-    p.then(value => {
+    hookAbortSignalPromise(flushAbort(), () => {
+      return callback(arg)
+    }, function (value) {
       if (version == uidVersion) {
-        valueCenter.set(value)
-        resolveAll(list, value)
-        list.length = 0
-      }
-    }).catch(err => {
-      if (version == uidVersion) {
-        rejectAll(list, err)
+        if (value.type == 'success') {
+          valueCenter.set(value.value)
+          resolveAll(list, value.value)
+        } else {
+          rejectAll(list, value.value)
+        }
         list.length = 0
       }
     })

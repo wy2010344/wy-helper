@@ -3,7 +3,7 @@ import { GetValue } from "./setStateHelper";
 
 export type NullType = undefined | null | void;
 /**6种情况为false,NaN是数字类型*/
-export type FalseType = false | 0 | "" | NullType
+export type FalseType = false | 0 | 0n | "" | NullType
 export type EmptyFun = (...vs: any[]) => void
 export type Quote<T> = (v: T, ...vs: any[]) => T
 export function quote<T>(v: T, ...vs: any[]) { return v }
