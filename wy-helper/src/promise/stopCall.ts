@@ -1,7 +1,7 @@
 import { arrayFunToOneOrEmpty } from "../ArrayHelper"
 import { ReducerDispatch, ReducerWithDispatchResult, createReduceValueCenter, mapReducerDispatch } from "../ValueCenter"
-import { EmptyFun, emptyFun, objectFreeze, quote } from "../util"
-import { VersionPromiseResult, createAbortController, hookSetAbortSignal } from "./buildSerialRequestSingle"
+import { objectFreeze, quote } from "../util"
+import { VersionPromiseResult, hookAbortSignalPromise } from "./buildSerialRequestSingle"
 
 /**
  * 如果使用valueCenter的reducer,将其集中到一个更大的状态
@@ -10,7 +10,7 @@ import { VersionPromiseResult, createAbortController, hookSetAbortSignal } from 
 export class PromiseStopCall<T> {
   constructor(
     public readonly requestVersion: number = 0,
-    private readonly lastCancel: EmptyFun = emptyFun,
+    readonly abortController: AbortController | undefined = undefined,
     public readonly data?: Readonly<VersionPromiseResult<T>>
   ) {
     objectFreeze(this)
@@ -23,7 +23,7 @@ export class PromiseStopCall<T> {
     if (value.version == this.requestVersion) {
       return new PromiseStopCall(
         this.requestVersion,
-        emptyFun,
+        undefined,
         value
       )
     }
@@ -32,33 +32,22 @@ export class PromiseStopCall<T> {
   reload(
     getFun: () => Promise<T>
   ) {
-    const lc = this.lastCancel
+    const lc = this.abortController
     const act: ReducerDispatch<VersionPromiseResult<T>> = function (dispatch) {
-      lc()
-      hookSetAbortSignal(c.signal)
-      const p = getFun()
-      hookSetAbortSignal()
-      p.then(value => {
-        dispatch({
-          type: "success",
-          value,
-          version
-        })
-      }).catch(err => {
-        dispatch({
-          type: "error",
-          value: err,
-          version
-        })
+      lc?.abort()
+      hookAbortSignalPromise(c.signal, getFun, value => {
+        const v = value as VersionPromiseResult<T>
+        v.version = version
+        dispatch(v)
       })
     }
 
     const version = this.requestVersion + 1
-    const c = createAbortController()
+    const c = new AbortController()
     return [
       new PromiseStopCall(
         version,
-        c.cancel,
+        c,
         this.data
       ),
       act
@@ -69,7 +58,7 @@ export class PromiseStopCall<T> {
     if (this.data?.type == 'success') {
       return new PromiseStopCall(
         this.requestVersion,
-        this.lastCancel,
+        this.abortController,
         {
           ...this.data,
           value: fun(this.data.value)
@@ -128,7 +117,7 @@ export class PromiseAutoLoadMore<T, K> {
     private readonly getFun: ((k: K) => Promise<AutoLoadMoreCore<T, K>>) | undefined = undefined,
     private readonly getKey: (n: T) => any = quote,
     public readonly isLoadingMore = false,
-    private readonly loadMoreCancel = emptyFun
+    readonly loadMoreAbortController: AbortController | undefined = undefined
   ) {
     objectFreeze(this)
   }
@@ -147,11 +136,10 @@ export class PromiseAutoLoadMore<T, K> {
         data,
         getFun,
         getKey,
-        false,
-        emptyFun
+        false
       ),
       function (dispatch) {
-        that.loadMoreCancel()
+        that.loadMoreAbortController?.abort()
         act(dispatch)
       } as typeof act
     ] as const
@@ -165,8 +153,7 @@ export class PromiseAutoLoadMore<T, K> {
       u,
       this.getFun,
       this.getKey,
-      false,
-      emptyFun
+      false
     )
   }
 
@@ -189,25 +176,16 @@ export class PromiseAutoLoadMore<T, K> {
     if (!this.data.data.value.hasMore) {
       return this
     }
-    const c = createAbortController()
+    const c = new AbortController()
     const that = this
 
     list.push(function (dispatch) {
-      hookSetAbortSignal(c.signal)
-      const p = that.getFun!(that.data.data!.value.nextKey)
-      hookSetAbortSignal()
-      p.then(value => {
-        dispatch({
-          value,
-          version,
-          type: "success"
-        })
-      }).catch(err => {
-        dispatch({
-          value: err,
-          version,
-          type: "error"
-        })
+      hookAbortSignalPromise(c.signal, () => {
+        return that.getFun!(that.data.data!.value.nextKey)
+      }, value => {
+        const v = value as VersionPromiseResult<AutoLoadMoreCore<T, K>>
+        v.version = version
+        dispatch(v)
       })
     })
     return new PromiseAutoLoadMore(
@@ -215,7 +193,7 @@ export class PromiseAutoLoadMore<T, K> {
       this.getFun,
       this.getKey,
       true,
-      c.cancel
+      c
     )
   }
   loadMore(
@@ -254,8 +232,7 @@ export class PromiseAutoLoadMore<T, K> {
       }),
       this.getFun,
       this.getKey,
-      undefined,
-      emptyFun
+      undefined
     )
   }
 
@@ -273,7 +250,7 @@ export class PromiseAutoLoadMore<T, K> {
           this.getFun,
           this.getKey,
           this.isLoadingMore,
-          this.loadMoreCancel)
+          this.loadMoreAbortController)
       }
     }
     return this
@@ -290,11 +267,10 @@ export class PromiseAutoLoadMore<T, K> {
         data,
         this.getFun,
         this.getKey,
-        false,
-        emptyFun
+        false
       ),
       function (dispatch) {
-        that.loadMoreCancel()
+        that.loadMoreAbortController?.abort()
         act(dispatch)
       } as typeof act
     ] as const

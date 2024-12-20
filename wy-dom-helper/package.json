@@ -30,7 +30,9 @@
   ],
   "scripts": {
     "build": "tsc && vite build",
-    "prepare": "yarn build"
+    "prepare": "yarn build",
+    "ts": "tsc --noEmit --incremental --skipLibCheck",
+    "ts:watch": "yarn ts --watch"
   },
   "devDependencies": {
     "@types/node": "^20.14.7",
@@ -38,7 +40,7 @@
     "typescript": "^5.2.2",
     "vite": "^5.3.1",
     "vite-plugin-dts": "^3.9.1",
-    "wy-helper": "^0.1.9"
+    "wy-helper": "file:.yalc/wy-helper"
   },
   "peerDependencies": {
     "wy-helper": "^0.1.9"

@@ -1,7 +1,7 @@
 {
   "name": "wy-helper",
   "author": "wy2010344",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "license": "MIT",
   "typings": "dist/index.d.ts",
   "module": "dist/index.mjs",
@@ -53,7 +53,9 @@
   ],
   "scripts": {
     "build": "tsc && vite build",
-    "prepare": "yarn build"
+    "prepare": "yarn build",
+    "ts": "tsc --noEmit --incremental --skipLibCheck",
+    "ts:watch": "yarn ts --watch"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",
