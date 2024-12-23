@@ -21,6 +21,7 @@ export type VersionPromiseResult<T> = Flatten<PromiseResult<T> & {
   version: number
 }>
 export type RequestPromiseResult<T> = Flatten<PromiseResult<T> & {
+  /**主要是用来判断Loading状态 */
   request: GetPromiseRequest<T>;
 }>
 export type RequestPromiseFinally<T> = (data: RequestPromiseResult<T>, ...vs: any[]) => void
@@ -32,6 +33,7 @@ export type RequestVersionPromiseFinally<T> = (data: RequestVersionPromiseReulst
 const w = globalThis as {
   __abort_signal__?: AbortSignal
 }
+
 export function hookAbortSignalPromise<T>(
   signal: AbortSignal,
   fun: GetValue<Promise<T>>,
@@ -41,7 +43,7 @@ export function hookAbortSignalPromise<T>(
   const p = fun()
   w.__abort_signal__ = undefined
   p.then(v => {
-    if (signal?.aborted) {
+    if (signal.aborted) {
       return
     }
     callback({
@@ -49,7 +51,7 @@ export function hookAbortSignalPromise<T>(
       value: v
     })
   }).catch(err => {
-    if (signal?.aborted) {
+    if (signal.aborted) {
       return
     }
     callback({
