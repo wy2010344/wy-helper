@@ -1,7 +1,7 @@
 import { Compare, simpleNotEqual } from "./equal";
 import { GetValue, SetValue } from "./setStateHelper";
 import { StoreRef } from "./storeRef";
-import { asLazy, EmptyFun, iterableToList, messageChannelCallback, numberSortAsc, run } from "./util";
+import { asLazy, emptyFun, EmptyFun, iterableToList, messageChannelCallback, numberSortAsc, run } from "./util";
 
 
 const m = globalThis as any
@@ -157,11 +157,11 @@ export function batchSignalEnd() {
  * @param get 通过信号计算出来的值
  * @returns 同步事件
  */
-export function trackSignal<T>(get: GetValue<T>, set: SetValue<T>): EmptyFun
+export function trackSignal<T>(get: GetValue<T>, set?: SetValue<T>): EmptyFun
 export function trackSignal<T, A>(get: GetValue<T>, set: (v: T, a: A) => void, a: A): EmptyFun
 export function trackSignal<T, A, B>(get: GetValue<T>, set: (v: T, a: A, b: B) => void, a: A, b: B): EmptyFun
 export function trackSignal<T, A, B, C>(get: GetValue<T>, set: (v: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): EmptyFun
-export function trackSignal(get: any, set: any): EmptyFun {
+export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
   let disabled = false
   const a = arguments[2]
   const b = arguments[3]
