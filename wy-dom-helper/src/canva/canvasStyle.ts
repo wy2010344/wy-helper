@@ -1,6 +1,6 @@
 
 
-export function getCanvasStyle(ctx: CanvasRenderingContext2D, v: CanvasStyle) {
+export function getCanvasStyle(ctx: CanvasRenderingContext2D, v: CanvasDefineStyle) {
   if (typeof v == 'string') {
     return v
   } else if (v.type == 'pattern') {
@@ -24,7 +24,9 @@ export function getCanvasStyle(ctx: CanvasRenderingContext2D, v: CanvasStyle) {
     return c
   }
 }
-export type CanvasStyle = string | CanvasPatternStyle | CanvasGradientStyle
+
+export type CanvasStyle = string | CanvasPattern | CanvasGradient
+export type CanvasDefineStyle = string | CanvasPatternStyle | CanvasGradientStyle
 /**
  * 方法用于使用指定的图像或重复创建图案
  */

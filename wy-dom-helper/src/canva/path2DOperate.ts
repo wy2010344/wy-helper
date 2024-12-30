@@ -1,13 +1,13 @@
-import { CanvasStyle, getCanvasStyle } from "./canvasStyle"
+import { CanvasDefineStyle, getCanvasStyle } from "./canvasStyle"
 
 
 export type Path2DOperate = {
   type: "stroke",
   width: number
-  style: CanvasStyle
+  style: CanvasDefineStyle
 } | {
   type: "fill"
-  style: CanvasStyle,
+  style: CanvasDefineStyle,
   rule?: CanvasFillRule
 } | {
   type: "draw"
