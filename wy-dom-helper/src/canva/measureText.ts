@@ -1,5 +1,6 @@
 
 import { emptyObject } from "wy-helper"
+import { CanvasStyle } from "./canvasStyle";
 const LineBreaker = require('linebreak');
 
 export type OCanvasTextDrawingStyles = Partial<CanvasTextDrawingStyles>
@@ -71,7 +72,7 @@ export type MeasuredTextWrapOut = {
 type MCtx = CanvasTextDrawingStyles & {
   measureText(text: string): TextMetrics
 }
-type TextWrapTextConfig = Omit<OCanvasTextDrawingStyles, 'direction' | 'textAlign' | 'textBaseline'>
+export type TextWrapTextConfig = Omit<OCanvasTextDrawingStyles, 'direction' | 'textAlign' | 'textBaseline'>
 export function measureTextWrap(
   ctx: MCtx,
   text: string,
@@ -155,25 +156,29 @@ export function measureTextWrap(
 
 type TextCtx = CanvasTextDrawingStyles & {
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/CanvasRenderingContext2D/fillStyle) */
-  fillStyle: string | CanvasGradient | CanvasPattern;
+  fillStyle: CanvasStyle;
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/CanvasRenderingContext2D/strokeStyle) */
-  strokeStyle: string | CanvasGradient | CanvasPattern;
+  strokeStyle: CanvasStyle;
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/CanvasRenderingContext2D/fillText) */
   fillText(text: string, x: number, y: number, maxWidth?: number): void;
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/CanvasRenderingContext2D/strokeText) */
   strokeText(text: string, x: number, y: number, maxWidth?: number): void;
 }
+
+
+export type DrawTextWrapExt = {
+  style?: CanvasStyle,
+  x?: number
+  y?: number
+  stroke?: boolean
+  direction?: 'ltr' | 'rtl'
+  textAlign?: 'start' | 'center' | 'end'
+}
+
 export function drawTextWrap(
   ctx: TextCtx,
   text: MeasuredTextWrapOut,
-  style: string | CanvasGradient | CanvasPattern,
-  arg?: {
-    x?: number
-    y?: number
-    stroke?: boolean
-    direction?: 'ltr' | 'rtl'
-    textAlign?: 'start' | 'center' | 'end'
-  }
+  arg?: DrawTextWrapExt
 ) {
   const x = arg?.x || 0
   const y = arg?.y || 0
@@ -186,10 +191,10 @@ export function drawTextWrap(
 
   let fun: 'strokeText' | 'fillText'
   if (arg?.stroke) {
-    ctx.strokeStyle = style
+    ctx.strokeStyle = arg.style || 'black'
     fun = 'strokeText'
   } else {
-    ctx.fillStyle = style
+    ctx.fillStyle = arg?.style || 'black'
     fun = 'fillText'
   }
   let curY = y
