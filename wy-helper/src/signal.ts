@@ -95,6 +95,11 @@ export function createSignal<T>(value: T, shouldChange: Compare<T> = simpleNotEq
         throw '计算期间不允许修改值'
       }
       if (shouldChange(newValue, value)) {
+        /**
+         * 是否可以在批量结束时,才检查哪些需要改变?
+         * 但是要区分缓存值与生效值
+         * 场景应该很少
+        */
         value = newValue
         beginCurrentBatch()
         //组装到batch里面
@@ -181,8 +186,6 @@ export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
     disabled = true
   }
 }
-
-
 export const trackSignalMemo: typeof trackSignal = function (...vs: any[]) {
   vs[0] = memo(vs[0])
   return trackSignal.apply(undefined, vs as any)
@@ -206,8 +209,9 @@ function memoGet<T>(relays: Map<GetValue<any>, any>, get: GetValue<T>) {
   signalCache.currentRelay = last
   return v
 }
-export function memo<T>(
+export function memoAfter<T>(
   get: GetValue<T>,
+  after: SetValue<T>,
   shouldChange: Compare<T> = simpleNotEqual
 ) {
   const relays = new Map<GetValue<any>, any>()
@@ -220,15 +224,23 @@ export function memo<T>(
         if (shouldChange(value, lastValue)) {
           lastValue = value
         }
+        after(lastValue)
       }
     } else {
       lastValue = memoGet(relays, get)
       init = true
+      after(lastValue)
     }
     addRelay(myGet, lastValue)
     return lastValue
   }
   return myGet
+}
+
+export function memo<T>(
+  get: GetValue<T>,
+  shouldChange: Compare<T> = simpleNotEqual) {
+  return memoAfter(get, emptyFun, shouldChange)
 }
 
 

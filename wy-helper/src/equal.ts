@@ -44,11 +44,15 @@ export function arrayNotEqualOrOne<T>(a: T, b: T) {
   return true
 }
 
-export function arrayReduceRight<T>(vs: T[], fun: (m: T, i: number, vs: T[]) => void) {
+export function arrayReduceRight<Ts extends readonly any[]>(vs: Ts, fun: (m: Ts[number], i: number, vs: Ts) => void) {
   for (let i = vs.length - 1; i > -1; i--) {
     const row = vs[i]
     fun(row, i, vs)
   }
+}
+
+export function arrayReduceLeft<Ts extends readonly any[]>(vs: Ts, fun: (m: Ts[number], i: number, vs: Ts) => void) {
+  vs.forEach(fun as any)
 }
 export function buildRemoveWhere<T, M>(equal: (m: M, a: T, idx: number) => any) {
   return function (vs: T[], m: M) {
