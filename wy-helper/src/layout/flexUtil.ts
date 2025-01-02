@@ -1,10 +1,13 @@
 import { MDisplayOut, SizeKey } from "."
+import { arrayReduceLeft, arrayReduceRight } from "../equal"
 import { PointKey } from "../geometry"
 import { memo } from "../signal"
 import { hookGetLayoutChildren } from "./util"
 
 export type DisplayProps = {
   direction?: PointKey
+  reverse?: boolean
+  directionFix?: 'start' | 'end' | 'center' | 'between' | 'around' | 'evenly'
   alignItems?: 'center' | 'start' | 'end'
   gap?: number
   alignFix?: boolean
@@ -15,19 +18,16 @@ export function flexDisplayUtil(
     direction = 'y',
     alignItems = 'center',
     gap = 0,
-    alignFix = false
+    alignFix = false,
+    directionFix,
+    reverse
   }: DisplayProps
 ): MDisplayOut {
-
   const info = hookGetLayoutChildren()
-  const d = direction
-  const s = directionToSize(d)
-  const od = oppositeDirection(d)
+  const s = directionToSize(direction)
+  const od = oppositeDirection(direction)
   const os = directionToSize(od)
-  const ai = alignItems
-
   const getInfo = memo(() => {
-
     let length = 0
     const list: number[] = [0]
     const growIndex = new Map<number, number>()
@@ -35,7 +35,10 @@ export function flexDisplayUtil(
 
     let growAll = 0
     let totalLength = 0
-    info.children().forEach((child, i) => {
+
+    let children = info.children()
+    const forEach = reverse ? arrayReduceRight : arrayReduceLeft
+    children.forEach((child, i) => {
       const grow = child.getExt().grow
       if (typeof grow == 'number' && grow > 0) {
         growAll += grow
@@ -44,30 +47,64 @@ export function flexDisplayUtil(
         totalLength = totalLength + child[s]()
       }
     })
+
     if (growAll) {
-      let remaing = info[s]() - (gap * info.children().length - gap) - totalLength
-      info.children().forEach((child, i) => {
+      let remaing = info[s]() - (gap * children.length - gap) - totalLength
+      forEach(children, (child, i) => {
         const grow = growIndex.get(i)
         const childLength = grow
           ? remaing > 0
             ? remaing * grow / growAll
             : 0
           : child[s]()
-        childLengths.push(childLength)
-
+        childLengths[i] = childLength
         length = length + childLength + gap
         list.push(length)
       })
-    } else {
-      info.children().forEach((child, i) => {
+    } else if (directionFix) {
+      let tGap = gap
+
+      let allRemaing = info[s]() - totalLength
+      let remaing = allRemaing - (gap * children.length - gap)
+
+      if (directionFix == 'center') {
+        list[0] = length = remaing / 2
+      } else if (directionFix == 'end') {
+        list[0] = length = remaing
+      } else if (directionFix == 'around') {
+        const rGap = allRemaing / children.length
+        list[0] = length = rGap / 2
+        tGap = rGap
+      } else if (directionFix == 'between') {
+        if (children.length > 1) {
+          const rGap = allRemaing / (children.length - 1)
+          tGap = rGap
+        }
+      } else if (directionFix == 'evenly') {
+        const rGap = allRemaing / (children.length + 1)
+        list[0] = length = rGap
+        tGap = rGap
+      }
+      forEach(children, (child, i) => {
         const childLength = child[s]()
-        childLengths.push(childLength)
+        childLengths[i] = childLength
+        length = length + childLength + tGap
+        list.push(length)
+      })
+    } else {
+      forEach(children, (child, i) => {
+        const childLength = child[s]()
+        childLengths[i] = childLength
         length = length + childLength + gap
         list.push(length)
       })
       if (length) {
         length = length - gap
       }
+    }
+    list.pop()
+    if (reverse) {
+      list.reverse()
     }
     return {
       childLengths,
@@ -93,7 +130,7 @@ export function flexDisplayUtil(
   return {
     getChildInfo(x, i) {
       // console.log("get", x, i)
-      if (x == d) {
+      if (x == direction) {
         return getInfo().list[i]
       }
       if (x == s) {
@@ -105,11 +142,11 @@ export function flexDisplayUtil(
       if (stretch) {
         return stretch(x, theWidth)
       } else if (x == od) {
-        if (ai == 'start') {
+        if (alignItems == 'start') {
           return 0
-        } else if (ai == 'center') {
+        } else if (alignItems == 'center') {
           return (theWidth - child[os]()) / 2
-        } else if (ai == 'end') {
+        } else if (alignItems == 'end') {
           return theWidth - child[os]()
         }
       }
@@ -132,7 +169,6 @@ export function flexDisplayUtil(
       throw ''
     }
   }
-
 }
 function directionToSize(x: PointKey): SizeKey {
   if (x == 'x') {
