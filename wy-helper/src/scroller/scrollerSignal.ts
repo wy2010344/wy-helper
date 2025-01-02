@@ -1,5 +1,7 @@
-import { createSignal, EmptyFun, emptyFun, GetValue, ReadArray, ValueOrGet, valueOrGetToGet } from "wy-helper";
 
+import { GetValue } from '../setStateHelper';
+import { createSignal, ValueOrGet, valueOrGetToGet } from '../signal';
+import { EmptyFun, emptyFun, ReadArray } from '../util';
 import * as Animate from './scrollerAnimate'
 
 // Easing Equations (c) 2003 Robert Penner, all rights reserved.
