@@ -16,6 +16,7 @@ if (!m[DepKey]) {
 
 
 type CurrentBatch = {
+  signals: Set<Signal<any>>
   listeners: Set<EmptyFun>
   effects: Map<number, EmptyFun[]>
 }
@@ -68,6 +69,60 @@ function addListener(listener: EmptyFun) {
 }
 
 
+class Signal<T> {
+  constructor(
+    private value: T,
+    public shouldChange: Compare<T>
+  ) {
+    this.dirtyValue = value
+  }
+  getValue() {
+    if (this.dirty) {
+      return this.dirtyValue
+    }
+    return this.value
+  }
+  private dirty = false
+  private dirtyValue: T
+  set(v: T) {
+    /**
+     * 是否可以在批量结束时,才检查哪些需要改变?
+     * 但是要区分缓存值与生效值
+     * 场景应该很少
+    */
+    if (this.dirty) {
+      this.dirtyValue = v
+    } else if (this.shouldChange(this.value, v)) {
+      this.dirty = true
+      this.dirtyValue = v
+      beginCurrentBatch()
+      signalCache.currentBatch!.signals.add(this)
+    }
+  }
+  private listeners = [new Set<EmptyFun>(), new Set<EmptyFun>()]  //可以回收使用吧
+  commit() {
+    this.dirty = false
+    if (this.shouldChange(this.dirtyValue, this.value)) {
+      this.value = this.dirtyValue
+      //组装到batch里面
+      const oldListener = this.listeners.shift()!
+      oldListener.forEach(addListener)
+      oldListener.clear()
+      this.listeners.push(oldListener)
+    } else {
+      console.info("忽略更新", this.value)
+    }
+  }
+  get = () => {
+    const value = this.getValue()
+    addRelay(this.get, value)
+    if (signalCache.currentFun) {
+      this.listeners[0].add(signalCache.currentFun)
+    }
+    return value
+  }
+}
+
 /**
  * 信号
  * @param value 
@@ -75,17 +130,9 @@ function addListener(listener: EmptyFun) {
  * @returns 
  */
 export function createSignal<T>(value: T, shouldChange: Compare<T> = simpleNotEqual): StoreRef<T> {
-  let listeners = [new Set<EmptyFun>(), new Set<EmptyFun>()]  //可以回收使用吧
-
-  function get() {
-    addRelay(get, value)
-    if (signalCache.currentFun) {
-      listeners[0].add(signalCache.currentFun)
-    }
-    return value
-  }
+  const signal = new Signal(value, shouldChange)
   return {
-    get,
+    get: signal.get,
     set(newValue) {
       if (signalCache.currentFun) {
         throw '计算期间不允许修改值'
@@ -94,20 +141,7 @@ export function createSignal<T>(value: T, shouldChange: Compare<T> = simpleNotEq
         //forEach的构造,不能直接set值
         throw '计算期间不允许修改值'
       }
-      if (shouldChange(newValue, value)) {
-        /**
-         * 是否可以在批量结束时,才检查哪些需要改变?
-         * 但是要区分缓存值与生效值
-         * 场景应该很少
-        */
-        value = newValue
-        beginCurrentBatch()
-        //组装到batch里面
-        const oldListener = listeners.shift()!
-        oldListener.forEach(addListener)
-        oldListener.clear()
-        listeners.push(oldListener)
-      }
+      signal.set(newValue)
     },
   }
 }
@@ -116,7 +150,8 @@ function beginCurrentBatch() {
   if (!signalCache.currentBatch) {
     signalCache.currentBatch = signalCache.recycleBatches.shift() || {
       listeners: new Set(),
-      effects: new Map()
+      effects: new Map(),
+      signals: new Set()
     }
     messageChannelCallback(batchSignalEnd)
   }
@@ -128,6 +163,10 @@ export interface SyncFun<T> {
   <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): EmptyFun;
 }
 
+
+function commitSignal(signal: Signal<any>) {
+  signal.commit()
+}
 export function batchSignalEnd() {
   if (signalCache.currentEffects) {
     console.warn("更新期间重复更新")
@@ -135,8 +174,12 @@ export function batchSignalEnd() {
   }
   const currentBatch = signalCache.currentBatch
   if (currentBatch) {
+    currentBatch.signals.forEach(commitSignal)
+    currentBatch.signals.clear()
+
     signalCache.currentBatch = undefined
     signalCache.currentEffects = currentBatch.effects
+
     const listeners = currentBatch.listeners
     listeners.forEach(run)
     listeners.clear()

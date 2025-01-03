@@ -1,7 +1,7 @@
 
 import { GetValue } from '../setStateHelper';
 import { createSignal, ValueOrGet, valueOrGetToGet } from '../signal';
-import { EmptyFun, emptyFun, ReadArray } from '../util';
+import { EmptyFun, emptyFun, emptyObject, ReadArray } from '../util';
 import * as Animate from './scrollerAnimate'
 
 // Easing Equations (c) 2003 Robert Penner, all rights reserved.
@@ -50,22 +50,10 @@ export function scrollerSignal(p: {
   zooming?: ValueOrGet<boolean>,
   maxZoom?: ValueOrGet<number>,
   minZoom?: ValueOrGet<number>,
-  /** 启用弹跳（内容可以缓慢移出并在释放后跳回） */
-  bouncing?: ValueOrGet<boolean>
-  speedMultiplier?: ValueOrGet<number>
-  locking?: ValueOrGet<boolean>
   /** 启用减速、快速返回、缩放和滚动的动画 */
   animating?: ValueOrGet<boolean>,
   paging?: ValueOrGet<boolean>
   snapping?: ValueOrGet<boolean>
-
-
-  /** 增加或减少施加于减速的摩擦力量 **/
-  decelerationRate?: ValueOrGet<number>,
-  /** 配置到达边界时减速的变化量 **/
-  penetrationDeceleration?: ValueOrGet<number>,
-  /** 配置到达边界时加速度的变化量 **/
-  penetrationAcceleration?: ValueOrGet<number>,
   animationDuration?: ValueOrGet<number>
   scrollingComplete?(): void
 }, requestAnimateFrame: EmptyFun,) {
@@ -79,10 +67,6 @@ export function scrollerSignal(p: {
     animating: true,
     /** scrollTo/zoomTo 触发动画的持续时间 */
     animationDuration: 250,
-    /** 启用弹跳（内容可以缓慢移出并在释放后跳回） */
-    bouncing: true,
-    /** 如果用户在开始时仅在其中一个轴上稍微移动，则启用对主轴的锁定 */
-    locking: true,
     /** 启用分页模式（在整页内容窗格之间切换） */
     paging: false,
     /** 启用内容捕捉到配置的像素网格 */
@@ -95,19 +79,10 @@ export function scrollerSignal(p: {
 
     /** Maximum zoom level */
     maxZoom: 3,
-    /** 增加或减少滚动速度 **/
-    speedMultiplier: 1,
     /** 回调在触摸结束或减速结束时触发，
     前提是另一个滚动操作尚未开始。用于了解
     何时淡出滚动条。*/
     scrollingComplete: emptyFun,
-    /** 增加或减少施加于减速的摩擦力量 **/
-    decelerationRate: 0.95,
-    /** 配置到达边界时减速的变化量 **/
-    penetrationDeceleration: 0.03,
-    /** 配置到达边界时加速度的变化量 **/
-    penetrationAcceleration: 0.08,
-
     snapHeight: 0,
     snapWidth: 0,
     ...p
@@ -121,15 +96,9 @@ export function scrollerSignal(p: {
   const maxZoom = valueOrGetToGet(m.maxZoom)
   const scrollingX = valueOrGetToGet(m.scrollingX)
   const scrollingY = valueOrGetToGet(m.scrollingY)
-  const speedMultiplier = valueOrGetToGet(m.speedMultiplier)
-  const bouncing = valueOrGetToGet(m.bouncing)
-  const locking = valueOrGetToGet(m.locking)
   const animating = valueOrGetToGet(m.animating)
   const paging = valueOrGetToGet(m.paging)
   const snapping = valueOrGetToGet(m.snapping)
-  const penetrationDeceleration = valueOrGetToGet(m.penetrationDeceleration)
-  const penetrationAcceleration = valueOrGetToGet(m.penetrationAcceleration)
-  const decelerationRate = valueOrGetToGet(m.decelerationRate)
   const snapWidth = valueOrGetToGet(m.snapWidth)
   const snapHeight = valueOrGetToGet(m.snapHeight)
   const animationDuration = valueOrGetToGet(m.animationDuration)
@@ -361,12 +330,34 @@ export function scrollerSignal(p: {
   function doTouchStart(
     touches: ReadArray<PagePoint>,
     timeStamp: number,
-    refresh?: {
-      refreshStart?: EmptyFun
-      refreshDeactivate?: EmptyFun
-      refreshActivate?: EmptyFun
-      refreshHeight: number
-    }
+    {
+      refresh,
+      decelerationRate = 0.95,
+      penetrationAcceleration = 0.08,
+      penetrationDeceleration = 0.03,
+      /** 增加或减少滚动速度 **/
+      speedMultiplier = 1,
+      bouncing = true,
+      locking = true,
+    }: {
+      refresh?: {
+        start?: EmptyFun,
+        deactivate?: EmptyFun
+        activate?: EmptyFun,
+        height: number
+      },
+      /** 启用弹跳（内容可以缓慢移出并在释放后跳回） */
+      bouncing?: boolean,
+      /** 如果用户在开始时仅在其中一个轴上稍微移动，则启用对主轴的锁定 */
+      locking?: boolean,
+      speedMultiplier?: number,
+      /** 增加或减少施加于减速的摩擦力量 **/
+      decelerationRate?: number,
+      /** 配置到达边界时减速的变化量 **/
+      penetrationDeceleration?: number,
+      /** 配置到达边界时加速度的变化量 **/
+      penetrationAcceleration?: number,
+    } = emptyObject
   ) {
     // Array-like check is enough here
     if (touches.length == null) {
@@ -460,12 +451,12 @@ export function scrollerSignal(p: {
         }
 
         if (enableScrollX) {
-          scrollLeft -= moveX * speedMultiplier();
+          scrollLeft -= moveX * speedMultiplier;
           var _maxScrollLeft = maxScrollLeft();
           if (scrollLeft > _maxScrollLeft || scrollLeft < 0) {
             // Slow down on the edges
-            if (bouncing()) {
-              scrollLeft += (moveX / 2 * speedMultiplier());
+            if (bouncing) {
+              scrollLeft += (moveX / 2 * speedMultiplier);
             } else if (scrollLeft > _maxScrollLeft) {
               scrollLeft = _maxScrollLeft;
             } else {
@@ -476,20 +467,20 @@ export function scrollerSignal(p: {
 
         // Compute new vertical scroll position
         if (enableScrollY) {
-          scrollTop -= moveY * speedMultiplier();
+          scrollTop -= moveY * speedMultiplier;
           var _maxScrollTop = maxScrollTop();
           if (scrollTop > _maxScrollTop || scrollTop < 0) {
             // Slow down on the edges
-            if (bouncing()) {
-              scrollTop += (moveY / 2 * speedMultiplier());
+            if (bouncing) {
+              scrollTop += (moveY / 2 * speedMultiplier);
               // Support pull-to-refresh (only when only y is scrollable)
-              if (!enableScrollX && refresh?.refreshHeight) {
-                if (!refreshActive.get() && scrollTop <= -refresh.refreshHeight) {
+              if (!enableScrollX && refresh?.height) {
+                if (!refreshActive.get() && scrollTop <= -refresh.height) {
                   refreshActive.set(true);
-                  refresh?.refreshActivate?.();
-                } else if (refreshActive.get() && scrollTop > -refresh.refreshHeight) {
+                  refresh.activate?.();
+                } else if (refreshActive.get() && scrollTop > -refresh.height) {
                   refreshActive.set(false);
-                  refresh?.refreshDeactivate?.()
+                  refresh.deactivate?.()
                 }
               }
             } else if (scrollTop > _maxScrollTop) {
@@ -510,7 +501,7 @@ export function scrollerSignal(p: {
         // Otherwise figure out whether we are switching into dragging mode now.
       } else {
 
-        var minimumTrackingForScroll = locking() ? 3 : 0;
+        var minimumTrackingForScroll = locking ? 3 : 0;
         var minimumTrackingForDrag = 5;
 
         var distanceX = Math.abs(n.currentTouchLeft - initialTouchLeft);
@@ -620,7 +611,7 @@ export function scrollerSignal(p: {
                     //
                     // 非弹跳模式的硬限制滚动位置
                     //
-                    if (!bouncing()) {
+                    if (!bouncing) {
                       var scrollLeftFixed = Math.max(Math.min(__maxDecelerationScrollLeft, scrollLeft), __minDecelerationScrollLeft);
                       if (scrollLeftFixed !== scrollLeft) {
                         scrollLeft = scrollLeftFixed;
@@ -649,7 +640,7 @@ export function scrollerSignal(p: {
                       // 这是应用于动画每次迭代的因素
                       // 以减慢进程。这应该模拟自然行为，其中
                       // 当移动发起者被移除时，物体会减速
-                      var frictionFactor = decelerationRate();
+                      var frictionFactor = decelerationRate;
 
                       decelerationVelocityX *= frictionFactor;
                       decelerationVelocityY *= frictionFactor;
@@ -657,12 +648,12 @@ export function scrollerSignal(p: {
                     //
                     // BOUNCING SUPPORT
                     //
-                    if (bouncing()) {
+                    if (bouncing) {
                       var scrollOutsideX = 0;
                       var scrollOutsideY = 0;
                       // 这配置了到达边界时减速/加速的变化量
-                      var _penetrationDeceleration = penetrationDeceleration();
-                      var _penetrationAcceleration = penetrationAcceleration();
+                      var _penetrationDeceleration = penetrationDeceleration;
+                      var _penetrationAcceleration = penetrationAcceleration;
 
                       // Check limits
                       if (scrollLeft < __minDecelerationScrollLeft) {
@@ -727,13 +718,13 @@ export function scrollerSignal(p: {
       // 例如，在未启用拖动的情况下触发 touchend。这通常不应该
       // 修改滚动位置，甚至显示滚动条。
       if (!__isDecelerating) {
-        if (refreshActive.get() && refresh?.refreshStart) {
+        if (refreshActive.get() && refresh?.start) {
           // 使用 publish 而不是 scrollTo 来允许滚动到边界位置之外
           // 我们不需要在这里规范化 scrollLeft、zoomLevel 等，因为我们只在启用下拉刷新时进行 y 滚动
-          if (refresh.refreshHeight) {
-            publish(left.get(), -refresh.refreshHeight, zoomLevel.get(), true);
+          if (refresh.height) {
+            publish(left.get(), -refresh.height, zoomLevel.get(), true);
           }
-          refresh?.refreshStart();
+          refresh.start();
         } else {
           if (interruptedAnimation || isDragging) {
             m.scrollingComplete();
@@ -742,7 +733,7 @@ export function scrollerSignal(p: {
           // 直接发出停用信号（刷新时无需执行任何操作？）
           if (refreshActive.get()) {
             refreshActive.set(false);
-            refresh?.refreshDeactivate?.();
+            refresh?.deactivate?.();
           }
         }
       }

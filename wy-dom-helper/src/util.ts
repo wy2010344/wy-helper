@@ -217,3 +217,32 @@ export function requestAnimationFrameThrottle<T>(call: SetValue<T>): SetValue<T>
 export function requestAnimationFrameThrottle(call: EmptyFun): EmptyFun {
   return buildThrottle(requestBatchAnimationFrame, call)
 }
+
+
+
+
+// 定义 subscribeEventListener 函数
+export function subscribeEventListener<
+  T extends EventTarget,
+  K extends keyof EventMap<T>
+>(
+  target: T,
+  type: K,
+  listener: (event: EventMap<T>[K]) => void,
+  options?: boolean | AddEventListenerOptions
+) {
+  target.addEventListener(type as any, listener as EventListener, options);
+  return function () {
+    target.removeEventListener(type as any, listener as EventListener, options);
+  }
+}
+// 获取特定目标的事件映射表
+type EventMap<T> = T extends Document
+  ? DocumentEventMap
+  : T extends HTMLElement
+  ? HTMLElementEventMap
+  : T extends SVGSVGElement
+  ? SVGElementEventMap
+  : T extends Window
+  ? WindowEventMap
+  : Record<string, Event>; // 默认返回通用 Event 类型
