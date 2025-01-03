@@ -8,6 +8,7 @@ export type DisplayProps = {
   direction?: PointKey
   reverse?: boolean
   directionFix?: 'start' | 'end' | 'center' | 'between' | 'around' | 'evenly'
+  directionFixBetweenWhenOne?: 'center' | 'end' | 'start'
   alignItems?: 'center' | 'start' | 'end'
   gap?: number
   alignFix?: boolean
@@ -20,6 +21,7 @@ export function flexDisplayUtil(
     gap = 0,
     alignFix = false,
     directionFix,
+    directionFixBetweenWhenOne = 'start',
     reverse
   }: DisplayProps
 ): MDisplayOut {
@@ -79,6 +81,12 @@ export function flexDisplayUtil(
         if (children.length > 1) {
           const rGap = allRemaing / (children.length - 1)
           tGap = rGap
+        } else if (children.length == 1) {
+          if (directionFixBetweenWhenOne == 'center') {
+            list[0] = allRemaing / 2
+          } else if (directionFixBetweenWhenOne == 'end') {
+            list[0] = allRemaing
+          }
         }
       } else if (directionFix == 'evenly') {
         const rGap = allRemaing / (children.length + 1)
