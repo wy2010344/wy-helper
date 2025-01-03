@@ -101,6 +101,12 @@ export class Reorder<K> {
     return this.moveV?.currentItem
   }
   /**注册 */
+  /**
+   * 1.其实不一定用requestAnimateFrame来更新尺寸,用ResizeObserver可以实时更新尺寸
+   * 2.拖拽可以在一次pointerdown事件中,而不必在全局状态中.
+   * @param value 
+   * @param axis 
+   */
   registerItem(value: K, axis: Box) {
     //依赖于requestAnimationFrame等去获得实时坐标,并不能完全对等
     const order = this.layoutList

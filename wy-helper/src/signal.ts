@@ -99,6 +99,14 @@ class Signal<T> {
       signalCache.currentBatch!.signals.add(this)
     }
   }
+
+  acceptChange(v: T) {
+    if (this.dirty) {
+      return true
+    }
+    return this.shouldChange(this.value, v)
+  }
+
   private listeners = [new Set<EmptyFun>(), new Set<EmptyFun>()]  //可以回收使用吧
   commit() {
     this.dirty = false
@@ -138,8 +146,13 @@ export function createSignal<T>(value: T, shouldChange: Compare<T> = simpleNotEq
         throw '计算期间不允许修改值'
       }
       if (signalCache.currentEffects) {
-        //forEach的构造,不能直接set值
-        throw '计算期间不允许修改值'
+        if (signal.acceptChange(newValue)) {
+          //在构造期间设值,会触发二次render
+          addEffect(() => {
+            signal.set(newValue)
+          })
+        }
+        return
       }
       signal.set(newValue)
     },

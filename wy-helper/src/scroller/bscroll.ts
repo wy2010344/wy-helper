@@ -27,7 +27,7 @@ export class MomentumBScoll {
   destinationWithMargin(
     {
       current, velocity,
-      lowerMargin, upperMargin, wrapperSize
+      lowerMargin, upperMargin, containerSize
     }: MomentumEndArg
   ): MomentumCallOut {
     if (lowerMargin < current && current < upperMargin) {
@@ -39,20 +39,20 @@ export class MomentumBScoll {
       let finalPosition = 0
 
       if (destination < lowerMargin) {
-        destination = wrapperSize
+        destination = containerSize
           ? Math.max(
-            lowerMargin - wrapperSize / 4,
-            lowerMargin - (wrapperSize / rate) * absSpeed
+            lowerMargin - containerSize / 4,
+            lowerMargin - (containerSize / rate) * absSpeed
           )
           : lowerMargin
         duration = this.swipeBounceTime
         edge = true
         finalPosition = lowerMargin
       } else if (destination > upperMargin) {
-        destination = wrapperSize
+        destination = containerSize
           ? Math.min(
-            upperMargin + wrapperSize / 4,
-            upperMargin + (wrapperSize / rate) * absSpeed
+            upperMargin + containerSize / 4,
+            upperMargin + (containerSize / rate) * absSpeed
           )
           : upperMargin
         duration = this.swipeBounceTime

@@ -58,7 +58,7 @@ export class MomentumIScroll {
   destinationWithMargin(
     {
       current, velocity,
-      lowerMargin, upperMargin, wrapperSize
+      lowerMargin, upperMargin, containerSize
     }: MomentumEndArg
   ): MomentumCallOut {
     if (lowerMargin < current && current < upperMargin) {
@@ -70,13 +70,13 @@ export class MomentumIScroll {
       let finalPosition = 0
       //超出边界的时间,减少位移
       if (destination < lowerMargin) {
-        destination = wrapperSize ? lowerMargin - wrapperSize / 2.5 * (absSpeed / 8) : lowerMargin;
+        destination = containerSize ? lowerMargin - containerSize / 2.5 * (absSpeed / 8) : lowerMargin;
         let distance = Math.abs(destination - current);
         duration = distance / absSpeed;
         edge = true
         finalPosition = lowerMargin
       } else if (destination > upperMargin) {
-        destination = wrapperSize ? upperMargin + wrapperSize / 2.5 * (absSpeed / 8) : upperMargin;
+        destination = containerSize ? upperMargin + containerSize / 2.5 * (absSpeed / 8) : upperMargin;
         let distance = Math.abs(current) + destination;
         duration = distance / absSpeed;
         edge = true

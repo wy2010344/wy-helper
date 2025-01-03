@@ -1,3 +1,5 @@
+import { ReadArray } from "./util"
+
 export type Compare<T> = (a: T, b: T) => any
 
 export function simpleEqual<T>(a: T, b: T) {
@@ -8,7 +10,7 @@ export function simpleNotEqual<T>(a: T, b: T) {
   return a != b
 }
 
-export function arrayEqual<T>(a1: readonly T[], a2: readonly T[], equal: (x: T, y: T) => boolean) {
+export function arrayEqual<T>(a1: ReadArray<T>, a2: ReadArray<T>, equal: (x: T, y: T) => boolean) {
   if (a1 == a2) {
     return true
   }

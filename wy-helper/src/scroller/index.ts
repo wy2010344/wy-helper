@@ -1,5 +1,5 @@
-import { AnimateFrameEvent, AnimateFrameValue, AnimationConfig, GetDeltaXAnimationConfig } from "../animation"
-import { FalseType, emptyObject } from "../util"
+import { AbsAnimateFrameValue, AnimateFrameEvent, AnimationConfig, GetDeltaXAnimationConfig } from "../animation"
+import { emptyObject } from "../util"
 export * from './bscroll'
 export * from './iscroll'
 
@@ -81,7 +81,7 @@ export interface MomentumEndArg {
   /**最上滚动,一般为0 */
   upperMargin: number,
   // /** 容器尺寸,如wrapperHeight  */
-  wrapperSize: number,
+  containerSize: number,
 }
 export interface MomentumJudgeBack {
   type: "scroll" | "scroll-edge" | "edge-back"
@@ -115,7 +115,7 @@ export function changeWithFixWidth({
   getBackConfig,
   getConfig
 }: {
-  translateY: AnimateFrameValue,
+  translateY: AbsAnimateFrameValue,
   lineHeight: number,
   getLength(): number,
   setIndex(n: number): void,
@@ -163,51 +163,36 @@ export type OldGetValue = {
   onEdgeBack(deltaX: number): AnimationConfig
 }
 
-
-type MoveCache = {
-  // value: number
-  beginValue: number
-  beginTime: number
-  latestValue: number
-}
-export function buildScroll({
-  edgeSlow = 3,
-  upperScrollDiff = 0,
-  lowerScrollDiff = 0,
-  wrapperSize,
-  containerSize,
-  getCurrentValue,
-  changeTo,
-  finish
-}: {
-  /**到达边缘时拖拽减速 */
-  edgeSlow?: number
-  upperScrollDiff?: number
-  lowerScrollDiff?: number
-  //滚动容器
-  wrapperSize(): number
-  //滚动内容
-  containerSize(): number
-  getCurrentValue(): number
-  changeTo(value: number): void
-  finish(v: MomentumEndArg): void
-}) {
-  let moveM: MoveCache | undefined = undefined
-  function getMaxScroll() {
-    return wrapperSize() - containerSize()
-  }
-  function getMargin() {
-    const maxScroll = getMaxScroll()
-    const upperMargin = upperScrollDiff
-    const lowerMargin = maxScroll + lowerScrollDiff
-    return {
-      upperMargin,
-      lowerMargin,
-      maxScroll
-    }
-  }
-  function setMove(last: MoveCache, n: number) {
-    let diff = n - last.latestValue
+export function startScroll(
+  n: number,
+  {
+    beginTime = performance.now(),
+    edgeSlow = 3,
+    upperScrollDiff = 0,
+    lowerScrollDiff = 0,
+    containerSize,
+    contentSize,
+    getCurrentValue,
+    changeTo,
+    finish
+  }: {
+    beginTime?: number
+    /**到达边缘时拖拽减速 */
+    edgeSlow?: number
+    upperScrollDiff?: number
+    lowerScrollDiff?: number
+    //滚动容器
+    containerSize(): number
+    //滚动内容
+    contentSize(): number
+    getCurrentValue(): number
+    changeTo(value: number): void
+    finish(v: MomentumEndArg): void
+  }) {
+  const beginValue = n
+  let latestValue = beginValue
+  function setMove(n: number) {
+    let diff = n - latestValue
     const cv = getCurrentValue()
     if (diff) {
       const { lowerMargin, upperMargin } = getMargin()
@@ -216,48 +201,42 @@ export function buildScroll({
       }
       const newValue = cv + diff
       changeTo(newValue)
-      last.latestValue = n
+      latestValue = n
       return newValue
     } else {
       return cv
     }
   }
+  function getMargin() {
+    const maxScroll = containerSize() - contentSize()
+    const upperMargin = upperScrollDiff
+    const lowerMargin = maxScroll + lowerScrollDiff
+    return {
+      upperMargin,
+      lowerMargin,
+      maxScroll
+    }
+  }
   return {
-    start(n: number, beginTime = performance.now()) {
-      moveM = {
-        beginValue: n,
-        //不必精确时间,只是用于计算动量
-        beginTime,
-        latestValue: n
-      }
-    },
     move(n: number) {
-      if (moveM) {
-        setMove(moveM, n)
-      }
+      return setMove(n)
     },
     end(n?: number, velocity?: number) {
-      const last = moveM
-      if (last) {
-        if (typeof n != 'number') {
-          n = last.latestValue
-        }
-        const newY = setMove(last, n)
-        moveM = undefined
-        const { lowerMargin, upperMargin } = getMargin()
-
-        if (typeof velocity != 'number') {
-          velocity = (n - last.beginValue) / (performance.now() - last.beginTime) //默认使用平均速度,因为最后的瞬间速度可能为0?
-        }
-
-        finish({
-          current: newY,
-          velocity,
-          lowerMargin,
-          upperMargin,
-          wrapperSize: wrapperSize()
-        })
+      if (typeof n != 'number') {
+        n = latestValue
       }
+      const newY = setMove(n)
+      const { lowerMargin, upperMargin } = getMargin()
+      if (typeof velocity != 'number') {
+        velocity = (n - beginValue) / (performance.now() - beginTime) //默认使用平均速度,因为最后的瞬间速度可能为0?
+      }
+      finish({
+        current: newY,
+        velocity,
+        lowerMargin,
+        upperMargin,
+        containerSize: containerSize()
+      })
     }
   }
 }
