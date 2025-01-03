@@ -1,4 +1,4 @@
-import { AnimateFrameEvent, AnimateFrameValue, FrictionalFactory, GetDeltaXAnimationConfig } from "../animation"
+import { AbsAnimateFrameValue, AnimateFrameEvent, FrictionalFactory, GetDeltaXAnimationConfig } from "../animation"
 import { EmptyFun } from "../util"
 import { RecycleScrollAction, getIdxWith } from "./reducer"
 
@@ -7,7 +7,7 @@ export function recicleScrollViewView(
   flushSync: (fun: EmptyFun) => void,
   addIndex: (n: number) => void,
   rowHeight: number,
-  transY: AnimateFrameValue
+  transY: AbsAnimateFrameValue
 ) {
   let initScrollHeight = 0
   function aUpdate(value: number) {

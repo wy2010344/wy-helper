@@ -1,8 +1,9 @@
 import { AnimationConfig, defaultSpringBaseAnimationConfig, GetDeltaXAnimationConfig } from "./AnimationConfig"
-import { SetValue } from "../setStateHelper"
+import { GetValue, SetValue } from "../setStateHelper"
 import { EmptyFun, emptyFun, emptyObject } from '../util'
-import { StoreRef } from "../storeRef"
 import { ReadValueCenter, ValueCenter, valueCenterOf } from "../ValueCenter"
+import { StoreRef } from "../storeRef"
+import { batchSignalEnd, createSignal } from "../signal"
 /**
  * 或者视着实例而非消息,即是可变的,只在事件中不变
  */
@@ -76,13 +77,13 @@ class AnimateToImpl implements AnimateConfig {
  * 使用react的render,可能不平滑,因为react是异步的,生成值到渲染到视图上,可能有时间间隔
  * 或者总是使用flushSync.
  */
-export class AnimateFrameValue implements ReadValueCenter<number> {
-  private value: ValueCenter<number>
+export class AbsAnimateFrameValue {
   constructor(
-    value: number,
+    public readonly get: GetValue<number>,
+    private set: SetValue<number>,
     private requestAnimateFrame: (fun: SetValue<number>) => void,
+    private eachCommit = emptyFun
   ) {
-    this.value = valueCenterOf(value)
   }
   /**
    * 如果正在发生动画,这个值存在
@@ -95,7 +96,7 @@ export class AnimateFrameValue implements ReadValueCenter<number> {
     if (this.animateConfig) {
       return this.animateConfig.target
     }
-    return this.value.get()
+    return this.get()
   }
 
   private lastCancel = emptyFun
@@ -110,7 +111,7 @@ export class AnimateFrameValue implements ReadValueCenter<number> {
       this.animateConfig.target = target
       this.animateConfig.reDo()
     } else {
-      this.value.set(target)
+      this.set(target)
       return true
     }
   }
@@ -120,7 +121,7 @@ export class AnimateFrameValue implements ReadValueCenter<number> {
       this.animateConfig.target = this.animateConfig.target + diff
       this.animateConfig.reDo()
     } else {
-      this.value.set(this.value.get() + diff)
+      this.set(this.get() + diff)
     }
   }
   animateTo(
@@ -146,14 +147,14 @@ export class AnimateFrameValue implements ReadValueCenter<number> {
     if (!getConfig) {
       //中止动画
       this.lastCancel()
-      this.value.set(target)
+      this.set(target)
       return 'immediately'
     }
     const { setValue, baseValue, needReset } = this.initConfig(from, onProcess)
     const config = getConfig(target - baseValue)
     if (!config) {
       //超越检测动画
-      this.value.set(target)
+      this.set(target)
       onFinish(true)
       return 'immediately'
     }
@@ -179,11 +180,11 @@ export class AnimateFrameValue implements ReadValueCenter<number> {
       needReset = true
       baseValue = from
     } else {
-      baseValue = this.value.get()
+      baseValue = this.get()
     }
     this.lastCancel()
     const setValue: AnimateSetValue = (v, o) => {
-      that.value.set(v)
+      that.set(v)
       if (o) {
         onProcess(v)
       }
@@ -213,6 +214,7 @@ export class AnimateFrameValue implements ReadValueCenter<number> {
             //在trigger里访问到animateTo已经结束
             onFinish(true)
           }
+          that.eachCommit()
         }
       })
     this.lastCancel = function () {
@@ -222,10 +224,39 @@ export class AnimateFrameValue implements ReadValueCenter<number> {
       onFinish(false)
     }
   }
-  get() {
-    return this.value.get()
+}
+
+export class AnimateFrameValue extends AbsAnimateFrameValue implements ReadValueCenter<number> {
+  private valueCenter: ValueCenter<number>
+  constructor(
+    value: number,
+    requestAnimateFrame: (fun: SetValue<number>) => void
+  ) {
+    const valueCenter = valueCenterOf(value)
+    super(
+      valueCenter.get.bind(valueCenter),
+      valueCenter.set.bind(valueCenter),
+      requestAnimateFrame
+    )
+    this.valueCenter = valueCenter
   }
   subscribe(notify: (v: number, old: number) => void): EmptyFun {
-    return this.value.subscribe(notify)
+    return this.valueCenter.subscribe(notify)
+  }
+}
+
+
+export class SignalAnimateFrameValue extends AbsAnimateFrameValue {
+  constructor(
+    value: number,
+    requestAnimateFrame: (fun: SetValue<number>) => void
+  ) {
+    const signal = createSignal(value)
+    super(
+      signal.get,
+      signal.set,
+      requestAnimateFrame,
+      batchSignalEnd
+    )
   }
 }
