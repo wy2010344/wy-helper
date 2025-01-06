@@ -28,6 +28,7 @@ const signalCache = m[DepKey] as {
   currentEffects?: Map<number, EmptyFun[]>
   recycleBatches: CurrentBatch[]
   currentRelay?: Map<GetValue<any>, any>
+  realTimeCall?: boolean
 }
 
 /**
@@ -146,19 +147,16 @@ export function createSignal<T>(value: T, shouldChange: Compare<T> = simpleNotEq
         throw '计算期间不允许修改值'
       }
       if (signalCache.currentEffects) {
-        if (signal.acceptChange(newValue)) {
-          //在构造期间设值,会触发二次render
-          addEffect(() => {
-            signal.set(newValue)
-          })
-        }
-        return
+        throw '计算期间不允许修改值1'
       }
       signal.set(newValue)
-    },
+    }
   }
 }
 
+export function signalOnUpdate() {
+  return Boolean(signalCache.currentEffects)
+}
 function beginCurrentBatch() {
   if (!signalCache.currentBatch) {
     signalCache.currentBatch = signalCache.recycleBatches.shift() || {
@@ -180,11 +178,16 @@ export interface SyncFun<T> {
 function commitSignal(signal: Signal<any>) {
   signal.commit()
 }
+
+export function setSignalRealTime() {
+  signalCache.realTimeCall = true
+}
 export function batchSignalEnd() {
   if (signalCache.currentEffects) {
     console.warn("更新期间重复更新")
     return
   }
+  signalCache.realTimeCall = false
   const currentBatch = signalCache.currentBatch
   if (currentBatch) {
     currentBatch.signals.forEach(commitSignal)
@@ -206,6 +209,10 @@ export function batchSignalEnd() {
     effects.clear()
 
     signalCache.recycleBatches.push(currentBatch)
+
+    if (signalCache.realTimeCall) {
+      batchSignalEnd()
+    }
     if (signalCache.recycleBatches.length > 2) {
       console.log("出现多个recycleBatches", signalCache.recycleBatches.length)
     }

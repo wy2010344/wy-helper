@@ -1,13 +1,11 @@
 import { AbsAnimateFrameValue, AnimateFrameEvent, FrictionalFactory, GetDeltaXAnimationConfig } from "../animation"
-import { EmptyFun } from "../util"
 import { RecycleScrollAction, getIdxWith } from "./reducer"
 
 
-export function recicleScrollViewView(
-  flushSync: (fun: EmptyFun) => void,
-  addIndex: (n: number) => void,
+export function recicleScrollViewView<T extends AbsAnimateFrameValue>(
+  addIndex: (n: number, immediately?: boolean) => void,
   rowHeight: number,
-  transY: AbsAnimateFrameValue
+  transY: T
 ) {
   let initScrollHeight = 0
   function aUpdate(value: number) {
@@ -15,9 +13,7 @@ export function recicleScrollViewView(
     const idx = getIdxWith(diff, rowHeight)
     if (idx) {
       transY.slientDiff(idx * rowHeight)
-      flushSync(() => {
-        addIndex(idx)
-      })
+      addIndex(idx, true)
     }
   }
 
@@ -59,7 +55,8 @@ export function recicleScrollViewView(
       aUpdate(target)
     },
     //速度
-    endMove(idealDistance: number,
+    endMove(
+      idealDistance: number,
       getConfig: GetDeltaXAnimationConfig
     ) {
       const value = transY.get() + idealDistance - initScrollHeight
@@ -79,7 +76,7 @@ export function recicleScrollViewView(
         aUpdate(nValue)
       }
     },
-    wrapperAdd(n: number, config?: GetDeltaXAnimationConfig, event?: AnimateFrameEvent) {
+    containerAdd(n: number, config?: GetDeltaXAnimationConfig, event?: AnimateFrameEvent) {
       if (n) {
         if (config) {
           updateIndex(-n, config, event)

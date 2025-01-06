@@ -1,40 +1,46 @@
 
 
 
-import { pointZero, ReorderChild, Box, Point, emptyFun } from "wy-helper"
-import { getPageOffset } from "./util"
+import { ReorderChild, Box, Point, emptyFun, PointKey } from "wy-helper"
+import { getPageOffset, subscribeEventListener } from "./util"
 import { subscribeRequestAnimationFrame } from "./animation"
 
-export function getChangeOnScroll(change: (p: Point) => any) {
-  let lastScroll = pointZero
-  return {
-    reset(container: HTMLElement) {
-      const top = container.scrollTop
-      const left = container.scrollLeft
-      lastScroll = {
-        x: left,
-        y: top
-      }
-    },
-    onScroll(container: HTMLElement) {
-      const top = container.scrollTop
-      const left = container.scrollLeft
-      const diffY = top - lastScroll.y
-      const diffX = left - lastScroll.x
-      if (change({
-        x: diffX,
-        y: diffY
-      })) {
-        //接受了改变
-        lastScroll = {
-          x: left,
-          y: top
-        }
-      }
+export function subscribeScroller(
+  container: HTMLElement,
+  direction: PointKey,
+  change: (v: number) => any
+) {
+  const key = direction == 'x' ? 'scrollLeft' : 'scrollTop'
+  let value = container[key]
+  return subscribeEventListener(container, 'scroll', e => {
+    const newValue = container[key]
+    const diff = newValue - value
+    if (change(diff)) {
+      value = newValue
     }
-  }
+  })
 }
-
+export function subscribeScrollerAll(
+  container: HTMLElement,
+  change: (v: Point) => any
+) {
+  const point = {
+    x: container.scrollLeft,
+    y: container.scrollTop
+  }
+  return subscribeEventListener(container, 'scroll', e => {
+    const newLeft = container.scrollLeft
+    const newTop = container.scrollTop
+    const diff = {
+      x: newLeft - point.x,
+      y: newTop - point.y
+    }
+    if (change(diff)) {
+      point.x = newLeft
+      point.y = newTop
+    }
+  })
+}
 export function reorderChildChangeIndex<K>(
   child: ReorderChild<K>,
   div: HTMLElement,
