@@ -37,24 +37,25 @@ export type EdgeScrollConfig = {
   config?: EdgeScrollBox
 }
 export function edgeScrollChange(
-  cp: number,
   axis: Axis,
   config: EdgeScrollConfig,
   set: (diff: number) => void
 ) {
   const padding = config.padding || 0
   const yMin = getCfg(padding, 'min', config.config)
-  if (yMin) {
-    const diffTop = axis.min + yMin.padding - cp
-    if (diffTop > 0) {
-      set(-diffTop)
-    }
-  }
   const yMax = getCfg(padding, 'max', config.config)
-  if (yMax) {
-    const diffBottom = axis.max - yMax.padding - cp
-    if (diffBottom < 0) {
-      set(-diffBottom)
+  return function (cp: number) {
+    if (yMin) {
+      const diffTop = axis.min + yMin.padding - cp
+      if (diffTop > 0) {
+        set(-diffTop)
+      }
+    }
+    if (yMax) {
+      const diffBottom = axis.max - yMax.padding - cp
+      if (diffBottom < 0) {
+        set(-diffBottom)
+      }
     }
   }
 }

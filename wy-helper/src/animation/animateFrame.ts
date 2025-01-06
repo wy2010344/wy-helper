@@ -3,7 +3,7 @@ import { GetValue, SetValue } from "../setStateHelper"
 import { EmptyFun, emptyFun, emptyObject } from '../util'
 import { ReadValueCenter, ValueCenter, valueCenterOf } from "../ValueCenter"
 import { StoreRef } from "../storeRef"
-import { batchSignalEnd, createSignal } from "../signal"
+import { addEffect, batchSignalEnd, createSignal, setSignalRealTime, signalOnUpdate } from "../signal"
 /**
  * 或者视着实例而非消息,即是可变的,只在事件中不变
  */
@@ -81,6 +81,7 @@ export class AbsAnimateFrameValue {
   constructor(
     public readonly get: GetValue<number>,
     private set: SetValue<number>,
+    private trySet: SetValue<number>,
     private requestAnimateFrame: (fun: SetValue<number>) => void,
     private eachCommit = emptyFun
   ) {
@@ -184,7 +185,7 @@ export class AbsAnimateFrameValue {
     }
     this.lastCancel()
     const setValue: AnimateSetValue = (v, o) => {
-      that.set(v)
+      that.trySet(v)
       if (o) {
         onProcess(v)
       }
@@ -233,9 +234,11 @@ export class AnimateFrameValue extends AbsAnimateFrameValue implements ReadValue
     requestAnimateFrame: (fun: SetValue<number>) => void
   ) {
     const valueCenter = valueCenterOf(value)
+    const set = valueCenter.set.bind(valueCenter)
     super(
       valueCenter.get.bind(valueCenter),
-      valueCenter.set.bind(valueCenter),
+      set,
+      set,
       requestAnimateFrame
     )
     this.valueCenter = valueCenter
@@ -255,6 +258,16 @@ export class SignalAnimateFrameValue extends AbsAnimateFrameValue {
     super(
       signal.get,
       signal.set,
+      function (v) {
+        if (signalOnUpdate()) {
+          addEffect(() => {
+            signal.set(v)
+            setSignalRealTime()
+          })
+        } else {
+          signal.set(v)
+        }
+      },
       requestAnimateFrame,
       batchSignalEnd
     )
