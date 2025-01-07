@@ -57,7 +57,13 @@
     "ts": "tsc --noEmit --incremental --skipLibCheck",
     "ts:watch": "yarn ts --watch"
   },
+  "peerDependencies": {
+    "d3-binarytree": "^1.0.2",
+    "d3-octree": "^1.1.0",
+    "d3-quadtree": "^3.0.1"
+  },
   "devDependencies": {
+    "@types/d3-quadtree": "^3.0.6",
     "@types/node": "^20.11.5",
     "typescript": "^5.2.2",
     "vite": "^5.0.8",
