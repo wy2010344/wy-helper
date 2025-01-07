@@ -13,7 +13,7 @@ export function createAnimateSignal(
   create: (v: number) => AbsAnimateFrameValue,
   get: GetValue<number>,
   {
-    config = g._signal_animation_with_ || defaultSpringBaseAnimationConfig,
+    config = defaultSpringBaseAnimationConfig,
     onFinish,
     onProcess,
   }: AnimateFrameSignalConfig = emptyObject,
@@ -22,7 +22,7 @@ export function createAnimateSignal(
   const destroy = trackSignal(get, v => {
     const to = value.getTargetValue()
     if (to != v) {
-      value.changeTo(v, config, {
+      value.changeTo(v, g._signal_animation_with_ || config, {
         from: to,
         onProcess,
         onFinish
