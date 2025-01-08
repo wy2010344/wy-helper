@@ -118,8 +118,6 @@ class Signal<T> {
       oldListener.forEach(addListener)
       oldListener.clear()
       this.listeners.push(oldListener)
-    } else {
-      console.info("忽略更新", this.value)
     }
   }
   get = () => {
@@ -264,34 +262,39 @@ function relayChange(relays: Map<GetValue<any>, any>) {
   }
   return false
 }
-function memoGet<T>(relays: Map<GetValue<any>, any>, get: GetValue<T>) {
+function memoGet<T>(relays: Map<GetValue<any>, any>, get: GetValue<T>, lastValue: T, init: boolean) {
   relays.clear()
   const last = signalCache.currentRelay
   signalCache.currentRelay = relays
-  const v = get()
+  const v = get(lastValue, init)
   signalCache.currentRelay = last
   return v
 }
+
+interface MemoGet<T> {
+  (old: undefined, inited: false): T,
+  (old: T, inited: true): T
+}
 export function memoAfter<T>(
-  get: GetValue<T>,
+  get: MemoGet<T>,
   after: SetValue<T>,
   shouldChange: Compare<T> = simpleNotEqual
 ) {
   const relays = new Map<GetValue<any>, any>()
   let lastValue!: T
-  let init = false
+  let inited = false
   const myGet = function () {
-    if (init) {
+    if (inited) {
       if (relayChange(relays)) {
-        const value = memoGet(relays, get)
+        const value = memoGet(relays, get, lastValue, inited)
         if (shouldChange(value, lastValue)) {
           lastValue = value
         }
         after(lastValue)
       }
     } else {
-      lastValue = memoGet(relays, get)
-      init = true
+      lastValue = memoGet(relays, get, lastValue, inited)
+      inited = true
       after(lastValue)
     }
     addRelay(myGet, lastValue)
@@ -301,7 +304,7 @@ export function memoAfter<T>(
 }
 
 export function memo<T>(
-  get: GetValue<T>,
+  get: MemoGet<T>,
   shouldChange: Compare<T> = simpleNotEqual) {
   return memoAfter(get, emptyFun, shouldChange)
 }

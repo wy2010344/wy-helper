@@ -15,10 +15,18 @@ export default defineConfig({
         infixLang: resolve(__dirname, 'src/infixLang/index.ts'),
         ObserverCenter: resolve(__dirname, 'src/observerCenter/index.ts'),
         router: resolve(__dirname, 'src/router/index.ts'),
+        forceLayout: resolve(__dirname, 'src/forceLayout/index.ts'),
       },
       formats: ["es", "cjs"]
     },
-    minify: false
+    minify: false,
+    rollupOptions: {
+      external: [
+        /^d3-binarytree(\/)?/,
+        /^d3-quadtree(\/)?/,
+        /^d3-octree(\/)?/,
+      ]
+    }
   },
   plugins: [dts()]
 })

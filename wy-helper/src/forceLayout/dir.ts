@@ -1,5 +1,5 @@
-import { asLazy, emptyObject } from "wy-helper";
-import { CallBackNode, Direction, NodeForce } from ".";
+import { asLazy, emptyObject } from "../util";
+import { CallBackNode, Direction, ForceDir, ForceNode } from "./forceModel";
 
 
 
@@ -10,7 +10,7 @@ import { CallBackNode, Direction, NodeForce } from ".";
  * @param param1 
  * @returns 
  */
-export default function <T, V>(
+export function forceDir<T, V>(
   dir: Direction,
   {
     getZ = asLazy(0),
@@ -21,15 +21,16 @@ export default function <T, V>(
     /**力的强度 */
     getStrength?: CallBackNode<T, number>
   } = emptyObject
-): NodeForce<T, V> {
-  return function (nodes) {
-    return function (alpha, nodes) {
-      for (var i = 0, n = nodes.length, node; i < n; ++i) {
-        node = nodes[i]
-        node[dir].v += (
-          getZ(node, i, nodes) - node[dir].d
-        ) * getStrength(node, i, nodes) * alpha;
-      }
+) {
+  return function (
+    nodes: readonly ForceNode<T, ForceDir>[],
+    alpha: number
+  ) {
+    for (var i = 0, n = nodes.length, node; i < n; ++i) {
+      node = nodes[i]
+      node[dir].v += (
+        getZ(node, i, nodes) - node[dir].d
+      ) * getStrength(node, i, nodes) * alpha;
     }
   }
 }
