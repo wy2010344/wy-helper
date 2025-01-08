@@ -41,6 +41,11 @@
       "types": "./dist/router/index.d.ts",
       "import": "./dist/router.mjs",
       "require": "./dist/router.js"
+    },
+    "./forceLayout": {
+      "types": "./dist/forceLayout/index.d.ts",
+      "import": "./dist/forceLayout.mjs",
+      "require": "./dist/forceLayout.js"
     }
   },
   "files": [

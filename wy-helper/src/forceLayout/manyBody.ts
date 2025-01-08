@@ -2,9 +2,10 @@ import { binarytree } from "d3-binarytree";
 import { quadtree } from "d3-quadtree";
 import { octree } from "d3-octree";
 import jiggle from "./jiggle";
-import { DIMType, TreeNode } from ".";
-import { GetValue, emptyObject } from "wy-helper";
-import { Direction, ForceNode, NodeForce } from ".";
+import { DIMType, ForceDir, TreeNode } from "./forceModel";
+import { Direction, ForceNode } from "./forceModel";
+import { GetValue } from "../setStateHelper";
+import { emptyObject } from "../util";
 
 
 function getD(d: Direction) {
@@ -32,7 +33,7 @@ function defaultGetStrenth(n: any) {
  * @param param0 
  * @returns 
  */
-export default function <T, V>(
+export function forceManybody<T, V>(
   {
     distanceMax2 = Infinity,
     distanceMin2 = 1,
@@ -47,26 +48,28 @@ export default function <T, V>(
     random?: GetValue<number>
     getStrenth?(n: ForceNode<T>): number
   } = emptyObject
-): NodeForce<T, V> {
-  return function (nodes, nDim) {
-    return function (alpha, nodes) {
-      g.alpha = alpha
-      g.nDim = nDim
-      g.distanceMax2 = distanceMax2
-      g.distanceMin2 = distanceMin2
-      g.theta2 = theta2
-      g.random = random
-      g.getStrenth = getStrenth
-      const tree =
-        (g.nDim === 1 ? binarytree(nodes, getD('x'))
-          : (g.nDim === 2 ? quadtree(nodes, getD('x'), getD('y'))
-            : (g.nDim === 3 ? octree(nodes, getD('x'), getD('y'), getD('z'))
-              : null
-            ))).visitAfter(accumulate);
+) {
+  return function (
+    nodes: readonly ForceNode<T, ForceDir>[],
+    nDim: DIMType,
+    alpha: number
+  ) {
+    g.alpha = alpha
+    g.nDim = nDim
+    g.distanceMax2 = distanceMax2
+    g.distanceMin2 = distanceMin2
+    g.theta2 = theta2
+    g.random = random
+    g.getStrenth = getStrenth
+    const tree =
+      (g.nDim === 1 ? binarytree(nodes, getD('x'))
+        : (g.nDim === 2 ? quadtree(nodes as any[], getD('x'), getD('y'))
+          : (g.nDim === 3 ? octree(nodes, getD('x'), getD('y'), getD('z'))
+            : null
+          ))).visitAfter(accumulate);
 
-      for (let i = 0, n = nodes.length; i < n; ++i) {
-        g.node = nodes[i], tree.visit(apply);
-      }
+    for (let i = 0, n = nodes.length; i < n; ++i) {
+      g.node = nodes[i], tree.visit(apply);
     }
   }
 }

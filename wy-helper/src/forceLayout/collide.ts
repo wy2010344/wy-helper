@@ -4,10 +4,11 @@
 import { binarytree } from "d3-binarytree";
 import { quadtree } from "d3-quadtree";
 import { octree } from "d3-octree";
-import { Direction, ForceNode, NodeForce } from ".";
-import { DIMType, TreeNode } from ".";
-import { GetValue, emptyObject } from "wy-helper";
+import { Direction, ForceNode, TreeNode } from "./forceModel";
+import { DIMType } from "./forceModel";
 import jiggle from "./jiggle";
+import { GetValue } from "../setStateHelper";
+import { emptyObject } from "../util";
 
 function getDV(d: Direction) {
   return <T>(n: ForceNode<T>,) => {
@@ -23,10 +24,9 @@ function defaultGetRadius() {
  * @param param0 
  * @returns 
  */
-export default function <T, V>({
+export function forceCollide<T, V>({
   strength = 1,
   iterations = 1,
-
   random = Math.random,
   getRadius = defaultGetRadius
 }: {
@@ -34,31 +34,32 @@ export default function <T, V>({
   iterations?: number
   random?: GetValue<number>
   getRadius?(n: ForceNode<T>): number
-} = emptyObject): NodeForce<T, V> {
-  return function (nodes, nDim) {
-    return function (_, nodes) {
-      g.nDim = nDim
-      g.strength = strength
-      g.getRadius = getRadius
-      g.random = random
-      for (var k = 0; k < iterations; ++k) {
-        const tree =
-          (nDim === 1 ? binarytree(nodes, getDV('x'))
-            : (nDim === 2 ? quadtree(nodes, getDV('x'), getDV('y'))
-              : (nDim === 3 ? octree(nodes, getDV('x'), getDV('y'), getDV('z'))
-                : null
-              ))).visitAfter(prepare);
+} = emptyObject) {
+  return function (
+    nodes: readonly ForceNode<T>[],
+    nDim: DIMType
+  ) {
+    g.nDim = nDim
+    g.strength = strength
+    g.getRadius = getRadius
+    g.random = random
+    for (var k = 0; k < iterations; ++k) {
+      const tree =
+        (nDim === 1 ? binarytree(nodes, getDV('x'))
+          : (nDim === 2 ? quadtree(nodes as any[], getDV('x'), getDV('y'))
+            : (nDim === 3 ? octree(nodes, getDV('x'), getDV('y'), getDV('z'))
+              : null
+            ))).visitAfter(prepare);
 
-        for (let i = 0; i < nodes.length; ++i) {
-          const node = nodes[i]
-          g.node = node
-          g.ri = getRadius(node);
-          g.ri2 = g.ri * g.ri;
-          g.xi = node.x.d + node.x.v;
-          if (nDim > 1) { g.yi = node.y.d + node.y.v; }
-          if (nDim > 2) { g.zi = node.z.d + node.z.v; }
-          tree.visit(apply);
-        }
+      for (let i = 0; i < nodes.length; ++i) {
+        const node = nodes[i]
+        g.node = node
+        g.ri = getRadius(node);
+        g.ri2 = g.ri * g.ri;
+        g.xi = node.x.d + node.x.v;
+        if (nDim > 1) { g.yi = node.y.d + node.y.v; }
+        if (nDim > 2) { g.zi = node.z.d + node.z.v; }
+        tree.visit(apply);
       }
     }
   }
