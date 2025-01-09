@@ -33,7 +33,7 @@ function defaultGetStrenth(n: any) {
  * @param param0 
  * @returns 
  */
-export function forceManybody<T, V>(
+export function forceManybody<T>(
   {
     distanceMax2 = Infinity,
     distanceMin2 = 1,

@@ -1,6 +1,6 @@
 
 
-import { emptyFun, GetValue, objectDiffDeleteKey, SetValue, SyncFun } from "wy-helper";
+import { emptyFun, GetValue, objectDiffDeleteKey, SetValue, SyncFun, ValueOrGet } from "wy-helper";
 import { PureCSSProperties } from "../util";
 import { DomElementType, React, SvgElementType } from "./html";
 import { addEvent, FDomAttributeC, FSvgAttributeC, isEvent, mergeEvent, setClassName, setHtml, setText, updateAttr, updateCssVariable, updateDataSet, updateDom, updateStyle, updateSvg } from "./fx";
@@ -57,22 +57,10 @@ export type FSvgAttribute<T extends SvgElementType> = {
 
 export type FGetChildAttr<T> = {
   childrenType: "text"
-  children: string | GetValue<string>
+  children: ValueOrGet<number | string>
 } | {
   childrenType: "html"
-  children: string | GetValue<string>
-} | {
-  childrenType?: never
-  children?: SetValue<T>
-}
-
-
-export type FChildAttr<T> = {
-  childrenType: "text"
-  children: string | SyncFun<string>
-} | {
-  childrenType: "html"
-  children: string | SyncFun<string>
+  children: ValueOrGet<number | string>
 } | {
   childrenType?: never
   children?: SetValue<T>

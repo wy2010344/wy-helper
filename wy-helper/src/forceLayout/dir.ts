@@ -10,7 +10,7 @@ import { CallBackNode, Direction, ForceDir, ForceNode } from "./forceModel";
  * @param param1 
  * @returns 
  */
-export function forceDir<T, V>(
+export function forceDir<T>(
   dir: Direction,
   {
     getZ = asLazy(0),
