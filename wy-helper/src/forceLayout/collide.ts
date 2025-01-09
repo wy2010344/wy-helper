@@ -24,7 +24,7 @@ function defaultGetRadius() {
  * @param param0 
  * @returns 
  */
-export function forceCollide<T, V>({
+export function forceCollide<T>({
   strength = 1,
   iterations = 1,
   random = Math.random,

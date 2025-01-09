@@ -1,7 +1,7 @@
 import { Compare, simpleNotEqual } from "./equal";
 import { GetValue, SetValue } from "./setStateHelper";
 import { StoreRef } from "./storeRef";
-import { asLazy, emptyFun, EmptyFun, iterableToList, messageChannelCallback, numberSortAsc, run } from "./util";
+import { asLazy, emptyFun, EmptyFun, emptyObject, iterableToList, messageChannelCallback, numberSortAsc, run } from "./util";
 
 
 const m = globalThis as any
@@ -335,4 +335,52 @@ export function valueOrGetToGet<T>(o: ValueOrGet<T>, toMemo?: boolean, shouldCha
   } else {
     return asLazy(o)
   }
+}
+
+
+
+
+
+export function toProxySignal<T extends {}>(init: T, {
+  signalObject = {} as any,
+  getToCreate,
+  setToCreate
+}: {
+  signalObject?: {
+    [key in keyof T]: StoreRef<T[key]>
+  }
+  getToCreate?: boolean
+  setToCreate?: boolean
+} = emptyObject) {
+  for (const key in init) {
+    signalObject[key] = createSignal(init[key])
+  }
+  type Target = Record<string | symbol, StoreRef<any>>
+  return new Proxy(signalObject, {
+    get(target: Target, p, receiver) {
+      let tp = target[p]
+      if (!tp) {
+        if (getToCreate) {
+          tp = createSignal(undefined)
+          target[p] = tp
+        } else {
+          return undefined
+        }
+      }
+      return tp.get()
+    },
+    set(target, p, newValue, receiver) {
+      let tp = target[p]
+      if (!tp) {
+        if (setToCreate) {
+          tp = createSignal(newValue)
+          target[p] = tp
+        } else {
+          return false
+        }
+      }
+      tp.set(newValue)
+      return true
+    },
+  }) as T
 }

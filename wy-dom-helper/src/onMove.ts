@@ -101,12 +101,18 @@ export function subscribeMove(
 }
 
 export interface PagePoint {
+  /**相对页面 */
   pageX: number
   pageY: number
+  /**相对屏幕 */
   screenX: number
   screenY: number
+  /**相对视口 */
   clientX: number
   clientY: number
+  /**相对元素 */
+  // offsetX:number
+  // offsetY:number
 }
 
 interface DragMove {

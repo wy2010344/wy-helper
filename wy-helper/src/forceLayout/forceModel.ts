@@ -44,37 +44,52 @@ const initialRadius = 10,
 
 
 
-export function mergeNodesAndLinks<N, L, K, FDir extends ForceDir = ForceDir>({
-  nodes,
-  links,
-  fromNodes: fnodes,
-  fromLinks: flinks,
-  getNodeKey: getKey,
-  getSorceKey,
-  getTargetKey,
-  createFromKey,
-  createForceNode
-}: {
+interface MergeNodesAndLinks<N, L, K, FDir extends ForceDir = ForceDir> {
+  (arg: {
+    nodes: readonly ForceNode<N, FDir>[],
+    links: readonly ForceLink<L, N, FDir>[],
+    fromNodes: ReadArray<N>,
+    fromLinks: ReadArray<L>,
+    getNodeKey(n: N): K,
+    getSorceKey(n: L): K,
+    getTargetKey(n: L): K,
+    createFromKey(k: K): N,
+    createForceNode(n: N, i: number, befores: readonly ForceNode<N, FDir>[]): ForceNode<N, FDir>,
+  }): {
+    nodes: readonly ForceNode<N, FDir>[]
+    links: ForceLink<L, N, FDir>[]
+  }
+  (arg: {
+    nodes: readonly ForceNode<N, FDir>[],
+    fromNodes: ReadArray<N>,
+    getNodeKey(n: N): K,
+    createForceNode(n: N, i: number, befores: readonly ForceNode<N, FDir>[]): ForceNode<N, FDir>,
+  }): {
+    nodes: readonly ForceNode<N, FDir>[]
+  }
+}
+
+
+export interface MergeNodesArg<N, K, FDir extends ForceDir = ForceDir> {
   nodes: readonly ForceNode<N, FDir>[],
-  links: readonly ForceLink<L, N, FDir>[],
   fromNodes: ReadArray<N>,
-  fromLinks: ReadArray<L>,
-  getNodeKey: (n: N) => K,
-  getSorceKey: (n: L) => K,
-  getTargetKey: (n: L) => K,
-  createFromKey: (k: K) => N,
-  createForceNode: (n: N, i: number, befores: readonly ForceNode<N, FDir>[]) => ForceNode<N, FDir>,
-}) {
+  createForceNode(n: N, i: number, befores: readonly ForceNode<N, FDir>[]): ForceNode<N, FDir>,
+}
+function _mergeNodes<N, K, FDir extends ForceDir = ForceDir>({
+  nodes,
+  fromNodes,
+  createForceNode
+}: MergeNodesArg<N, K, FDir>) {
   const helper = new ArrayHelper(nodes)
-  const count = Math.max(nodes.length, fnodes.length)
+  const count = Math.max(nodes.length, fromNodes.length)
   for (let i = 0; i < count; i++) {
     //需要依fnode调顺序
-    const fnode = fnodes[i]
+    const fnode = fromNodes[i]
     const node = helper.get()[i]
     if (fnode) {
-      const fkey = getKey(fnode)
+      const fkey = (fnode)
       if (node) {
-        const key = getKey(node.value)
+        const key = (node.value)
         if (key == fkey) {
           if (node.index != i) {
             //坐标不相同
@@ -84,7 +99,7 @@ export function mergeNodesAndLinks<N, L, K, FDir extends ForceDir = ForceDir>({
             })
           }
         } else {
-          const targetIndex = helper.get().findIndex(v => getKey(v.value) == fkey)
+          const targetIndex = helper.get().findIndex(v => (v.value) == fkey)
           if (targetIndex < 0) {
             //新的
             helper.insert(i,
@@ -109,8 +124,33 @@ export function mergeNodesAndLinks<N, L, K, FDir extends ForceDir = ForceDir>({
       helper.removeAt(i)
     }
   }
+  return helper
+}
+export function mergeNodes<N, K, FDir extends ForceDir = ForceDir>(arg: MergeNodesArg<N, K, FDir>) {
+  return _mergeNodes(arg).get()
+}
+export interface MergeNodesAndLinksArg<N, L, K, FDir extends ForceDir = ForceDir> extends MergeNodesArg<N, K, FDir> {
+  links: readonly ForceLink<L, N, FDir>[],
+  fromLinks: ReadArray<L>,
+  getNodeKey(n: N): K,
+  getSorceKey(n: L): K,
+  getTargetKey(n: L): K,
+  createFromKey(k: K): N,
+}
+export function mergeNodesAndLinks<N, L, K, FDir extends ForceDir = ForceDir>(arg: MergeNodesAndLinksArg<N, L, K, FDir>) {
+  const helper = _mergeNodes(arg)
+  const {
+    nodes,
+    links,
+    fromLinks,
+    getNodeKey,
+    getSorceKey,
+    getTargetKey,
+    createFromKey,
+    createForceNode
+  } = arg
   function getNode(key: K) {
-    let value = helper.get().find(v => getKey(v.value) == key)
+    let value = helper.get().find(v => getNodeKey(v.value) == key)
     if (!value) {
       const index = helper.get().length
       value = createForceNode(createFromKey(key), index, nodes)
@@ -119,8 +159,8 @@ export function mergeNodesAndLinks<N, L, K, FDir extends ForceDir = ForceDir>({
     return value
   }
   const newLinks: ForceLink<L, N, FDir>[] = []
-  for (let i = 0; i < flinks.length; i++) {
-    const flink = flinks[i]
+  for (let i = 0; i < fromLinks.length; i++) {
+    const flink = fromLinks[i]
     newLinks.push({
       source: getNode(getSorceKey(flink)),
       target: getNode(getTargetKey(flink)),
