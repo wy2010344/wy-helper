@@ -38,7 +38,6 @@ export class Reorder<K> {
       getSize[this.direction],
       offset[this.direction],
       {
-        delta: diff[this.direction],
         gap: this.gap
       }
     )

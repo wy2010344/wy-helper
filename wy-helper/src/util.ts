@@ -16,11 +16,19 @@ export function run<T extends AnyFunction>(
 class FreezeError extends Error {
 }
 
+const FreezeErrorSymbol = Symbol('FreezeErrorSymbol')
 export const objectFreeze = 'freeze' in Object ? Object.freeze.bind(Object) : quote
 export const objectFreezeThrow = run((): <T extends Object>(v: T) => T => {
   if (globalThis.Proxy) {
     return (a: any) => {
       return new Proxy(a, {
+        get(target, p, receiver) {
+          if (p == FreezeErrorSymbol) {
+            //特殊的区分符号
+            return true
+          }
+          return target[p]
+        },
         set(target, p, newValue, receiver) {
           throw new FreezeError("don't allow set value")
         },
@@ -31,7 +39,7 @@ export const objectFreezeThrow = run((): <T extends Object>(v: T) => T => {
 })
 // 检查对象是否是代理对象
 function isProxy(obj: any) {
-  return !!obj && obj instanceof Object && !!obj.constructor && obj.constructor.name === 'Proxy';
+  return obj && obj[FreezeErrorSymbol]
 };
 export function objectDeepFreezeThrow<T>(n: T, before: any[] = []) {
   if (typeof n == 'object' && n) {

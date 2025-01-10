@@ -9,7 +9,10 @@ export class ArrayHelper<V> {
   ) {
     this.array = _array as V[]
   }
-
+  reset(v: V[]) {
+    this.array = v
+    this.dirty = false
+  }
   get(): readonly V[] {
     return this.array
   }

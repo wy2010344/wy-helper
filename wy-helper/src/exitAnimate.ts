@@ -1,6 +1,6 @@
 import { ArrayHelper, NoInsertArrayHelper, emptyArrayHelper } from "./ArrayHelper"
 import { getOutResolvePromise } from "./setStateHelper"
-import { EmptyFun, defaultToGetTrue, emptyObject } from "./util"
+import { EmptyFun, alawaysFalse, defaultToGetTrue, emptyObject } from "./util"
 
 
 export interface ExitModel<V> {
@@ -20,10 +20,10 @@ interface ExitModelImpl<V> extends ExitModel<V> {
  * 主要是有一点,可能会回退
  */
 export type ExitAnimateMode = 'pop' | 'shift'
-
+export type ExitAnimateWait = 'in-out' | 'out-in'
 export type ExitAnimateArg<V> = {
   mode?: ExitAnimateMode
-  wait?: 'in-out' | 'out-in'
+  wait?: ExitAnimateWait
   exitIgnore?: any | ((v: V) => any)
   enterIgnore?: any | ((v: V) => any)
   onExitComplete?(v?: any): void
@@ -42,7 +42,7 @@ export function buildUseExitAnimate<V>(
   updateVersion: EmptyFun,
   //需要保持稳定不变
   cacheList: {
-    list: ExitModelImpl<V>[],
+    list: readonly ExitModelImpl<V>[],
     /**
      * 主要是应对render过程中,发生promise事件触发,因为effect阶段才提交到list上面.
      * 乐观情况,非render阶段是空,计算量为0
@@ -65,8 +65,8 @@ export function buildUseExitAnimate<V>(
   }: ExitAnimateArg<V> = emptyObject
 ) {
 
-  exitIgnore = defaultToGetTrue(exitIgnore)
-  enterIgnore = defaultToGetTrue(enterIgnore)
+  exitIgnore = defaultToGetTrue(exitIgnore) || alawaysFalse
+  enterIgnore = defaultToGetTrue(enterIgnore) || alawaysFalse
 
   const newCacheList = new ArrayHelper(cacheList.list)
   cacheList.renderHelper = newCacheList
@@ -77,7 +77,7 @@ export function buildUseExitAnimate<V>(
   newCacheList.forEachRight(function (old, i) {
     if (!old.exiting && !list.some(v => getKey(v) == old.originalKey)) {
       //新删除了
-      if (exitIgnore?.(old.value)) {
+      if (exitIgnore(old.value)) {
         newCacheList.removeAt(i)
       } else {
         const [promise, resolve] = getOutResolvePromise()
@@ -98,7 +98,7 @@ export function buildUseExitAnimate<V>(
           const nv = cacheList.renderHelper.removeWhere(removeWhere)
           if (n || nv) {
             // console.log("remove", n, nv)
-            cacheList.list = eCacheList.get() as ExitModelImpl<V>[]
+            cacheList.list = eCacheList.get()
             updateVersion()
           }
         })
@@ -106,7 +106,9 @@ export function buildUseExitAnimate<V>(
     }
   })
   let nextIndex = 0
-  for (const v of list) {
+  const addHide = wait == 'out-in' && thisRemoveList.length != 0
+  for (let i = 0, len = list.length; i < len; i++) {
+    const v = list[i]
     const key = getKey(v)
     const oldIndex = newCacheList.get().findIndex(old => !old.exiting && old.originalKey == key)
     if (oldIndex < 0) {
@@ -120,8 +122,8 @@ export function buildUseExitAnimate<V>(
         key: getNextId(promise),
         value: v,
         originalKey: key,
-        hide: wait == 'out-in' && thisRemoveList.length != 0,
-        enterIgnore: enterIgnore?.(v),
+        hide: addHide,
+        enterIgnore: enterIgnore(v),
         promise,
         resolve
       }
@@ -150,7 +152,7 @@ export function buildUseExitAnimate<V>(
     list: tempCacheList.get() as readonly ExitModel<V>[],
     effect() {
       const removePromiseList: Promise<any>[] = thisRemoveList.map(v => v.promise)
-      if (removePromiseList.length) {
+      if (thisRemoveList.length) {
         const allDestroyPromise = Promise.all(removePromiseList)
         if (onExitComplete) {
           allDestroyPromise.then(onExitComplete)
@@ -165,14 +167,15 @@ export function buildUseExitAnimate<V>(
             const nv = opHelperHide(cacheList.renderHelper, thisAddList)
             if (n || nv) {
               // console.log("update out-in", n, nv)
-              cacheList.list = eCacheList.get() as ExitModelImpl<V>[]
+              cacheList.list = eCacheList.get()
               updateVersion()
             }
           })
         }
       }
       const addPromiseList: Promise<any>[] = []
-      for (const thisAdd of thisAddList) {
+      for (let i = 0, len = thisAddList.length; i < len; i++) {
+        const thisAdd = thisAddList[i]
         if (!enterIgnore?.(thisAdd.value)) {
           addPromiseList.push(thisAdd.promise)
         }
@@ -191,7 +194,7 @@ export function buildUseExitAnimate<V>(
             const nv = opHelperHide(cacheList.renderHelper, thisRemoveList)
             if (n || nv) {
               // console.log("update in-out", n, nv)
-              cacheList.list = eCacheList.get() as ExitModelImpl<V>[]
+              cacheList.list = eCacheList.get()
               updateVersion()
             }
           })
@@ -201,7 +204,7 @@ export function buildUseExitAnimate<V>(
         Promise.all([...addPromiseList, ...removePromiseList]).then(onAnimateComplete)
       }
 
-      cacheList.list = cacheList.renderHelper.get() as ExitModelImpl<V>[]
+      cacheList.list = cacheList.renderHelper.get()
       cacheList.renderHelper = emptyArrayHelper
     }
   }

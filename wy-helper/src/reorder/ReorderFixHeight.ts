@@ -40,7 +40,6 @@ export class ReorderFixHeight<K> {
       this.getHeight,
       offset[this.direction],
       {
-        delta: diff[this.direction],
         gap: this.gap
       })
     if (item) {
