@@ -2,6 +2,8 @@ import { emptyObject } from "../util";
 
 
 /**
+ * 
+ * 这个不是中线相交发生替换,而是移动距离大于目标元素的一半
  * 实时的靠速度来判断
  * @param order 
  * @param getKey 
@@ -14,26 +16,43 @@ import { emptyObject } from "../util";
 export function reorderCheckTarget<T>(
   order: T[],
   index: number,
-  getHeight: (n: T, i: number) => number,
+  getOffsetHeight: (n: T, i: number) => number,
   offset: number,
   {
-    delta = offset,
+    // meetAt = 'start-target',
+    meetDiff,
     gap = 0
   }: {
-    /**单位位移,否则不靠位移 */
-    delta?: number,
+    /**
+     * start-self:开始的一半,不应该存在,
+     *  因为silentDiff是target的offsetHeight+gap,否则会有闪烁
+     *  这里offset>gap+target.offsetHeight/2,则一diff,则仍然是正(符号不变)
+     * start-target:结束的一半,刚刚好的位置
+     * center:两个中线相交,各自的一半
+     * end-self:与自身的结束位置相交,全部的开始+一半的结束
+     * end-target:与目标的结束位置相交,一半开始+全部的结束
+     */
+    // meetAt?: "start-target" | "center" | "end-self" | "end-target",
+    /**
+     * 使用meetDiff,可以更多控制
+     * 中线,startheight/2
+     * @param startHeight 
+     * @param endHeight 
+     * @param gap 
+     */
+    meetDiff?(startHeight: number, endHeight: number, gap: number): number
     gap?: number
   } = emptyObject as any
 ) {
   'worklet';
   gap = Math.abs(gap)
   //速度为0时,不调整
-  if (!delta) {
+  if (!offset) {
     return
   }
-  const nextOffset = delta > 0 ? 1 : -1
-
+  const nextOffset = offset > 0 ? 1 : -1
   let nextHeightOffset = gap * nextOffset
+  const startHeight = getOffsetHeight(order[index], index)
   let flagIndex = index
   while (flagIndex > -1 && flagIndex < order.length) {
     const nextIndex = flagIndex + nextOffset
@@ -41,9 +60,13 @@ export function reorderCheckTarget<T>(
     if (!nextItem) {
       break
     }
-
-    const nextHeight = getHeight(nextItem, nextIndex)
-    const nextHeightCenter = nextHeight / 2
+    const nextHeight = getOffsetHeight(nextItem, nextIndex)
+    let meetDiffValue = meetDiff?.(startHeight, nextHeight, gap) || 0
+    if (meetDiffValue < 0) {
+      console.warn("差异值必须为正")
+      meetDiffValue = -meetDiffValue
+    }
+    let nextHeightCenter = nextHeight / 2 + meetDiffValue
     if (
       (nextOffset > 0 && offset > nextHeightOffset + nextHeightCenter) ||
       (nextOffset < 0 && offset < nextHeightOffset - nextHeightCenter)

@@ -145,7 +145,6 @@ function changeDiff<K>(
     getElementHeight,
     ty,
     {
-      delta: diffY,
       gap
     }
   )

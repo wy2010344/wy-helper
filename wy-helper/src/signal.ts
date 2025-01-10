@@ -86,6 +86,11 @@ class Signal<T> {
   private dirty = false
   private dirtyValue: T
   set(v: T) {
+    if (!this.listeners[0].size) {
+      console.log("没有监听者,可以安全更新", this.dirty)
+      this.value = v
+      return
+    }
     /**
      * 是否可以在批量结束时,才检查哪些需要改变?
      * 但是要区分缓存值与生效值
@@ -232,6 +237,9 @@ export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
   const a = arguments[2]
   const b = arguments[3]
   const c = arguments[4]
+
+  let inited = false
+  let lastValue: any = undefined
   function addFun() {
     if (disabled) {
       return
@@ -239,7 +247,16 @@ export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
     signalCache.currentFun = addFun
     const value = get()
     signalCache.currentFun = undefined
-    set(value, a, b, c)
+    if (inited) {
+      if (value != lastValue) {
+        lastValue = value
+        set(value, a, b, c)
+      }
+    } else {
+      inited = true
+      lastValue = value
+      set(value, a, b, c)
+    }
   }
   addFun()
   //销毁
