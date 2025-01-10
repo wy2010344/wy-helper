@@ -1,6 +1,6 @@
 import { arrayMove } from "../ArrayHelper"
 import { EmptyFun, run } from "../util"
-import { rangeBetweenLeft, rangeBetweenRight, reorderCheckTarget } from "./util"
+import { beforeMoveOperate, rangeBetweenLeft, rangeBetweenRight, reorderCheckTarget } from "./util"
 export type ReorderLocalModel<K> = {
   onMove?: {
     key: K
@@ -144,55 +144,61 @@ function changeDiff<K>(
     currentIndex,
     getElementHeight,
     ty,
-    {
-      gap
-    }
+    gap
   )
 
   if (target) {
     const [idx, idx1] = target
-    const newElements = arrayMove(elements, idx, idx1, true)
-    // newList = arrayMove(newList, idx, idx1, true)
-
-    /**
-     * 如果向后移动
-     * 从elements上取
-     * 
-     */
-    let otherHeight = elements[idx].getHeight() + gap
-    if (idx > idx1) {
-      otherHeight = -otherHeight
-    }
-    //2->4,3-2,4-3
-    //4->2,3-4,2-3
-    rangeBetweenLeft(idx, idx1, function (i) {
-      //对于所有非自己元素,移动当前元素的高度与gap
-      //如何与react兼容?状态变更触发事件,需要在useEffect里依赖状态去触发事件....
-      const element = newElements[i]
-      ma.append(function () {
-        element.layoutFrom(otherHeight)
-      })
+    const diff = beforeMoveOperate(idx, idx1, elements, getElementHeight, gap, (row, from, i) => {
+      row.layoutFrom(from)
     })
-    let diffHeight = 0
-    rangeBetweenRight(idx, idx1, function (i) {
-      const row = elements[i]
-      const height = row.getHeight()
-      diffHeight = diffHeight + height + gap
-    })
-    if (idx > idx1) {
-      diffHeight = -diffHeight
-    }
-    /**
-     * 部分改变,因为本身有偏移
-     * 对于自己,偏移量为非自己到目标元素的高度+gap
-     * 1->2,则是2的高度+gap
-     * 2->1,则是1的高度=gap
-     */
-    const element = elements[idx]
     ma.append(function () {
-      element.silentDiff(-diffHeight)
+      element.silentDiff(diff)
     })
-    return [idx, idx1] as const
+    return target
+
+    // const newElements = arrayMove(elements, idx, idx1, true)
+    // // newList = arrayMove(newList, idx, idx1, true)
+
+    // /**
+    //  * 如果向后移动
+    //  * 从elements上取
+    //  * 
+    //  */
+    // let otherHeight = elements[idx].getHeight() + gap
+    // if (idx > idx1) {
+    //   otherHeight = -otherHeight
+    // }
+    // //2->4,3-2,4-3
+    // //4->2,3-4,2-3
+    // rangeBetweenLeft(idx, idx1, function (i) {
+    //   //对于所有非自己元素,移动当前元素的高度与gap
+    //   //如何与react兼容?状态变更触发事件,需要在useEffect里依赖状态去触发事件....
+    //   const element = newElements[i]
+    //   ma.append(function () {
+    //     element.layoutFrom(otherHeight)
+    //   })
+    // })
+    // let diffHeight = 0
+    // rangeBetweenRight(idx, idx1, function (i) {
+    //   const row = elements[i]
+    //   const height = row.getHeight()
+    //   diffHeight = diffHeight + height + gap
+    // })
+    // if (idx > idx1) {
+    //   diffHeight = -diffHeight
+    // }
+    // /**
+    //  * 部分改变,因为本身有偏移
+    //  * 对于自己,偏移量为非自己到目标元素的高度+gap
+    //  * 1->2,则是2的高度+gap
+    //  * 2->1,则是1的高度=gap
+    //  */
+    // const element = elements[idx]
+    // ma.append(function () {
+    //   element.silentDiff(-diffHeight)
+    // })
+    // return [idx, idx1] as const
   }
 }
 export function reorderLocalReducer<K, M extends ReorderLocalModel<K>>(

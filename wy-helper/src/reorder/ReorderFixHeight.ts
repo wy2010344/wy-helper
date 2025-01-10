@@ -39,9 +39,7 @@ export class ReorderFixHeight<K> {
       index,
       this.getHeight,
       offset[this.direction],
-      {
-        gap: this.gap
-      })
+      this.gap)
     if (item) {
       const [index, targetIndex] = item
       const targetKey = this.layoutList[targetIndex].value

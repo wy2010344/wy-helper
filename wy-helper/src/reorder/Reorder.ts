@@ -37,9 +37,7 @@ export class Reorder<K> {
       index,
       getSize[this.direction],
       offset[this.direction],
-      {
-        gap: this.gap
-      }
+      this.gap
     )
     if (item) {
       const [index, targetIndex] = item
