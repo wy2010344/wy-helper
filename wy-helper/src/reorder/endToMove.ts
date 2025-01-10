@@ -31,7 +31,7 @@ export function buildEndToMove<T>({
       idx,
       getHeight,
       getTransValue(row),
-      { gap }
+      gap
     )
     if (tempOut && !arrayNotEqualOrOne(change, tempOut?.change)) {
       return tempOut

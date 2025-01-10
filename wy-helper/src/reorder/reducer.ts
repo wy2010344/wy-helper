@@ -2,7 +2,7 @@ import { arrayMove } from "../ArrayHelper"
 import { ReducerDispatch, ReducerWithDispatch, ReducerWithDispatchResult, mapReducerDispatchListA } from "../ValueCenter"
 import { AnimateFrameAct, AnimateFrameModel } from "../animation"
 import { GetDeltaXAnimationConfig } from "../animation/AnimationConfig"
-import { rangeBetweenLeft, rangeBetweenRight, reorderCheckTarget } from "./util"
+import { beforeMoveOperate, rangeBetweenLeft, rangeBetweenRight, reorderCheckTarget } from "./util"
 export type ReorderModelRow<T> = {
   transY: AnimateFrameModel
   value: T
@@ -156,30 +156,15 @@ export function createReorderReducer<T, K, E>(
       currentIndex,
       getElementHeight,
       ty,
-      { gap }
+      gap
     )
     if (target) {
       const [idx, idx1] = target
-      newList = arrayMove(newList, idx, idx1)
-      /**
-       * 如果向后移动
-       * 从elements上取
-       * 
-       */
-      let otherHeight = getHeight(elements[idx].div) + gap
-      if (idx > idx1) {
-        otherHeight = -otherHeight
-      }
-      //2->4,3-2,4-3
-      //4->2,3-4,2-3
-      rangeBetweenLeft(idx, idx1, function (i) {
-        //对于所有非自己元素,移动当前元素的高度与gap
-        //如何与react兼容?状态变更触发事件,需要在useEffect里依赖状态去触发事件....
+      const diff = beforeMoveOperate(idx, idx1, elements, getElementHeight, gap, (element, from, i) => {
         const row = newList[i]
-
         const [transY, onMove] = animateNumberFrameReducer(row.transY, {
           type: "changeTo",
-          from: otherHeight,
+          from: from,
           target: 0,
           getConfig
         })
@@ -189,32 +174,79 @@ export function createReorderReducer<T, K, E>(
           transY
         }
       })
-
-
-      const row = newList[idx1]
-      let diffHeight = 0
-      rangeBetweenRight(idx, idx1, function (i) {
-        const row = elements[i]
-        const height = getHeight(row.div)
-        diffHeight = diffHeight + height + gap
-      })
-      if (idx > idx1) {
-        diffHeight = -diffHeight
-      }
-      /**
-       * 部分改变,因为本身有偏移
-       * 对于自己,偏移量为非自己到目标元素的高度+gap
-       * 1->2,则是2的高度+gap
-       * 2->1,则是1的高度=gap
-       */
+      const row = newList[idx]
       const [transY, onMove] = animateNumberFrameReducer(row.transY, {
         type: "silentDiff",
-        value: -diffHeight
+        value: diff
       })
-      newList[idx1] = {
+      newList[idx] = {
         ...row,
         transY
       }
+      newList = arrayMove(newList, idx, idx1)
+      /**
+       * 如果向后移动
+       * 从elements上取
+       * 
+       */
+      // let otherHeight = getHeight(elements[idx].div) + gap
+      // if (idx > idx1) {
+      //   otherHeight = -otherHeight
+      // }
+      // //2->4,3-2,4-3
+      // //4->2,3-4,2-3
+      // rangeBetweenLeft(idx, idx1, function (i) {
+      //   //对于所有非自己元素,移动当前元素的高度与gap
+      //   //如何与react兼容?状态变更触发事件,需要在useEffect里依赖状态去触发事件....
+      //   const row = newList[i]
+
+      //   const [transY, onMove] = animateNumberFrameReducer(row.transY, {
+      //     type: "changeTo",
+      //     from: otherHeight,
+      //     target: 0,
+      //     getConfig
+      //   })
+      //   ma.append(getKey(row.value), onMove)
+      //   newList[i] = {
+      //     ...row,
+      //     transY
+      //   }
+      // })
+
+      // const [transY, onMove] = animateNumberFrameReducer(row.transY, {
+      //   type: "silentDiff",
+      //   value: -diffHeight
+      // })
+      // newList[idx1] = {
+      //   ...row,
+      //   transY
+      // }
+
+
+      // const row = newList[idx1]
+      // let diffHeight = 0
+      // rangeBetweenRight(idx, idx1, function (i) {
+      //   const row = elements[i]
+      //   const height = getHeight(row.div)
+      //   diffHeight = diffHeight + height + gap
+      // })
+      // if (idx > idx1) {
+      //   diffHeight = -diffHeight
+      // }
+      // /**
+      //  * 部分改变,因为本身有偏移
+      //  * 对于自己,偏移量为非自己到目标元素的高度+gap
+      //  * 1->2,则是2的高度+gap
+      //  * 2->1,则是1的高度=gap
+      //  */
+      // const [transY, onMove] = animateNumberFrameReducer(row.transY, {
+      //   type: "silentDiff",
+      //   value: -diffHeight
+      // })
+      // newList[idx1] = {
+      //   ...row,
+      //   transY
+      // }
       return [newList, true] as const
     }
     return [newList, false] as const
