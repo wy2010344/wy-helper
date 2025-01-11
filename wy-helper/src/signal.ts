@@ -86,11 +86,6 @@ class Signal<T> {
   private dirty = false
   private dirtyValue: T
   set(v: T) {
-    // if (!this.dirty && !this.listeners[0].size) {
-    //   console.log("没有监听者,可以安全更新", this.dirty)
-    //   this.value = v
-    //   return
-    // }
     /**
      * 是否可以在批量结束时,才检查哪些需要改变?
      * 但是要区分缓存值与生效值
@@ -98,11 +93,18 @@ class Signal<T> {
     */
     if (this.dirty) {
       this.dirtyValue = v
-    } else if (this.shouldChange(this.value, v)) {
-      this.dirty = true
-      this.dirtyValue = v
-      beginCurrentBatch()
-      signalCache.currentBatch!.signals.add(this)
+    } else {
+      if (this.listeners[0].size) {
+        if (this.shouldChange(this.value, v)) {
+          this.dirty = true
+          this.dirtyValue = v
+          beginCurrentBatch()
+          signalCache.currentBatch!.signals.add(this)
+        }
+      } else {
+        //没有监听者,可以安全更新
+        this.value = v
+      }
     }
   }
 
@@ -190,9 +192,9 @@ export function batchSignalEnd() {
     console.warn("更新期间重复更新")
     return
   }
-  signalCache.realTimeCall = false
   const currentBatch = signalCache.currentBatch
   if (currentBatch) {
+    signalCache.realTimeCall = false
     currentBatch.signals.forEach(commitSignal)
     currentBatch.signals.clear()
 
@@ -220,6 +222,7 @@ export function batchSignalEnd() {
       console.log("出现多个recycleBatches", signalCache.recycleBatches.length)
     }
   } else {
+    //主要是提前执行了,所以messageChannelCallback里的回调是自然的空
     // console.log("未在批量任务中,没必要更新")
   }
 }
