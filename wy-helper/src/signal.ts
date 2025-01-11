@@ -86,11 +86,11 @@ class Signal<T> {
   private dirty = false
   private dirtyValue: T
   set(v: T) {
-    if (!this.listeners[0].size) {
-      console.log("没有监听者,可以安全更新", this.dirty)
-      this.value = v
-      return
-    }
+    // if (!this.dirty && !this.listeners[0].size) {
+    //   console.log("没有监听者,可以安全更新", this.dirty)
+    //   this.value = v
+    //   return
+    // }
     /**
      * 是否可以在批量结束时,才检查哪些需要改变?
      * 但是要区分缓存值与生效值
@@ -264,11 +264,6 @@ export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
     disabled = true
   }
 }
-export const trackSignalMemo: typeof trackSignal = function (...vs: any[]) {
-  vs[0] = memo(vs[0])
-  return trackSignal.apply(undefined, vs as any)
-}
-
 
 function relayChange(relays: Map<GetValue<any>, any>) {
   for (const [get, old] of relays) {
@@ -292,10 +287,9 @@ interface MemoGet<T> {
   (old: undefined, inited: false): T,
   (old: T, inited: true): T
 }
-export function memoAfter<T>(
+export function memo<T>(
   get: MemoGet<T>,
-  after: SetValue<T>,
-  shouldChange: Compare<T> = simpleNotEqual
+  after: SetValue<T> = emptyFun
 ) {
   const relays = new Map<GetValue<any>, any>()
   let lastValue!: T
@@ -304,7 +298,7 @@ export function memoAfter<T>(
     if (inited) {
       if (relayChange(relays)) {
         const value = memoGet(relays, get, lastValue, inited)
-        if (shouldChange(value, lastValue)) {
+        if (value != lastValue) {
           lastValue = value
         }
         after(lastValue)
@@ -318,12 +312,6 @@ export function memoAfter<T>(
     return lastValue
   }
   return myGet
-}
-
-export function memo<T>(
-  get: MemoGet<T>,
-  shouldChange: Compare<T> = simpleNotEqual) {
-  return memoAfter(get, emptyFun, shouldChange)
 }
 
 
@@ -343,11 +331,8 @@ export function getValueOrGet<T>(o: ValueOrGet<T>) {
  * @param shouldChange 
  * @returns 
  */
-export function valueOrGetToGet<T>(o: ValueOrGet<T>, toMemo?: boolean, shouldChange?: Compare<T>): GetValue<T> {
+export function valueOrGetToGet<T>(o: ValueOrGet<T>): GetValue<T> {
   if (typeof o == 'function') {
-    if (toMemo) {
-      return memo(o as any, shouldChange)
-    }
     return o as any
   } else {
     return asLazy(o)

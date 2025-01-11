@@ -22,14 +22,13 @@ export type InstanceCallbackOrValue<T> = number | ((n: T) => number)
 export function valueInstOrGetToGet<T, M>(
   o: InstanceCallbackOrValue<M> | undefined,
   getIns: GetValue<M>,
-  create: (getIns: GetValue<M>) => GetValue<T>,
-  shouldChange?: Compare<T>
+  create: (getIns: GetValue<M>) => GetValue<T>
 ): GetValue<T> {
   const tp = typeof o
   if (tp == 'function') {
-    return memo(() => {
+    return () => {
       return (o as any)(getIns())
-    }, shouldChange)
+    }
   } else if (tp == 'undefined') {
     return create(getIns)
   } else {
