@@ -9,8 +9,8 @@ export class ArrayHelper<V> {
   ) {
     this.array = _array as V[]
   }
-  reset(v: V[]) {
-    this.array = v
+  reset(v: readonly V[]) {
+    this.array = v as V[]
     this.dirty = false
   }
   get(): readonly V[] {
@@ -66,8 +66,6 @@ export class ArrayHelper<V> {
 }
 
 export type NoInsertArrayHelper<T> = Omit<ArrayHelper<T>, 'insert'>
-export const emptyArrayHelper = objectFreeze(new ArrayHelper(emptyArray)) as NoInsertArrayHelper<any>
-
 
 export function arrayFindIndexFrom<T>(
   vs: ReadArray<T>,
