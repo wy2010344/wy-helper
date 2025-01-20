@@ -160,7 +160,10 @@ export function flexDisplayUtil(
       }
       throw ''
     },
-    getInfo(x) {
+    getInfo(x, def) {
+      if (def) {
+        return 0
+      }
       // console.log("gext", x)
       if (x == s) {
         const { growAll, length } = getInfo()
