@@ -9,7 +9,12 @@ export type SizeKey = "width" | "height"
 export type LayoutKey = SizeKey | PointKey
 
 export type MDisplayOut = {
-  getInfo(x: LayoutKey): number
+  /**
+   * 
+   * @param x 
+   * @param def 父节点也没有值,退回自己提供的默认值,以尽量避免抛出错误 
+   */
+  getInfo(x: LayoutKey, def?: boolean): number
   /**
    * 有可能影响子节点的尺寸
    * @param x 
