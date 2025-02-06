@@ -252,7 +252,8 @@ export class AnimateFrameValue extends AbsAnimateFrameValue implements ReadValue
 export class SignalAnimateFrameValue extends AbsAnimateFrameValue {
   constructor(
     value: number,
-    requestAnimateFrame: (fun: SetValue<number>) => void
+    requestAnimateFrame: (fun: SetValue<number>) => void,
+    eachCommit?: EmptyFun
   ) {
     const signal = createSignal(value)
     super(
@@ -269,7 +270,7 @@ export class SignalAnimateFrameValue extends AbsAnimateFrameValue {
         }
       },
       requestAnimateFrame,
-      batchSignalEnd
+      eachCommit
     )
   }
 }

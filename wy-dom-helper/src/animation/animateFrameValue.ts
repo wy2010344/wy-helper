@@ -1,4 +1,4 @@
-import { createAnimateFrameReducer, superSubscribeRequestAnimationFrame, createRecycleScrollListReducer, AnimationFrameArg, AnimateFrameValue, SetValue, SignalAnimateFrameValue } from "wy-helper"
+import { createAnimateFrameReducer, superSubscribeRequestAnimationFrame, createRecycleScrollListReducer, AnimationFrameArg, AnimateFrameValue, SetValue, SignalAnimateFrameValue, EmptyFun } from "wy-helper"
 import { requestBatchAnimationFrame } from "../util"
 
 
@@ -13,8 +13,11 @@ export function animateFrame(value: number, requestAnimateFrame: SetValue<SetVal
   return new AnimateFrameValue(value, requestAnimateFrame)
 }
 
-export function signalAnimateFrame(value: number, requestAnimateFrame: SetValue<SetValue<number>> = requestBatchAnimationFrame) {
-  return new SignalAnimateFrameValue(value, requestAnimateFrame)
+export function signalAnimateFrame(value: number,
+  requestAnimateFrame: SetValue<SetValue<number>> = requestBatchAnimationFrame,
+  eachCommit?: EmptyFun
+) {
+  return new SignalAnimateFrameValue(value, requestAnimateFrame, eachCommit)
 }
 
 export const animateFrameReducer = createAnimateFrameReducer(requestBatchAnimationFrame)

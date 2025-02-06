@@ -130,7 +130,7 @@ export function splitClassNames(names: string) {
 }
 
 import * as CSS from 'csstype';
-import { EmptyFun, FalseType, Point, SetValue, buildThrottle, quote, run } from 'wy-helper'
+import { EmptyFun, FalseType, Point, SetValue, batchSignalEnd, buildThrottle, quote, run } from 'wy-helper'
 export type PureCSSProperties = CSS.Properties<string | number>
 export interface CSSProperties extends PureCSSProperties {
   [key: `--${string}`]: string | number | undefined;
@@ -186,6 +186,8 @@ function clearCacheList(n: number) {
   cacheList.push(list)
   list.forEach(run => run(n))
   list.length = 0
+  //这里统一调一下
+  batchSignalEnd()
 }
 
 

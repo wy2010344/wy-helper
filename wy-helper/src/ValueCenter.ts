@@ -70,24 +70,21 @@ export class ReadValueCenterProxyImpl<T> implements ReadValueCenter<T> {
   }
 }
 export class ValueCenterDefaultImpl<T> implements ValueCenter<T> {
-  private value: StoreRef<T>
   constructor(
-    value: T
+    private value: T
   ) {
-    //这样兼容了signal
-    this.value = createSignal(value)
   }
   private ec = new EventCenter<T>()
   set(v: T): void {
-    const oldValue = this.value.get()
-    this.value.set(v)
+    const oldValue = this.value
+    this.value = v
     this.ec.notify(v, oldValue)
   }
   poolSize(): number {
     return this.ec.poolSize()
   }
   get(): T {
-    return this.value.get()
+    return this.value
   }
   subscribe(ev: EventChangeHandler<T>) {
     return this.ec.subscribe(ev)
