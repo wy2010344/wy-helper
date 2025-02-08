@@ -426,3 +426,8 @@ export function genTemplateStringS2(
 ) {
   return genTemplateStringS1(ts, vs.map(toSingleValue))
 }
+
+
+export function tw(strings: TemplateStringsArray, ...vs: string[]) {
+  return genTemplateStringS1(strings, vs)
+}
