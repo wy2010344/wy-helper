@@ -208,7 +208,7 @@ export function startScroll(
     }
   }
   function getMargin() {
-    const maxScroll = containerSize() - contentSize()
+    const maxScroll = Math.min(containerSize() - contentSize(), 0)
     const upperMargin = upperScrollDiff
     const lowerMargin = maxScroll + lowerScrollDiff
     return {
