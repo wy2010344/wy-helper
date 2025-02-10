@@ -1,3 +1,4 @@
+import { DAYMILLSECONDS } from "./util"
 import { formatFirstWeek } from "./YearMonthVirtualView"
 
 
@@ -17,7 +18,6 @@ export function weekVirtualViewGetKey(a: WeekVirtualView) {
   return a.getKeys()
 }
 
-export const DAYMILLSECONDS = 24 * 60 * 60 * 1000
 export function dateFromYearMonthDay(n: YearMonthDay) {
   const d = new Date()
   d.setFullYear(n.year)

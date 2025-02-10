@@ -250,6 +250,8 @@ export function startScroll(
  * @param width 宽度
  * @param VELOCITY_THRESHOLD 容错
  * @returns 1 向右移动 -1向左移动
+ * 
+ * @deprecated 使用iScroll.getWithSpeedIdeal计算出理想位移,再与中点进行比较,偏移中点或越界,才进行翻页
  */
 export function scrollJudgeDirection(
   velocityX: number,
