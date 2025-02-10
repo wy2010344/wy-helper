@@ -431,3 +431,41 @@ export function genTemplateStringS2(
 export function tw(strings: TemplateStringsArray, ...vs: string[]) {
   return genTemplateStringS1(strings, vs)
 }
+
+/**
+ * 一天的毫秒数
+ */
+export const DAYMILLSECONDS = 24 * 60 * 60 * 1000
+
+
+/**
+ * 今天是今年的第几周
+ * @param date 
+ * @returns 
+ */
+export function getWeekOfYear(date: Date) {
+  const startOfYear = new Date(date.getFullYear(), 0, 1);
+  const pastDaysOfYear = (date.valueOf() - startOfYear.valueOf()) / DAYMILLSECONDS;
+  return Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
+}
+
+/**
+ * 今天是这个月的第几周
+ * @param date 
+ * @returns 
+ */
+export function getWeekOfMonth(date: Date) {
+  const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+  const pastDays = date.getDate() - 1; // 计算该日相对于本月第一天的天数
+  return Math.ceil((pastDays + firstDayOfMonth.getDay() + 1) / 7);
+}
+
+/**
+ * 今天是今年的第几天
+ * @param date 
+ * @returns 
+ */
+export function getDayOfYear(date: Date) {
+  const startOfYear = new Date(date.getFullYear(), 0, 1);
+  return Math.floor((date.valueOf() - startOfYear.valueOf()) / DAYMILLSECONDS) + 1;
+}
