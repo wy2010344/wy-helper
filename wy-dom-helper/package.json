@@ -1,7 +1,7 @@
 {
   "name": "wy-dom-helper",
   "author": "wy2010344",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "license": "MIT",
   "typings": "dist/index.d.ts",
   "module": "dist/index.mjs",
@@ -40,10 +40,10 @@
     "typescript": "^5.2.2",
     "vite": "^5.3.1",
     "vite-plugin-dts": "^3.9.1",
-    "wy-helper": "file:.yalc/wy-helper"
+    "wy-helper": "^0.1.11"
   },
   "peerDependencies": {
-    "wy-helper": "^0.1.9"
+    "wy-helper": "^0.1.11"
   },
   "dependencies": {
     "csstype": "^3.1.3",
