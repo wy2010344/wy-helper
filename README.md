@@ -1,7 +1,7 @@
 # wy-helper
+
 A helper tool for js environment
 
+## wy-helper
 
-need update:
-  wy-helper
-  wy-dom-helper
+## wy-dom-helper
