@@ -76,7 +76,9 @@ export function mergeEvent(
     eventType = eventType.slice(0, eventType.length - CAPTURE_SUFFIX.length)
   }
   eventType = eventType.toLowerCase()
-
+  if (eventType == "doubleclick") {
+    eventType = "dblclick"
+  }
   if (oldValue) {
     node.removeEventListener(eventType, oldValue, capture)
   }

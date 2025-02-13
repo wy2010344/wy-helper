@@ -1,7 +1,7 @@
 {
   "name": "wy-dom-helper",
   "author": "wy2010344",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "license": "MIT",
   "typings": "dist/index.d.ts",
   "module": "dist/index.mjs",
@@ -16,6 +16,11 @@
       "types": "./dist/contentEditable/index.d.ts",
       "import": "./dist/contentEditable.mjs",
       "require": "./dist/contentEditable.js"
+    },
+    "./canvas": {
+      "types": "./dist/canvas/index.d.ts",
+      "import": "./dist/canvas.mjs",
+      "require": "./dist/canvas.js"
     }
   },
   "repository": {
@@ -26,7 +31,8 @@
   "files": [
     "dist",
     "src",
-    "contentEditable"
+    "contentEditable",
+    "canvas"
   ],
   "scripts": {
     "build": "tsc && vite build",
@@ -40,10 +46,10 @@
     "typescript": "^5.2.2",
     "vite": "^5.3.1",
     "vite-plugin-dts": "^3.9.1",
-    "wy-helper": "^0.1.11"
+    "wy-helper": "^0.1.12"
   },
   "peerDependencies": {
-    "wy-helper": "^0.1.11"
+    "wy-helper": "^0.1.12"
   },
   "dependencies": {
     "csstype": "^3.1.3",

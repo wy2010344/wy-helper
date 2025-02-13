@@ -206,12 +206,18 @@ export function mergeDomAttr(
         if (value && typeof value == 'object') {
           //新为object
           keepMap.style = updateStyle(n, value, oldStyleProps || emptyObject, styleProps || {})
-        } else if (isSyncFun(value)) {
-          //新的是一个单值的valueCenter
-          keepMap.style = value(setStyleS, n)
         } else {
-          //新是string
-          n.style = value
+          if (isSyncFun(value)) {
+            //新的是一个单值的valueCenter
+            keepMap.style = value(setStyleS, n)
+          } else {
+            //新是string
+            n.style = value
+          }
+          if (oldValue && typeof oldValue == 'object') {
+            Object.values(styleProps).forEach(run as any)
+            delete keepMap[key]
+          }
         }
       } else if (isEvent(key)) {
         mergeEvent(node, key, oldValue, value)
