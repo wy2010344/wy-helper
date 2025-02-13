@@ -10,7 +10,8 @@ export default defineConfig({
       // Could also be a dictionary or array of multiple entry points
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
-        contentEditable: resolve(__dirname, 'src/contentEditable/index.ts')
+        contentEditable: resolve(__dirname, 'src/contentEditable/index.ts'),
+        canvas: resolve(__dirname, 'src/canvas/index.ts')
       },
       formats: ["es", "cjs"]
     },
