@@ -16,6 +16,12 @@ export function setHtml(value: string, node: any) {
   node.innerHTML = value
 }
 
+/**
+ * 无className等,其它attr属性的更新
+ * @param value 
+ * @param node 
+ * @param key 
+ */
 export function updateDom(value: any, node: any, key: string,) {
   if (key == 'href') {
     node[key] = value || ''
@@ -24,6 +30,12 @@ export function updateDom(value: any, node: any, key: string,) {
   }
 }
 
+/**
+ * 无className等,其它attr属性的更新
+ * @param value 
+ * @param node 
+ * @param key 
+ */
 export function updateSvg(value: any, node: any, key: string,) {
   key = getAttributeAlias(key)
   if (value) {
@@ -33,10 +45,10 @@ export function updateSvg(value: any, node: any, key: string,) {
   }
 }
 
-export function updateDataSet(value: any, node: any, key: any) {
+export function updateDataSet(value: any = '', node: any, key: any) {
   node.dataset[key] = value
 }
-export function updateAttr(value: any, node: any, key: string) {
+export function updateAttr(value: any = '', node: any, key: string) {
   if (value) {
     node.setAttribute(key, value)
   } else {
@@ -44,11 +56,11 @@ export function updateAttr(value: any, node: any, key: string) {
   }
 }
 
-export function updateStyle(value: any, node: any, key: string) {
+export function updateStyle(value: any = '', node: any, key: string) {
   node.style[key] = value
 }
 
-export function updateCssVariable(value: any, node: any, key: string) {
+export function updateCssVariable(value: any = '', node: any, key: string) {
   if (typeof value == 'undefined') {
     node.style.removeProperty(key)
   } else {
@@ -75,8 +87,9 @@ export function mergeEvent(
     capture = true
     eventType = eventType.slice(0, eventType.length - CAPTURE_SUFFIX.length)
   }
-  eventType = eventType.toLowerCase()
-  if (eventType == "doubleclick") {
+  //只将首字母小写
+  eventType = eventType[0].toLowerCase() + eventType.slice(1)
+  if (eventType == "doubleClick") {
     eventType = "dblclick"
   }
   if (oldValue) {
@@ -91,3 +104,6 @@ export function mergeEvent(
 export function addEvent(node: any, key: string, value: any) {
   mergeEvent(node, key, undefined, value)
 }
+
+
+export type UpdateProp = (value: any, node: any, key: string) => void

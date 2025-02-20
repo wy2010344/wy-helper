@@ -17,3 +17,4 @@ export * from './loadImage'
 export * from './html/fhtml'
 export * from './html/xhtml'
 export { isEvent, addEvent } from './html/fx'
+export type { UpdateProp } from './html/fx';

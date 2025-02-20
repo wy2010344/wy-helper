@@ -1,9 +1,9 @@
 import { MergeValue, mergeValueDes, mergeValueSkipDes } from "./fhtml"
-import { BDomAttribute, BSvgAttribute, DomElementType, React, SvgElementType } from "./html"
-import { DataAttr, DomType, isProperty, isSyncFun, Props } from "./updateDom"
+import { DomElementType, React, SvgElementType } from "./html"
+import { DataAttr, Props } from "./updateDom"
 import { PureCSSProperties } from "../util"
 
-import { addEvent, FDomAttributeC, FSvgAttributeC, isEvent, mergeEvent, setClassName, setHtml, setText, updateAttr, updateCssVariable, updateDataSet, updateDom, updateStyle, updateSvg } from "./fx";
+import { FDomAttributeC, FSvgAttributeC, isEvent, mergeEvent, setClassName, updateAttr, updateCssVariable, updateDataSet, updateDom, UpdateProp, updateStyle, updateSvg } from "./fx";
 import { emptyFun, objectDiffDeleteKey } from "wy-helper";
 
 
@@ -77,42 +77,52 @@ function updateProp(
   }
 }
 
-
-export function mergeXNodeAttr(
-  node: Node,
-  attrs: Props,
-  oldAttrs: Props,
-  oldDes: any,
-  type: DomType,
-  /**
-   * 专为react的事件合并
-   */
-  skipEvent?: boolean
+/**
+ * 在XML语境中,所有style变成破折线扁平
+ * @param updateMAttr 
+ * @returns 
+ */
+function createMergeXNodeAttr(
+  updateMAttr: UpdateProp
 ) {
-  let mevent = mergeEvent
-  let mergeValue = mergeValueDes
-  if (skipEvent) {
-    mevent = emptyFun
-    mergeValue = mergeValueSkipDes
-  }
-  const updateMAttr = type == 'svg' ? updateSvg : updateDom
-  objectDiffDeleteKey(oldAttrs, attrs, function (key) {
-    if (isEvent(key)) {
-      mevent(node, key, oldAttrs[key])
-    } else {
-      updateProp(node, key, undefined, oldDes, updateMAttr, mergeValue)
+  return function (
+    node: Node,
+    attrs: Props,
+    oldAttrs: Props,
+    oldDes: any,
+    /**
+     * 专为react的事件合并
+     */
+    skipEvent?: boolean
+  ) {
+    let mevent = mergeEvent
+    let mergeValue = mergeValueDes
+    if (skipEvent) {
+      mevent = emptyFun
+      mergeValue = mergeValueSkipDes
     }
-  })
-  for (const key in attrs) {
-    const value = attrs[key]
-    const oldValue = oldAttrs[key]
-    if (value != oldValue) {
+    objectDiffDeleteKey(oldAttrs, attrs, function (key) {
       if (isEvent(key)) {
-        mevent(node, key, oldAttrs[key], attrs[key])
+        mevent(node, key, oldAttrs[key])
       } else {
-        updateProp(node, key, value, oldDes, updateMAttr, mergeValue)
+        updateProp(node, key, undefined, oldDes, updateMAttr, mergeValue)
+      }
+    })
+    for (const key in attrs) {
+      const value = attrs[key]
+      const oldValue = oldAttrs[key]
+      if (value != oldValue) {
+        if (isEvent(key)) {
+          mevent(node, key, oldAttrs[key], attrs[key])
+        } else {
+          updateProp(node, key, value, oldDes, updateMAttr, mergeValue)
+        }
       }
     }
+    return oldDes
   }
-  return oldDes
 }
+
+
+export const mergeXSvgAttr = createMergeXNodeAttr(updateDom)
+export const mergeXDomAttr = createMergeXNodeAttr(updateSvg)
