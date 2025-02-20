@@ -4,9 +4,11 @@ import { EmptyFun, FalseType, Flatten, emptyFun, messageChannelCallback, objectF
 
 export type PromiseResult<T> = {
   type: "success",
+  promise: Promise<T>
   value: T
 } | {
   type: "error",
+  promise: Promise<T>
   value: any
 }
 
@@ -48,6 +50,7 @@ export function hookAbortSignalPromise<T>(
     }
     callback({
       type: "success",
+      promise: p,
       value: v
     })
   }).catch(err => {
@@ -56,6 +59,7 @@ export function hookAbortSignalPromise<T>(
     }
     callback({
       type: "error",
+      promise: p,
       value: err
     })
   })
@@ -109,19 +113,21 @@ export function buildSerialRequestSingle<Req extends any[], Res>(
       cacheList.shift()
     }
     const req = cacheList[0]
-    callback(...req)
-      .then(res => {
-        if (checkRun()) {
-          effect({
-            type: "success",
-            value: res
-          }, req)
-        }
-      })
+    const promise = callback(...req)
+    promise.then(res => {
+      if (checkRun()) {
+        effect({
+          type: "success",
+          promise,
+          value: res
+        }, req)
+      }
+    })
       .catch(err => {
         if (checkRun()) {
           effect({
             type: "error",
+            promise,
             value: err
           }, req)
         }

@@ -46,7 +46,7 @@
     "typescript": "^5.2.2",
     "vite": "^5.3.1",
     "vite-plugin-dts": "^3.9.1",
-    "wy-helper": "^0.1.12"
+    "wy-helper": "file:.yalc/wy-helper"
   },
   "peerDependencies": {
     "wy-helper": "^0.1.12"

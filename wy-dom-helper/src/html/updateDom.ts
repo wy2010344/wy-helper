@@ -1,7 +1,7 @@
 import { emptyObject, GetValue, objectDiffDeleteKey, run, SetValue, SyncFun } from "wy-helper"
 import { BDomAttribute, BDomEvent, BSvgAttribute, BSvgEvent, DomElementType, React, SvgElementType } from "./html"
 import { CSSProperties } from "../util"
-import { isEvent, mergeEvent } from "./fx"
+import { isEvent, mergeEvent, UpdateProp } from "./fx"
 import { getAttributeAlias } from "../getAttributeAlias"
 export type Props = { [key: string]: any }
 
@@ -126,7 +126,7 @@ function setStyleS(v: string | undefined, node: any) {
 
 
 const emptyKeys = ['href', 'className']
-function updateDomProps(node: any, key: string, value?: any) {
+export function updateDomProps(value: any, node: any, key: string) {
   if (key.includes('-')) {
     node.setAttribute(key, value)
   } else {
@@ -137,7 +137,7 @@ function updateDomProps(node: any, key: string, value?: any) {
     }
   }
 }
-function updateSvgProps(node: any, key: string, value?: any) {
+export function updateSvgProps(value: any, node: any, key: string) {
   if (key == 'innerHTML' || key == 'textContent') {
     updateDomProps(node, key, value)
   } else {
@@ -155,88 +155,96 @@ function updateSvgProps(node: any, key: string, value?: any) {
 }
 
 export type DomType = "svg" | "dom"
+
+
+
 /**
- * 更新节点
+ * react模式,更新节点
  * @param dom 
  * @param oldProps 
  * @param props 
  */
-export function mergeDomAttr(
-  node: Node,
-  props: Props,
-  oldProps: Props,
-  /**最后销毁绑定*/
-  keepMap: Props,
-  type: DomType
+function createMergeAttr(
+  updateProp: UpdateProp
 ) {
-  const updateProps = type == 'svg' ? updateSvgProps : updateDomProps
-  //移除旧事件：新属性中不存在相应事件，或者事件不一样
-  objectDiffDeleteKey(oldProps, props, function (key: string) {
-    if (isEvent(key)) {
-      mergeEvent(node, key, oldProps[key])
-    } else if (isProperty(key)) {
-      updateProps(node, key, undefined)
-      const del = keepMap[key]
-      if (del) {
-        //如果存在,则销毁
-        if (typeof del == 'function') {
-          del()
-        } else {
-          Object.values(del).forEach(run as any)
-        }
-        delete keepMap[key]
-      }
-    }
-  })
-  for (const key in props) {
-    const value = props[key]
-    const oldValue = oldProps[key]
-    if (value != oldValue) {
-      if (key == 'style') {
-        const n = node as unknown as Node & { style: any }
-        let oldStyleProps = oldValue
-        let styleProps = keepMap[key]
-        if (isSyncFun(oldValue)) {
-          //旧是一个单值的valueCenter
-          styleProps()
-          delete keepMap[key]
-          oldStyleProps = emptyObject
-          styleProps = {}
-        }
-        if (value && typeof value == 'object') {
-          //新为object
-          keepMap.style = updateStyle(n, value, oldStyleProps || emptyObject, styleProps || {})
-        } else {
-          if (isSyncFun(value)) {
-            //新的是一个单值的valueCenter
-            keepMap.style = value(setStyleS, n)
-          } else {
-            //新是string
-            n.style = value
-          }
-          if (oldValue && typeof oldValue == 'object') {
-            Object.values(styleProps).forEach(run as any)
-            delete keepMap[key]
-          }
-        }
-      } else if (isEvent(key)) {
-        mergeEvent(node, key, oldValue, value)
+  return function (
+    node: Node,
+    props: Props,
+    oldProps: Props,
+    /**最后销毁绑定*/
+    keepMap: Props
+  ) {
+    //移除旧事件：新属性中不存在相应事件，或者事件不一样
+    objectDiffDeleteKey(oldProps, props, function (key: string) {
+      if (isEvent(key)) {
+        mergeEvent(node, key, oldProps[key])
       } else if (isProperty(key)) {
-        if (isSyncFun(oldValue)) {
-          //旧属性删除
-          runAndDelete(keepMap, key)
+        updateProp(undefined, node, key)
+        const del = keepMap[key]
+        if (del) {
+          //如果存在,则销毁
+          if (typeof del == 'function') {
+            del()
+          } else {
+            Object.values(del).forEach(run as any)
+          }
+          delete keepMap[key]
         }
-        if (isSyncFun(value)) {
-          keepMap[key] = value(setProp, node, key, updateProps)
-        } else {
-          updateProps(node, key, value)
+      }
+    })
+    for (const key in props) {
+      const value = props[key]
+      const oldValue = oldProps[key]
+      if (value != oldValue) {
+        if (key == 'style') {
+          const n = node as unknown as Node & { style: any }
+          let oldStyleProps = oldValue
+          let styleProps = keepMap[key]
+          if (isSyncFun(oldValue)) {
+            //旧是一个单值的valueCenter
+            styleProps()
+            delete keepMap[key]
+            oldStyleProps = emptyObject
+            styleProps = {}
+          }
+          if (value && typeof value == 'object') {
+            //新为object
+            keepMap.style = updateStyle(n, value, oldStyleProps || emptyObject, styleProps || {})
+          } else {
+            //先销毁
+            if (oldValue && typeof oldValue == 'object') {
+              Object.values(styleProps).forEach(run as any)
+              delete keepMap[key]
+            }
+            if (isSyncFun(value)) {
+              //新的是一个单值的valueCenter
+              keepMap.style = value(setStyleS, n)
+            } else {
+              //新是string
+              n.style = value
+            }
+          }
+        } else if (isEvent(key)) {
+          mergeEvent(node, key, oldValue, value)
+        } else if (isProperty(key)) {
+          if (isSyncFun(oldValue)) {
+            //旧属性删除
+            runAndDelete(keepMap, key)
+          }
+          if (isSyncFun(value)) {
+            keepMap[key] = value(setProp, node, key, updateProp)
+          } else {
+            updateProp(node, key, value)
+          }
         }
       }
     }
+    return keepMap
   }
-  return keepMap
 }
 
+export const mergeDomAttr = createMergeAttr(updateDomProps)
+export const mergeSvgAttr = createMergeAttr(updateSvgProps)
 function setProp(v: string, node: any, key: string, updateProp: any) {
   updateProp(node, key, v)
 }
