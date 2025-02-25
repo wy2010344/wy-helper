@@ -1,8 +1,8 @@
 import { getAttributeAlias } from "../getAttributeAlias"
 import { BDomAttribute, BSvgAttribute, DomElementType, SvgElementType } from "./html"
 
-export type FDomAttributeC<T extends DomElementType> = Omit<BDomAttribute<T>, 'className'>
-export type FSvgAttributeC<T extends SvgElementType> = Omit<BSvgAttribute<T>, 'className'>
+// export type FDomAttributeC<T extends DomElementType> = Omit<BDomAttribute<T>, 'className'>
+// export type FSvgAttributeC<T extends SvgElementType> = Omit<BSvgAttribute<T>, 'className'>
 
 export function setClassName(value: string, node: any) {
   node.className = value

@@ -1,26 +1,26 @@
 
 
-import { emptyFun, emptyObject, GetValue, objectDiffDeleteKey, SetValue, SyncFun, ValueOrGet } from "wy-helper";
+import { emptyFun, emptyObject, objectDiffDeleteKey, SetValue, SyncFun, ValueOrGet } from "wy-helper";
 import { PureCSSProperties } from "../util";
-import { DomElementType, React, SvgElementType } from "./html";
-import { addEvent, FDomAttributeC, FSvgAttributeC, isEvent, mergeEvent, setClassName, setHtml, setText, updateAttr, updateCssVariable, updateDataSet, updateDom, UpdateProp, updateStyle, updateSvg } from "./fx";
-import { DomType, isProperty, isSyncFun, Props } from "./updateDom";
+import { BDomAttribute, BSvgAttribute, DomElementType, React, SvgElementType } from "./html";
+import { addEvent, isEvent, mergeEvent, setHtml, setText, updateAttr, updateCssVariable, updateDataSet, updateDom, UpdateProp, updateStyle, updateSvg } from "./fx";
+import { isSyncFun, Props } from "./updateDom";
 
-type FDataAttr = {
+export type FDataAttr = {
   [key in `data_${string}`]?: string | number | boolean
 }
 
-type FDomAttributeCS<T extends DomElementType> = {
-  [key in keyof FDomAttributeC<T> as (key extends string ? `a_${key}` : key)]: FDomAttributeC<T>[key]
-}
+// type FDomAttributeCS<T extends DomElementType> = {
+//   [key in keyof FDomAttributeC<T> as (key extends string ? `a_${key}` : key)]: FDomAttributeC<T>[key]
+// }
 
 
-type FSvgAttributeCS<T extends SvgElementType> = {
-  [key in keyof FSvgAttributeC<T> as (key extends string ? `a_${key}` : key)]: FSvgAttributeC<T>[key]
-}
+// type FSvgAttributeCS<T extends SvgElementType> = {
+//   [key in keyof FSvgAttributeC<T> as (key extends string ? `a_${key}` : key)]: FSvgAttributeC<T>[key]
+// }
 
 
-type FCssVaribute = {
+export type FCssVaribute = {
   [key in `css_${string}`]?: string | number | boolean
 }
 type FStyleProps = {
@@ -33,24 +33,22 @@ type FReplaceAria<Key> = Key extends string
   : Key
   : Key;
 
-type FAriaAttribute = {
+export type FAriaAttribute = {
   [key in keyof React.AriaAttributes as FReplaceAria<key>]: React.AriaAttributes[key]
 }
 
 
 
-export type FDomAttribute<T extends DomElementType> = {
-  className?: string
-} & FDataAttr
-  & FDomAttributeCS<T>
+export type FDomAttribute<T extends DomElementType> =
+  BDomAttribute<T>
+  & FDataAttr
   & FAriaAttribute
   & FStyleProps
   & FCssVaribute
 
-export type FSvgAttribute<T extends SvgElementType> = {
-  className?: string
-} & FDataAttr
-  & FSvgAttributeCS<T>
+export type FSvgAttribute<T extends SvgElementType> =
+  BSvgAttribute<T>
+  & FDataAttr
   & FAriaAttribute
   & FStyleProps
   & FCssVaribute
@@ -81,12 +79,12 @@ export interface MergeValue {
 }
 
 
-const ATTR_PREFIX = "a_"
+// const ATTR_PREFIX = "a_"
 const DATA_PREFIX = "data_"
 const ARIA_PREFIX = "aria_"
 const S_PREFIX = "s_"
 const CSS_PREFIX = "css_"
-
+const CHILDREN_PREFIX = 'children'
 /**
  * mve式更新
  * @param updateMAttr 
@@ -99,16 +97,12 @@ function createRenderFAttr(
     node: Node,
     arg: any,
     mergeValue: MergeValue,
-    renderPortal: (n: Node, children: SetValue<Node>) => void
+    renderPortal: (n: Node, children: SetValue<Node>) => void,
+    ignoreKeys: readonly string[]
   ) {
     for (const key in arg) {
-      if (key == 'className') {
-        mergeValue(node, arg[key], setClassName)
-      } else if (isEvent(key)) {
+      if (isEvent(key)) {
         addEvent(node, key, arg[key])
-      } else if (key.startsWith(ATTR_PREFIX)) {
-        const attrKey = key.slice(ATTR_PREFIX.length)
-        mergeValue(node, arg[key], updateMAttr, attrKey)
       } else if (key.startsWith(DATA_PREFIX)) {
         const dataAttr = key.slice(DATA_PREFIX.length)
         mergeValue(node, arg[key], updateDataSet, dataAttr)
@@ -121,6 +115,8 @@ function createRenderFAttr(
       } else if (key.startsWith(CSS_PREFIX)) {
         const cssVariable = key.slice(CSS_PREFIX.length)
         mergeValue(node, arg[key], updateCssVariable, `--${cssVariable}`)
+      } else if (!key.startsWith(CHILDREN_PREFIX) && !ignoreKeys.includes(key)) {
+        mergeValue(node, arg[key], updateMAttr, key)
       }
     }
 
@@ -137,94 +133,6 @@ function createRenderFAttr(
 export const renderFDomAttr = createRenderFAttr(updateDom)
 export const renderFSvgAttr = createRenderFAttr(updateSvg)
 
-function updateMInsideNodeAttr(
-  node: Node,
-  key: string,
-  value: any,
-  updateMAttr: UpdateProp
-) {
-  if (key.startsWith(DATA_PREFIX)) {
-    //data-attr属性
-    const dataAttr = key.slice(DATA_PREFIX.length)
-    updateDataSet(value, node, dataAttr)
-  } else if (key.startsWith(ARIA_PREFIX)) {
-    //aria属性
-    const ariaKey = key.slice(ARIA_PREFIX.length)
-    updateAttr(value, node, `aria-${ariaKey}`)
-  } else if (key.startsWith(S_PREFIX)) {
-    //css属性
-    const styleKey = key.slice(S_PREFIX.length)
-    updateStyle(value, node, styleKey)
-  } else if (key.startsWith(CSS_PREFIX)) {
-    //css变量属性
-    const cssVariable = key.slice(CSS_PREFIX.length)
-    updateCssVariable(value, node, `--${cssVariable}`)
-  } else {
-    //attr属性
-    updateMAttr(value, node, key)
-  }
-}
-
-
-/***
- * 所有属性的diff更新,mergeValue只有一个
- */
-function createRenderMAttr(updateMAttr: UpdateProp) {
-  return function (
-    node: Node,
-    arg: any = emptyObject,
-    mergeValue: MergeValue,
-    renderPortal: (n: Node, children: SetValue<Node>) => void
-  ) {
-    for (const key in arg) {
-      if (isEvent(key)) {
-        addEvent(node, key, arg[key])
-      } else if (key == 'attrs') {
-        let initValue = arg[key]
-        let value
-        if (typeof initValue == 'function') {
-          value = () => {
-            const newAttrs = {}
-            initValue(newAttrs)
-            return newAttrs
-          }
-        } else {
-          value = initValue
-        }
-
-        let oldAttrs = emptyObject as any
-        mergeValue(node, value, function (newAttrs) {
-          objectDiffDeleteKey(oldAttrs, newAttrs, (key) => {
-            //删除
-            updateMInsideNodeAttr(node, key, undefined, updateMAttr)
-          })
-          for (const key in newAttrs) {
-            //修改
-            const value = newAttrs[key]
-            const oldValue = oldAttrs[key]
-            if (value != oldValue) {
-              updateMInsideNodeAttr(node, key, value, updateMAttr)
-            }
-          }
-          oldAttrs = newAttrs
-        })
-      }
-    }
-
-    if (arg.childrenType == 'text') {
-      mergeValue(node, arg.children, setText)
-    } else if (arg.childrenType == 'html') {
-      mergeValue(node, arg.children, setHtml)
-    } else if (arg.children) {
-      renderPortal(node, arg.children)
-    }
-  }
-}
-
-
-
-export const renderMSvgAttr = createRenderMAttr(updateDom)
-export const renderMDomAttr = createRenderMAttr(updateSvg)
 
 export const mergeValueDes: MergeValue = function (node, value, setValue) {
   const ext = arguments[3]
@@ -246,15 +154,11 @@ function updateProp(
   value: any,
   oldDes: any,
   updateMAttr: UpdateProp,
-  mergeValueDes: MergeValue
+  mergeValueDes: MergeValue,
+  ignoreKeys: readonly string[]
 ) {
   oldDes[key]?.()
-  if (key == 'className') {
-    oldDes[key] = mergeValueDes(node, value, setClassName)
-  } else if (key.startsWith(ATTR_PREFIX)) {
-    const attrKey = key.slice(ATTR_PREFIX.length)
-    oldDes[key] = mergeValueDes(node, value, updateMAttr, attrKey)
-  } else if (key.startsWith(DATA_PREFIX)) {
+  if (key.startsWith(DATA_PREFIX)) {
     const dataAttr = key.slice(DATA_PREFIX.length)
     oldDes[key] = mergeValueDes(node, value, updateDataSet, dataAttr)
   } else if (key.startsWith(ARIA_PREFIX)) {
@@ -266,6 +170,9 @@ function updateProp(
   } else if (key.startsWith(CSS_PREFIX)) {
     const cssVariable = key.slice(CSS_PREFIX.length)
     oldDes[key] = mergeValueDes(node, value, updateCssVariable, `--${cssVariable}`)
+  } else if (!key.startsWith(CHILDREN_PREFIX) && !ignoreKeys.includes(key)) {
+    //普通属性key
+    oldDes[key] = mergeValueDes(node, value, updateMAttr, key)
   }
 }
 
@@ -283,6 +190,7 @@ function createMergeFNodeAttr(
     attrs: Props,
     oldAttrs: Props,
     oldDes: any,
+    ignoreKeys: readonly string[],
     /**
      * 专为react的事件合并
      */
@@ -298,7 +206,7 @@ function createMergeFNodeAttr(
       if (isEvent(key)) {
         mevent(node, key, oldAttrs[key])
       } else {
-        updateProp(node, key, undefined, oldDes, updateMAttr, mergeValue)
+        updateProp(node, key, undefined, oldDes, updateMAttr, mergeValue, ignoreKeys)
       }
     })
     for (const key in attrs) {
@@ -308,7 +216,7 @@ function createMergeFNodeAttr(
         if (isEvent(key)) {
           mevent(node, key, oldAttrs[key], attrs[key])
         } else {
-          updateProp(node, key, value, oldDes, updateMAttr, mergeValue)
+          updateProp(node, key, value, oldDes, updateMAttr, mergeValue, ignoreKeys)
         }
       }
     }

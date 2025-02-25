@@ -12,6 +12,10 @@ export type PromiseResult<T> = {
   value: any
 }
 
+export type AbortPromiseResult<T> = PromiseResult<T> & {
+  request: GetValue<Promise<T>>
+}
+
 export type PromiseResultSuccessValue<T> = T extends {
   type: "success"
   value: infer V
@@ -19,18 +23,9 @@ export type PromiseResultSuccessValue<T> = T extends {
 export type GetPromiseRequest<T> = () => Promise<T>;
 
 
-export type VersionPromiseResult<T> = Flatten<PromiseResult<T> & {
+export type VersionPromiseResult<T> = Flatten<AbortPromiseResult<T> & {
   version: number
 }>
-export type RequestPromiseResult<T> = Flatten<PromiseResult<T> & {
-  /**主要是用来判断Loading状态 */
-  request: GetPromiseRequest<T>;
-}>
-export type RequestPromiseFinally<T> = (data: RequestPromiseResult<T>, ...vs: any[]) => void
-
-
-export type RequestVersionPromiseReulst<T> = Flatten<RequestPromiseResult<T> & VersionPromiseResult<T>>
-export type RequestVersionPromiseFinally<T> = (data: RequestVersionPromiseReulst<T>, ...vs: any[]) => void
 
 const w = globalThis as {
   __abort_signal__?: AbortSignal
@@ -39,7 +34,7 @@ const w = globalThis as {
 export function hookAbortSignalPromise<T>(
   signal: AbortSignal,
   fun: GetValue<Promise<T>>,
-  callback: SetValue<PromiseResult<T>>
+  callback: SetValue<AbortPromiseResult<T>>
 ) {
   w.__abort_signal__ = signal
   const p = fun()
@@ -51,6 +46,7 @@ export function hookAbortSignalPromise<T>(
     callback({
       type: "success",
       promise: p,
+      request: fun,
       value: v
     })
   }).catch(err => {
@@ -60,6 +56,7 @@ export function hookAbortSignalPromise<T>(
     callback({
       type: "error",
       promise: p,
+      request: fun,
       value: err
     })
   })
@@ -86,7 +83,7 @@ export function createAndFlushAbortController() {
 
 export type OutPromiseOrFalse<T> = (GetPromiseRequest<T>) | FalseType;
 /**
- * 串行挪
+ * 串行请求,跳过中间的请求
  * @param callback 执行体
  * @param effect 执行完成后回调
  * @param cacheList 缓存请求参数
@@ -122,16 +119,15 @@ export function buildSerialRequestSingle<Req extends any[], Res>(
           value: res
         }, req)
       }
+    }).catch(err => {
+      if (checkRun()) {
+        effect({
+          type: "error",
+          promise,
+          value: err
+        }, req)
+      }
     })
-      .catch(err => {
-        if (checkRun()) {
-          effect({
-            type: "error",
-            promise,
-            value: err
-          }, req)
-        }
-      })
   }
   function circleRun() {
     delay(didCircleRun)
@@ -147,6 +143,20 @@ export function buildSerialRequestSingle<Req extends any[], Res>(
   }
 }
 
+/**
+ * 串行请求,使用abortController来控制
+ * @param callback 
+ * @returns 
+ */
+export function serialAbortRequest<T>(
+  callback: SetValue<AbortPromiseResult<T>>
+) {
+  const abortController = createAndFlushAbortController()
+  return function (getPromise: GetPromiseRequest<T>) {
+    const signal = abortController()
+    hookAbortSignalPromise(signal, getPromise, callback)
+  }
+}
 
 
 export function buildThrottle<T>(didRun: (fun: () => void) => void, callback: SetValue<T>) {

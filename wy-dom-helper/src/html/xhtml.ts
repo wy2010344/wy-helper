@@ -1,20 +1,20 @@
 import { MergeValue, mergeValueDes, mergeValueSkipDes } from "./fhtml"
-import { DomElementType, React, SvgElementType } from "./html"
+import { BDomAttribute, BSvgAttribute, DomElementType, React, SvgElementType } from "./html"
 import { DataAttr, Props } from "./updateDom"
 import { PureCSSProperties } from "../util"
 
-import { FDomAttributeC, FSvgAttributeC, isEvent, mergeEvent, setClassName, updateAttr, updateCssVariable, updateDataSet, updateDom, UpdateProp, updateStyle, updateSvg } from "./fx";
+import { isEvent, mergeEvent, setClassName, updateAttr, updateCssVariable, updateDataSet, updateDom, UpdateProp, updateStyle, updateSvg } from "./fx";
 import { emptyFun, objectDiffDeleteKey } from "wy-helper";
 
 
-type XDomAttributeCS<T extends DomElementType> = {
-  [key in keyof FDomAttributeC<T> as (key extends string ? `a-${key}` : key)]: FDomAttributeC<T>[key]
-}
+// type XDomAttributeCS<T extends DomElementType> = {
+//   [key in keyof FDomAttributeC<T> as (key extends string ? `a-${key}` : key)]: FDomAttributeC<T>[key]
+// }
 
 
-type XSvgAttributeCS<T extends SvgElementType> = {
-  [key in keyof FSvgAttributeC<T> as (key extends string ? `a-${key}` : key)]: FSvgAttributeC<T>[key]
-}
+// type XSvgAttributeCS<T extends SvgElementType> = {
+//   [key in keyof FSvgAttributeC<T> as (key extends string ? `a-${key}` : key)]: FSvgAttributeC<T>[key]
+// }
 type XStyleProps = {
   [key in keyof PureCSSProperties as `s-${key}`]: PureCSSProperties[key]
 }
@@ -26,7 +26,7 @@ export type XDomAttribute<T extends DomElementType> = {
   className?: string
 } & DataAttr
   & React.AriaAttributes
-  & XDomAttributeCS<T>
+  & BDomAttribute<T>
   & XStyleProps
   & XCssVaribute
 
@@ -34,7 +34,7 @@ export type XSvgAttribute<T extends SvgElementType> = {
   className?: string
 } & DataAttr
   & React.AriaAttributes
-  & XSvgAttributeCS<T>
+  & BSvgAttribute<T>
   & XStyleProps
   & XCssVaribute
 
@@ -42,10 +42,10 @@ export type XSvgAttribute<T extends SvgElementType> = {
 
 const DATA_PREFIX = "data-"
 const ARIA_PREFIX = "aria-"
-const ATTR_PREFIX = "a-"
+// const ATTR_PREFIX = "a-"
 const S_PREFIX = "s-"
 const CSS_PREFIX = "css-"
-
+const CHILDREN_PREFIX = 'children'
 
 function updateProp(
   node: any,
@@ -53,16 +53,12 @@ function updateProp(
   value: any,
   oldDes: any,
   updateMAttr: (value: any, node: any, key: string) => void,
-  mergeValueDes: MergeValue
+  mergeValueDes: MergeValue,
+  ingoreKeys: readonly string[]
 ) {
   oldDes[key]?.()
   oldDes[key] = undefined
-  if (key == 'className') {
-    oldDes[key] = mergeValueDes(node, value, setClassName)
-  } else if (key.startsWith(ATTR_PREFIX)) {
-    const attrKey = key.slice(ATTR_PREFIX.length)
-    oldDes[key] = mergeValueDes(node, value, updateMAttr, attrKey)
-  } else if (key.startsWith(DATA_PREFIX)) {
+  if (key.startsWith(DATA_PREFIX)) {
     const dataAttr = key.slice(DATA_PREFIX.length)
     oldDes[key] = mergeValueDes(node, value, updateDataSet, dataAttr)
   } else if (key.startsWith(ARIA_PREFIX)) {
@@ -74,6 +70,9 @@ function updateProp(
     const cssVariable = key.slice(CSS_PREFIX.length)
     const cssVariableKey = `--${cssVariable}`
     oldDes[key] = mergeValueDes(node, value, updateCssVariable, cssVariableKey)
+  } else if (!key.startsWith(CHILDREN_PREFIX) && !ingoreKeys.includes(key)) {
+
+    oldDes[key] = mergeValueDes(node, value, updateMAttr, key)
   }
 }
 
@@ -90,6 +89,7 @@ function createMergeXNodeAttr(
     attrs: Props,
     oldAttrs: Props,
     oldDes: any,
+    ignoreKeys: readonly string[],
     /**
      * 专为react的事件合并
      */
@@ -105,7 +105,7 @@ function createMergeXNodeAttr(
       if (isEvent(key)) {
         mevent(node, key, oldAttrs[key])
       } else {
-        updateProp(node, key, undefined, oldDes, updateMAttr, mergeValue)
+        updateProp(node, key, undefined, oldDes, updateMAttr, mergeValue, ignoreKeys)
       }
     })
     for (const key in attrs) {
@@ -115,7 +115,7 @@ function createMergeXNodeAttr(
         if (isEvent(key)) {
           mevent(node, key, oldAttrs[key], attrs[key])
         } else {
-          updateProp(node, key, value, oldDes, updateMAttr, mergeValue)
+          updateProp(node, key, value, oldDes, updateMAttr, mergeValue, ignoreKeys)
         }
       }
     }
