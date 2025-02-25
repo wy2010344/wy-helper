@@ -290,10 +290,21 @@ interface MemoGet<T> {
   (old: undefined, inited: false): T,
   (old: T, inited: true): T
 }
+
+export interface MemoFun<T> {
+  (): T
+  memorized: true
+  after: SetValue<T>
+}
 export function memo<T>(
-  get: MemoGet<T>,
+  get: MemoGet<T> | MemoFun<T>,
   after: SetValue<T> = emptyFun
 ) {
+  const target = get as any
+  if (target.memorized && (after == target.after || after == emptyFun)) {
+    //减少不必要的声明
+    return get as MemoFun<T>
+  }
   const relays = new Map<GetValue<any>, any>()
   let lastValue!: T
   let inited = false
@@ -313,7 +324,9 @@ export function memo<T>(
     }
     addRelay(myGet, lastValue)
     return lastValue
-  }
+  } as MemoFun<T>
+  myGet.memorized = true
+  myGet.after = after
   return myGet
 }
 
