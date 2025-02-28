@@ -12,7 +12,8 @@
  * License: MIT + Apache (V2)
  */
 
-import { EmptyFun } from "wy-helper";
+import { EmptyFun } from "../util";
+
 /**
  * Generic animation class with support for dropped frames both optional easing and duration.
  *
