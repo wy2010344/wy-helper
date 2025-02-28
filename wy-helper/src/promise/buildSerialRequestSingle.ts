@@ -16,6 +16,8 @@ export type AbortPromiseResult<T> = PromiseResult<T> & {
   request: GetValue<Promise<T>>
 }
 
+export type RequestAbortPromiseFinally<T> = SetValue<AbortPromiseResult<T>>
+
 export type PromiseResultSuccessValue<T> = T extends {
   type: "success"
   value: infer V
@@ -27,6 +29,8 @@ export type VersionPromiseResult<T> = Flatten<AbortPromiseResult<T> & {
   version: number
 }>
 
+export type RequestVersionPromiseFinally<T> = SetValue<VersionPromiseResult<T>>
+
 const w = globalThis as {
   __abort_signal__?: AbortSignal
 }
@@ -34,7 +38,7 @@ const w = globalThis as {
 export function hookAbortSignalPromise<T>(
   signal: AbortSignal,
   fun: GetValue<Promise<T>>,
-  callback: SetValue<AbortPromiseResult<T>>
+  callback: RequestAbortPromiseFinally<T>
 ) {
   w.__abort_signal__ = signal
   const p = fun()

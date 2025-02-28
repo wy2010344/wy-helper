@@ -85,7 +85,13 @@ class Signal<T> {
   }
   private dirty = false
   private dirtyValue: T
-  set(v: T) {
+  set = (v: T) => {
+    if (signalCache.currentFun) {
+      throw '计算期间不允许修改值'
+    }
+    if (signalCache.currentEffects) {
+      throw '计算期间不允许修改值1'
+    }
     /**
      * 是否可以在批量结束时,才检查哪些需要改变?
      * 但是要区分缓存值与生效值
@@ -147,15 +153,7 @@ export function createSignal<T>(value: T, shouldChange: Compare<T> = simpleNotEq
   const signal = new Signal(value, shouldChange)
   return {
     get: signal.get,
-    set(newValue) {
-      if (signalCache.currentFun) {
-        throw '计算期间不允许修改值'
-      }
-      if (signalCache.currentEffects) {
-        throw '计算期间不允许修改值1'
-      }
-      signal.set(newValue)
-    }
+    set: signal.set
   }
 }
 
@@ -314,8 +312,9 @@ export function memo<T>(
         const value = memoGet(relays, get, lastValue, inited)
         if (value != lastValue) {
           lastValue = value
+          //是需要控制每次函数执行后执行,还是每次结果不同才执行?
+          after(lastValue)
         }
-        after(lastValue)
       }
     } else {
       lastValue = memoGet(relays, get, lastValue, inited)
