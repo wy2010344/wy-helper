@@ -726,8 +726,8 @@ export namespace React {
     onClickCapture?: MouseEventHandler<T> | undefined;
     onContextMenu?: MouseEventHandler<T> | undefined;
     onContextMenuCapture?: MouseEventHandler<T> | undefined;
-    onDoubleClick?: MouseEventHandler<T> | undefined;
-    onDoubleClickCapture?: MouseEventHandler<T> | undefined;
+    onDblClick?: MouseEventHandler<T> | undefined;
+    onDblClickCapture?: MouseEventHandler<T> | undefined;
     onDrag?: DragEventHandler<T> | undefined;
     onDragCapture?: DragEventHandler<T> | undefined;
     onDragEnd?: DragEventHandler<T> | undefined;
@@ -1359,7 +1359,8 @@ export namespace React {
     autoComplete?: string | undefined;
     autoFocus?: boolean | undefined;
     capture?: boolean | 'user' | 'environment' | undefined; // https://www.w3.org/TR/html-media-capture/#the-capture-attribute
-    //checked?: boolean | undefined;
+    //只设置属性,动态变更会出意外
+    checked?: boolean | undefined;
     crossOrigin?: string | undefined;
     disabled?: boolean | undefined;
     enterKeyHint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send' | undefined;
@@ -1385,12 +1386,9 @@ export namespace React {
     src?: string | undefined;
     step?: number | string | undefined;
     type?: HTMLInputTypeAttribute | undefined;
-
-    // value?: string | ReadonlyArray<string> | number | undefined;
-
+    //只设置属性,动态变更会出意外
+    value?: string | ReadonlyArray<string> | number | undefined;
     width?: number | string | undefined;
-
-    // onChange?: ChangeEventHandler<T> | undefined;
   }
 
   export interface LabelHTMLAttributes extends HTMLAttributes {

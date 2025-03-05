@@ -15,7 +15,6 @@ export function setText(value: string, node: any) {
 export function setHtml(value: string, node: any) {
   node.innerHTML = value
 }
-
 /**
  * 无className等,其它attr属性的更新
  * @param value 
@@ -36,8 +35,12 @@ export function updateDom(value: any, node: any, key: string,) {
  * @param node 
  * @param key 
  */
-export function updateSvg(value: any, node: any, key: string,) {
-  key = getAttributeAlias(key)
+export function updateSvg(value: any, node: any, key: string) {
+  if (key == 'className') {
+    key = 'class'
+  } else {
+    key = getAttributeAlias(key)
+  }
   if (value) {
     node.setAttribute(key, value)
   } else {
@@ -87,11 +90,8 @@ export function mergeEvent(
     capture = true
     eventType = eventType.slice(0, eventType.length - CAPTURE_SUFFIX.length)
   }
-  //只将首字母小写
-  eventType = eventType[0].toLowerCase() + eventType.slice(1)
-  if (eventType == "doubleClick") {
-    eventType = "dblclick"
-  }
+  //在dom里面只能使用小写字母,含有大写字母不被识别
+  eventType = eventType.toLowerCase()
   if (oldValue) {
     node.removeEventListener(eventType, oldValue, capture)
   }

@@ -39,7 +39,7 @@ export function signalSerialAbortPromise<T>(
     const request = memoGeneratePromise()
     if (request) {
       //是否正在加载中
-      return request == signal.get()?.request
+      return request != signal.get()?.request
     }
     return false;
   }

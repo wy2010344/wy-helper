@@ -110,15 +110,11 @@ export function matchCharIn(...vs: number[]) {
   if (set.size != vs.length) {
     console.warn("参数中有重复", vs)
   }
+  function cb(c: number) {
+    return set.has(c)
+  }
   return (que: Que) => {
-    return que.step1Code(c => {
-      for (const v of set) {
-        if (c == v) {
-          return true
-        }
-      }
-      return false
-    })
+    return que.step1Code(cb)
   }
 }
 export function matchCharNotIn(...vs: number[]): ParseFun<Que> {
@@ -126,15 +122,11 @@ export function matchCharNotIn(...vs: number[]): ParseFun<Que> {
   if (set.size != vs.length) {
     console.warn("参数中有重复", vs)
   }
+  function cb(c: number) {
+    return !set.has(c)
+  }
   return (que: Que) => {
-    return que.step1Code(c => {
-      for (const v of set) {
-        if (c == v) {
-          return false
-        }
-      }
-      return true
-    })
+    return que.step1Code(cb)
   }
 }
 
