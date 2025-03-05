@@ -6,7 +6,7 @@
  * 
  */
 
-import { emptyObject, FalseType, objectDiffDeleteKey, SetValue } from "wy-helper"
+import { emptyFun, emptyObject, objectDiffDeleteKey, SetValue } from "wy-helper"
 import { addEvent, isEvent, setHtml, setText, updateAttr, updateCssVariable, updateDataSet, updateDom, UpdateProp, updateStyle, updateSvg } from "./fx"
 import { Props } from "./updateDom"
 import { FAriaAttribute, FCssVaribute, FDataAttr, MergeValue } from "./fhtml"
@@ -128,7 +128,7 @@ function updateGInsideNodeAttr(
  */
 function createRenderMAttr(
   updateMAttr: UpdateProp,
-  updateInsideNodeAttr: typeof updateMInsideNodeAttr
+  updateInsideNodeAttr: typeof updateMInsideNodeAttr,
 ) {
   return function (
     node: Node,
@@ -189,8 +189,8 @@ function createRenderMAttr(
 
 
 
-export const renderMSvgAttr = createRenderMAttr(updateDom, updateMInsideNodeAttr)
-export const renderMDomAttr = createRenderMAttr(updateSvg, updateMInsideNodeAttr)
+export const renderMDomAttr = createRenderMAttr(updateDom, updateMInsideNodeAttr)
+export const renderMSvgAttr = createRenderMAttr(updateSvg, updateMInsideNodeAttr)
 
 type IgnoreKeys = typeof ignoreDomAttrKeys[number]
 type OmitBDomAttribute<T extends DomElementType> = Omit<BDomAttribute<T>, IgnoreKeys>

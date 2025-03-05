@@ -1,6 +1,6 @@
 
 
-import { emptyFun, emptyObject, objectDiffDeleteKey, SetValue, SyncFun, ValueOrGet } from "wy-helper";
+import { emptyFun, objectDiffDeleteKey, SetValue, SyncFun, ValueOrGet } from "wy-helper";
 import { PureCSSProperties } from "../util";
 import { BDomAttribute, BSvgAttribute, DomElementType, React, SvgElementType } from "./html";
 import { addEvent, isEvent, mergeEvent, setHtml, setText, updateAttr, updateCssVariable, updateDataSet, updateDom, UpdateProp, updateStyle, updateSvg } from "./fx";
@@ -91,7 +91,7 @@ const CHILDREN_PREFIX = 'children'
  * @returns 
  */
 function createRenderFAttr(
-  updateMAttr: UpdateProp
+  updateMAttr: UpdateProp,
 ) {
   return function (
     node: Node,
@@ -239,5 +239,5 @@ export type FMergeChildAttr<T> = {
   children?: SetValue<T>;
 };
 
-export const mergeFSvgAttr = createMergeFNodeAttr(updateDom)
 export const mergeFDomAttr = createMergeFNodeAttr(updateSvg)
+export const mergeFSvgAttr = createMergeFNodeAttr(updateDom)

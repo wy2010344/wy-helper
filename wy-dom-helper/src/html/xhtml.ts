@@ -3,18 +3,9 @@ import { BDomAttribute, BSvgAttribute, DomElementType, React, SvgElementType } f
 import { DataAttr, Props } from "./updateDom"
 import { PureCSSProperties } from "../util"
 
-import { isEvent, mergeEvent, setClassName, updateAttr, updateCssVariable, updateDataSet, updateDom, UpdateProp, updateStyle, updateSvg } from "./fx";
+import { isEvent, mergeEvent, updateAttr, updateCssVariable, updateDataSet, updateDom, UpdateProp, updateStyle, updateSvg } from "./fx";
 import { emptyFun, objectDiffDeleteKey } from "wy-helper";
 
-
-// type XDomAttributeCS<T extends DomElementType> = {
-//   [key in keyof FDomAttributeC<T> as (key extends string ? `a-${key}` : key)]: FDomAttributeC<T>[key]
-// }
-
-
-// type XSvgAttributeCS<T extends SvgElementType> = {
-//   [key in keyof FSvgAttributeC<T> as (key extends string ? `a-${key}` : key)]: FSvgAttributeC<T>[key]
-// }
 type XStyleProps = {
   [key in keyof PureCSSProperties as `s-${key}`]: PureCSSProperties[key]
 }
@@ -82,7 +73,7 @@ function updateProp(
  * @returns 
  */
 function createMergeXNodeAttr(
-  updateMAttr: UpdateProp
+  updateMAttr: UpdateProp,
 ) {
   return function (
     node: Node,
@@ -124,5 +115,5 @@ function createMergeXNodeAttr(
 }
 
 
-export const mergeXSvgAttr = createMergeXNodeAttr(updateDom)
-export const mergeXDomAttr = createMergeXNodeAttr(updateSvg)
+export const mergeXSvgAttr = createMergeXNodeAttr(updateSvg)
+export const mergeXDomAttr = createMergeXNodeAttr(updateDom)

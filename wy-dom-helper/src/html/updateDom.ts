@@ -1,4 +1,4 @@
-import { emptyObject, GetValue, objectDiffDeleteKey, run, SetValue, SyncFun } from "wy-helper"
+import { emptyFun, emptyObject, GetValue, objectDiffDeleteKey, run, SetValue, SyncFun } from "wy-helper"
 import { BDomAttribute, BDomEvent, BSvgAttribute, BSvgEvent, DomElementType, React, SvgElementType } from "./html"
 import { CSSProperties } from "../util"
 import { isEvent, mergeEvent, UpdateProp } from "./fx"
@@ -154,10 +154,6 @@ export function updateSvgProps(value: any, node: any, key: string) {
   }
 }
 
-export type DomType = "svg" | "dom"
-
-
-
 /**
  * react模式,更新节点
  * @param dom 
@@ -165,7 +161,7 @@ export type DomType = "svg" | "dom"
  * @param props 
  */
 function createMergeAttr(
-  updateProp: UpdateProp
+  updateProp: UpdateProp,
 ) {
   return function (
     node: Node,

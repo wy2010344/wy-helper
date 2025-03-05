@@ -64,141 +64,151 @@ const matchInlineContent = ruleGetTranslate(manyRuleGet(
   return vs.join('')
 })
 
-function getStrValue(a: Que, b: Que) {
-  return ruleGetString(a, b)
-}
+export function generateParseXml(
+  //类型解析
+  ruleGetType: ParseFunGet<Que, string>,
+  //属性参数key
+  ruleGetKey: ParseFunGet<Que, string>,
+  //属性value
+  ruleGetValue: ParseFunGet<Que, string>
+) {
 
-/**
- * xml参数
- */
-const argRuleGet: ParseFunGet<Que, {
-  key: string
-  value: string | true
-}> = andRuleGet(
-  [
-    ruleGet(isPureWord, getStrValue),
-    orRuleGet(
-      [
-        andRuleGet(
-          [
-            ruleGet(matchAnyString('='), quote),
-            ruleStrBetweenGet('"'.charCodeAt(0))
-          ],
-          function (a, b) {
-            return b
-          }
-        ),
-        alawaysGet(() => true as const)
-      ]
-    )
-  ],
-  function (a, b) {
-    return {
-      key: a,
-      value: b
-    }
-  }
-)
-
-const matchBracket: ParseFunGet<Que, XmlBeginNode> = andRuleGet(
-  [
-    ruleGet(matchAnyString('<'), quote),
-    ruleGet(isPureWord, ruleGetString),
-    ruleGet(whiteSpaceRuleZero, quote),
-    manyRuleGet(
-      argRuleGet,
-      0,
-      whiteSpaceRuleZero
-    ),
-    ruleGet(whiteSpaceRuleZero, quote),
-    ruleGet(
-      matchAnyString(">", "/>"),
-      ruleGetString
-    )
-  ],
-  function (a, b, c, d, e, f) {
-    const map: AttrMap = {}
-    for (let x of d) {
-      if (x.key in map) {
-        throw `duplicate key ${x.key}`
-      }
-      map[x.key] = x.value
-    }
-    return new XmlBeginNode(b, map, f == '/>')
-  }
-)
-
-
-
-const matchBracketEnd = andRuleGet(
-  [
-    ruleSkip(matchAnyString('</')),
-    ruleGet(isPureWord, ruleGetString),
-    ruleSkip(matchAnyString('>')),
-  ],
-  function (a, b, c) {
-    return new XmlEndNode(b)
-  }
-)
-
-
-const parseXml = reduceRuleGet(
-  ruleGetTranslate(matchInlineContent, v => {
-    const last = new XmlNode("", {}, [])
-    if (v) {
-      last.children.push(v)
-    }
-    return [last] as XmlNode[]
-  }),
-  andRuleGet(
+  /**
+   * xml参数
+   */
+  const argRuleGet: ParseFunGet<Que, {
+    key: string
+    value: string | true
+  }> = andRuleGet(
     [
+      ruleGetKey,
       orRuleGet(
         [
-          matchBracket,
-          matchBracketEnd
+          andRuleGet(
+            [
+              ruleGet(matchAnyString('='), quote),
+              ruleGetValue
+            ],
+            function (a, b) {
+              return b
+            }
+          ),
+          alawaysGet(() => true as const)
         ]
-      ),
-      matchInlineContent
+      )
     ],
     function (a, b) {
       return {
-        brack: a,
-        content: b
+        key: a,
+        value: b
       }
     }
-  ),
-  function (init, { brack, content }) {
-    let last = init.at(-1)
-    if (!last) {
-      return
+  )
+
+  const matchBracket: ParseFunGet<Que, XmlBeginNode> = andRuleGet(
+    [
+      ruleGet(matchAnyString('<'), quote),
+      ruleGetType,
+      ruleGet(whiteSpaceRuleZero, quote),
+      manyRuleGet(
+        argRuleGet,
+        0,
+        whiteSpaceRuleZero
+      ),
+      ruleGet(whiteSpaceRuleZero, quote),
+      ruleGet(
+        matchAnyString(">", "/>"),
+        ruleGetString
+      )
+    ],
+    function (a, b, c, d, e, f) {
+      const map: AttrMap = {}
+      for (let x of d) {
+        if (x.key in map) {
+          throw `duplicate key ${x.key}`
+        }
+        map[x.key] = x.value
+      }
+      return new XmlBeginNode(b, map, f == '/>')
     }
-    if (brack instanceof XmlBeginNode) {
-      if (brack.close) {
-        last.children.push(new XmlNode(brack.key, brack.map, []))
+  )
+
+  const matchBracketEnd = andRuleGet(
+    [
+      ruleSkip(matchAnyString('</')),
+      ruleGetType,
+      ruleSkip(matchAnyString('>')),
+    ],
+    function (a, b, c) {
+      return new XmlEndNode(b)
+    }
+  )
+
+  const parseXml = reduceRuleGet(
+    ruleGetTranslate(matchInlineContent, v => {
+      const last = new XmlNode("", {}, [])
+      if (v) {
+        last.children.push(v)
+      }
+      return [last] as XmlNode[]
+    }),
+    andRuleGet(
+      [
+        orRuleGet(
+          [
+            matchBracket,
+            matchBracketEnd
+          ]
+        ),
+        matchInlineContent
+      ],
+      function (a, b) {
+        return {
+          brack: a,
+          content: b
+        }
+      }
+    ),
+    function (init, { brack, content }) {
+      let last = init.at(-1)
+      if (!last) {
+        return
+      }
+      if (brack instanceof XmlBeginNode) {
+        if (brack.close) {
+          last.children.push(new XmlNode(brack.key, brack.map, []))
+        } else {
+          const newNode = new XmlNode(brack.key, brack.map, [])
+          last.children.push(newNode)
+          init.push(newNode)
+          last = newNode
+        }
+      } else if (brack instanceof XmlEndNode) {
+        if (last.type != brack.key) {
+          throw 'not match the before quote'
+        }
+        init.pop()
+        last = init.at(-1)
       } else {
-        const newNode = new XmlNode(brack.key, brack.map, [])
-        last.children.push(newNode)
-        init.push(newNode)
-        last = newNode
+        throw 'unknown node' + brack
       }
-    } else if (brack instanceof XmlEndNode) {
-      if (last.type != brack.key) {
-        throw 'not match the before quote'
+      if (!last) {
+        throw 'unexpected end!'
       }
-      init.pop()
-      last = init.at(-1)
-    } else {
-      throw 'unknown node' + brack
+      if (content) {
+        last.children.push(content)
+      }
+      return init
     }
-    if (!last) {
-      throw 'unexpected end!'
-    }
-    if (content) {
-      last.children.push(content)
-    }
-    return init
-  }
-)
+  )
+
+  return parseXml
+}
+
+
+
+
+
 
 export class XmlNode {
   constructor(
@@ -208,8 +218,18 @@ export class XmlNode {
   ) { }
 }
 
+const simplePureWord = ruleGet(isPureWord, ruleGetString)
+const defaultParseXML = generateParseXml(
+  simplePureWord,
+  simplePureWord,
+  ruleStrBetweenGet('"'.charCodeAt(0))
+)
+
 export type AllXmlNode = string | XmlNode
-export function toXmlNodes(text: string) {
+export function toXmlNodes(
+  text: string,
+  parseXml = defaultParseXML
+) {
   const out = parseXml(new Que(text))
   if (isParseSuccess(out)) {
     if (out.end.i == out.end.content.length) {
