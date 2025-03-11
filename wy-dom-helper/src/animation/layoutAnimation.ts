@@ -1,5 +1,5 @@
-import { EmptyFun, FalseType, GetDeltaXAnimationConfig, Point, emptyObject, pointEqual, run, trackSignal } from "wy-helper";
-import { animateFrame } from "./animateFrameValue";
+import { EmptyFun, FalseType, GetDeltaXAnimationConfig, Point, createAnimateSignal, emptyObject, pointEqual, run, trackSignal } from "wy-helper";
+import { signalAnimateFrame } from "./animateFrameValue";
 import { getPageOffset } from "../util";
 
 
@@ -14,8 +14,8 @@ export function layoutFrameAnimation({
   didInit?(v: EmptyFun): EmptyFun | FalseType
 } = emptyObject) {
   let lastPS = init
-  const transX = animateFrame(0)
-  const transY = animateFrame(0)
+  const transX = signalAnimateFrame(0)
+  const transY = signalAnimateFrame(0)
   function setLastPs(ps: Point) {
     lastPS = ps
     saveTo?.(ps)

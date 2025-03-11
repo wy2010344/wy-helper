@@ -1,5 +1,7 @@
-import { AbsAnimateFrameValue, AnimateFrameEvent, AnimationConfig, GetDeltaXAnimationConfig } from "../animation"
-import { emptyObject } from "../util"
+import { AbsAnimateFrameValue, AnimateFrameEvent, AnimationConfig, easeFns, GetDeltaXAnimationConfig, getTweenAnimationConfig } from "../animation"
+import { SetValue } from "../setStateHelper"
+import { emptyFun, emptyObject, quote } from "../util"
+import { MomentumIScroll } from "./iscroll"
 export * from './bscroll'
 export * from './iscroll'
 
@@ -241,8 +243,27 @@ export function startScroll(
   }
 }
 
-
-
+/**
+ * 
+ * @param idealDistance 理想的惯性位移位置,通常是MomentumIScroll.get().getWithSpeedIdeal(velocityX).distance  + deltaX
+ * @param width 容器宽度
+ * @returns 1向左,0不动,-1向右
+ */
+export function scrollJudgeDirection(
+  idealDistance: number,
+  width: number
+) {
+  // const targetDis = MomentumIScroll.get().getWithSpeedIdeal(velocityX).distance  + deltaX
+  const absTargetDis = Math.abs(idealDistance)
+  if (absTargetDis < width / 2) {
+    return 0
+  } else {
+    if (idealDistance < 0) {
+      return 1
+    }
+    return -1
+  }
+}
 /**
  * 
  * @param velocityX 速度
@@ -253,32 +274,32 @@ export function startScroll(
  * 
  * @deprecated 使用iScroll.getWithSpeedIdeal计算出理想位移,再与中点进行比较,偏移中点或越界,才进行翻页
  */
-export function scrollJudgeDirection(
-  velocityX: number,
-  deltaX: number,
-  width: number,
-  {
-    VELOCITY_THRESHOLD = 0.1,
-    DELTA_THRESHOLD = width / 2
-  }: {
-    VELOCITY_THRESHOLD?: number
-    DELTA_THRESHOLD?: number
-  } = emptyObject) {
-  let directionX = 0;
-  // Used in SwipeView.handlePanStart for hasty swipes
-  if (Math.abs(velocityX) > VELOCITY_THRESHOLD) {
-    directionX = velocityX > 0 ? 1 : -1;
-    // If drag started towards one end (directionX determined by velocityX at dragEnd)
-    // but ends towards the opposite (deltaX determined by the diff between dragStart and dragEnd),
-    // we shall ignore the swipe intention.
-    if ((directionX > 0 && deltaX < 0) || (directionX < 0 && deltaX > 0)) {
-      directionX = 0;
-    }
-  } else if (Math.abs(deltaX) >= DELTA_THRESHOLD) {
-    directionX = deltaX > 0 ? 1 : -1;
-  }
-  return -directionX
-}
+// export function scrollJudgeDirection(
+//   velocityX: number,
+//   deltaX: number,
+//   width: number,
+//   {
+//     VELOCITY_THRESHOLD = 0.1,
+//     DELTA_THRESHOLD = width / 2
+//   }: {
+//     VELOCITY_THRESHOLD?: number
+//     DELTA_THRESHOLD?: number
+//   } = emptyObject) {
+//   let directionX = 0;
+//   // Used in SwipeView.handlePanStart for hasty swipes
+//   if (Math.abs(velocityX) > VELOCITY_THRESHOLD) {
+//     directionX = velocityX > 0 ? 1 : -1;
+//     // If drag started towards one end (directionX determined by velocityX at dragEnd)
+//     // but ends towards the opposite (deltaX determined by the diff between dragStart and dragEnd),
+//     // we shall ignore the swipe intention.
+//     if ((directionX > 0 && deltaX < 0) || (directionX < 0 && deltaX > 0)) {
+//       directionX = 0;
+//     }
+//   } else if (Math.abs(deltaX) >= DELTA_THRESHOLD) {
+//     directionX = deltaX > 0 ? 1 : -1;
+//   }
+//   return -directionX
+// }
 
 
 
@@ -333,4 +354,48 @@ class CacheVelocity {
 }
 export function cacheVelocity(BEFORE_LAST_KINEMATICS_DELAY = 32) {
   return new CacheVelocity(BEFORE_LAST_KINEMATICS_DELAY)
+}
+
+
+const defaultBackAnimateConfig = getTweenAnimationConfig(300, easeFns.out(easeFns.circ))
+function defaultGetToAnimateConfig(duration: number) {
+  return getTweenAnimationConfig(duration, easeFns.out(easeFns.circ))
+}
+
+
+export function destinationWithMarginTrans(
+  out: MomentumCallOut,
+  trans: AbsAnimateFrameValue,
+  {
+    backAnimateConfig = defaultBackAnimateConfig,
+    getToAnimateConfig = defaultGetToAnimateConfig,
+    targetSnap = quote,
+    event
+  }: {
+    onScrollEnd?: SetValue<boolean>
+    backAnimateConfig?: GetDeltaXAnimationConfig
+    getToAnimateConfig?: (duration: number) => GetDeltaXAnimationConfig
+    /**吸附 */
+    targetSnap?: (n: number) => number
+    event?: AnimateFrameEvent
+  } = emptyObject
+) {
+  if (out.type == 'scroll') {
+    //最在是0,然后到每一步
+    trans.changeTo(
+      targetSnap(out.target),
+      getToAnimateConfig(out.duration),
+      event
+    )
+  } else if (out.type == 'scroll-edge') {
+    //到达边界外
+    trans.changeTo(out.target, getToAnimateConfig(out.duration), {
+      onFinish(v) {
+        trans.changeTo(out.finalPosition, backAnimateConfig, event)
+      },
+    })
+  } else if (out.type == 'edge-back') {
+    //已经在边界外
+    trans.changeTo(out.target, backAnimateConfig, event)
+  }
 }

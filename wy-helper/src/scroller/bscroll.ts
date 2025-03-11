@@ -1,5 +1,4 @@
-import { MomentumCall, MomentumCallOut, MomentumEndArg, OldGetValue } from "."
-import { combineAnimationConfig } from "../animation"
+import { MomentumCallOut, MomentumEndArg } from "."
 import { emptyObject } from "../util"
 import { getDestination } from "./util"
 
