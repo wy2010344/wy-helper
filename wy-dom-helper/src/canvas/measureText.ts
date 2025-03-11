@@ -1,7 +1,7 @@
 
 import { emptyObject } from "wy-helper"
 import { CanvasStyle } from "./canvasStyle";
-const LineBreaker = require('linebreak');
+import LineBreaker from 'linebreak';
 
 export type OCanvasTextDrawingStyles = Partial<CanvasTextDrawingStyles>
 
