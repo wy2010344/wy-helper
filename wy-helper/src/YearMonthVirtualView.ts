@@ -44,6 +44,9 @@ export class YearMonthVirtualView {
   constructor(
     public readonly year: number,
     public readonly month: number,
+    /**
+     * 1~7,0会转化成7
+     */
     firstWeek: number
   ) {
     this.firstWeek = formatFirstWeek(firstWeek);
@@ -75,18 +78,24 @@ export class YearMonthVirtualView {
   /**第一列是星期几(1-7) */
   public readonly firstWeek: number;
 
-  getLastYear(month?: number, firstWeek?: number) {
+  getLastYear(
+    month = this.month,
+    firstWeek = this.firstWeek
+  ) {
     return new YearMonthVirtualView(
       this.year - 1,
-      month || this.month,
-      firstWeek || this.firstWeek
+      month,
+      firstWeek
     );
   }
-  getNextYear(month?: number, firstWeek?: number) {
+  getNextYear(
+    month = this.month,
+    firstWeek: number = this.firstWeek
+  ) {
     return new YearMonthVirtualView(
       this.year + 1,
-      month || this.month,
-      firstWeek || this.firstWeek
+      month,
+      firstWeek
     );
   }
 
@@ -95,39 +104,43 @@ export class YearMonthVirtualView {
    * @param firstWeek
    * @returns
    */
-  getlastMonth(firstWeek?: number) {
+  getlastMonth(firstWeek: number = this.firstWeek) {
     let m = this.month - 1;
     let y = this.year;
     if (m < 1) {
       m = 12;
       y = y - 1;
     }
-    return new YearMonthVirtualView(y, m, firstWeek || this.firstWeek);
+    return new YearMonthVirtualView(y, m, firstWeek);
   }
 
   private _lastMonth: YearMonthVirtualView | undefined = undefined;
 
   lastMonth() {
     if (!this._lastMonth) {
-      this._lastMonth = this.getlastMonth();
+      const lastMonth = this.getlastMonth();
+      this._lastMonth = lastMonth
+      lastMonth._nextMonth = this
     }
     return this._lastMonth;
   }
 
-  getNextMonth(firstWeek?: number) {
+  getNextMonth(firstWeek: number = this.firstWeek) {
     let m = this.month + 1;
     let y = this.year;
     if (m > 12) {
       m = 1;
       y = y + 1;
     }
-    return new YearMonthVirtualView(y, m, firstWeek || this.firstWeek);
+    return new YearMonthVirtualView(y, m, firstWeek);
   }
 
   private _nextMonth: YearMonthVirtualView | undefined = undefined;
   nextMonth() {
     if (!this._nextMonth) {
-      this._nextMonth = this.getNextMonth();
+      const nextMonth = this.getNextMonth();
+      this._nextMonth = nextMonth
+      nextMonth._lastMonth = this
     }
     return this._nextMonth;
   }
@@ -196,6 +209,10 @@ export class YearMonthVirtualView {
   }
   toNumber() {
     return yearMonthToNumber(this.year, this.month)
+  }
+
+  equals(n: YearMonthVirtualView) {
+    return this.toNumber() == n.toNumber() && this.firstWeek == n.firstWeek
   }
 }
 

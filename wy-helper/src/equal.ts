@@ -6,6 +6,12 @@ export function simpleEqual<T>(a: T, b: T) {
   return a == b
 }
 
+export function simpleEqualsEqual<T extends {
+  equals(b: T): boolean
+}>(a: T, b: T) {
+  return a.equals(b)
+}
+
 export function simpleNotEqual<T>(a: T, b: T) {
   return a != b
 }

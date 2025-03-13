@@ -77,13 +77,18 @@ export interface MomentumCallIdeal {
 export interface MomentumEndArg {
   /** < 0 当前位移 */
   current: number,
+  /**
+   * 负是向上,正是向下
+   */
   velocity: number,
-  /**最下滚动,一般为wrapperHeight-clientHeight,即maxScroll,为负数 */
-  lowerMargin: number,
   /**最上滚动,一般为0 */
+  lowerMargin: number,
+  /**最下滚动,一般为wrapperHeight-clientHeight,即maxScroll,为负数 */
   upperMargin: number,
   // /** 容器尺寸,如wrapperHeight  */
   containerSize: number,
+  contentSize: number
+  maxScroll: number
 }
 export interface MomentumJudgeBack {
   type: "scroll" | "scroll-edge" | "edge-back"
@@ -92,15 +97,18 @@ export interface MomentumJudgeBack {
 }
 
 export type MomentumCallOut = {
+  /**滚动 */
   type: "scroll"
   from: number
   target: number
   duration: number
 } | {
+  /**从外部滚回边界 */
   type: "edge-back"
   from: number
   target: number
 } | {
+  /**滚动到容器外,可能需要回退 */
   type: "scroll-edge"
   from: number
   target: number
@@ -170,8 +178,8 @@ export function startScroll(
   {
     beginTime = performance.now(),
     edgeSlow = 3,
-    upperScrollDiff = 0,
-    lowerScrollDiff = 0,
+    beginScrollDiff = 0,
+    endScrollDiff = 0,
     containerSize,
     contentSize,
     getCurrentValue,
@@ -181,8 +189,8 @@ export function startScroll(
     beginTime?: number
     /**到达边缘时拖拽减速 */
     edgeSlow?: number
-    upperScrollDiff?: number
-    lowerScrollDiff?: number
+    beginScrollDiff?: number
+    endScrollDiff?: number
     //滚动容器
     containerSize(): number
     //滚动内容
@@ -197,11 +205,11 @@ export function startScroll(
     let diff = n - latestValue
     const cv = getCurrentValue()
     if (diff) {
-      const { lowerMargin, upperMargin } = getMargin()
-      if (!(cv < upperMargin && cv > lowerMargin)) {
+      const { beginMargin, endMargin } = getMargin()
+      if (cv < beginMargin || cv > endMargin) {
         diff = diff / edgeSlow
       }
-      const newValue = cv + diff
+      const newValue = cv - diff
       changeTo(newValue)
       latestValue = n
       return newValue
@@ -210,13 +218,17 @@ export function startScroll(
     }
   }
   function getMargin() {
-    const maxScroll = Math.min(containerSize() - contentSize(), 0)
-    const upperMargin = upperScrollDiff
-    const lowerMargin = maxScroll + lowerScrollDiff
+    const _contentSize = contentSize()
+    const _containerSize = containerSize()
+    const maxScroll = Math.max(_contentSize - _containerSize, 0)
+    const beginMargin = beginScrollDiff
+    const endMargin = maxScroll + endScrollDiff
     return {
-      upperMargin,
-      lowerMargin,
-      maxScroll
+      beginMargin,
+      endMargin,
+      maxScroll,
+      contentSize: _contentSize,
+      containerSize: _containerSize
     }
   }
   return {
@@ -228,16 +240,18 @@ export function startScroll(
         n = latestValue
       }
       const newY = setMove(n)
-      const { lowerMargin, upperMargin } = getMargin()
+      const { beginMargin, endMargin, containerSize, contentSize, maxScroll } = getMargin()
       if (typeof velocity != 'number') {
-        velocity = (n - beginValue) / (performance.now() - beginTime) //默认使用平均速度,因为最后的瞬间速度可能为0?
+        velocity = (beginValue - n) / (performance.now() - beginTime) //默认使用平均速度,因为最后的瞬间速度可能为0?
       }
       finish({
         current: newY,
         velocity,
-        lowerMargin,
-        upperMargin,
-        containerSize: containerSize()
+        maxScroll,
+        lowerMargin: beginMargin,
+        upperMargin: endMargin,
+        contentSize,
+        containerSize
       })
     }
   }
@@ -362,7 +376,9 @@ function defaultGetToAnimateConfig(duration: number) {
   return getTweenAnimationConfig(duration, easeFns.out(easeFns.circ))
 }
 
-
+function defaultGetForceStop(current: number, idealTarget: number) {
+  return idealTarget
+}
 export function destinationWithMarginTrans(
   out: MomentumCallOut,
   trans: AbsAnimateFrameValue,
@@ -370,6 +386,7 @@ export function destinationWithMarginTrans(
     backAnimateConfig = defaultBackAnimateConfig,
     getToAnimateConfig = defaultGetToAnimateConfig,
     targetSnap = quote,
+    getForceStop = defaultGetForceStop,
     event
   }: {
     onScrollEnd?: SetValue<boolean>
@@ -377,19 +394,32 @@ export function destinationWithMarginTrans(
     getToAnimateConfig?: (duration: number) => GetDeltaXAnimationConfig
     /**吸附 */
     targetSnap?: (n: number) => number
+    /**获得强制吸附的位置 */
+    getForceStop?: (current: number, idealTarget: number) => number
     event?: AnimateFrameEvent
   } = emptyObject
 ) {
   if (out.type == 'scroll') {
+    const forceStop = getForceStop(out.from, out.target)
     //最在是0,然后到每一步
     trans.changeTo(
-      targetSnap(out.target),
+      targetSnap(forceStop),
       getToAnimateConfig(out.duration),
       event
     )
   } else if (out.type == 'scroll-edge') {
+    const forceStop = getForceStop(out.from, out.target)
+    if (forceStop > out.finalPosition) {
+      //在范围内
+      trans.changeTo(
+        targetSnap(forceStop),
+        getToAnimateConfig(out.duration),
+        event
+      )
+      return
+    }
     //到达边界外
-    trans.changeTo(out.target, getToAnimateConfig(out.duration), {
+    trans.changeTo(forceStop, getToAnimateConfig(out.duration), {
       onFinish(v) {
         trans.changeTo(out.finalPosition, backAnimateConfig, event)
       },
@@ -397,5 +427,76 @@ export function destinationWithMarginTrans(
   } else if (out.type == 'edge-back') {
     //已经在边界外
     trans.changeTo(out.target, backAnimateConfig, event)
+  }
+}
+
+
+
+
+export type DragSnapParam = {
+  beforeDiff?: number
+  //在这块区域内前面的吸附力
+  beforeForce?: number
+  size: number
+  //在这块区域内后面的吸附力
+  afterForce?: number
+  afterDiff?: number
+}
+export function dragSnapWithList(list: DragSnapParam[]) {
+  const newList: {
+    beforeDiff: number
+    beforeForce: number
+    afterForce: number
+    size: number
+    afterDiff: number
+  }[] = []
+  list.forEach(function (row) {
+    if (row.size <= 0) {
+      console.warn('尺寸必须大于0!故不参与', row)
+    } else {
+      let beforeForce = row.beforeForce || 0
+      if (beforeForce < 0) {
+        console.log('beforeForce不能小于0,识别为0', row)
+        beforeForce = 0
+      }
+      let afterForce = row.afterForce || 0
+      if (afterForce < 0) {
+        console.log('afterForce不能小于0,识别为0', row)
+        afterForce = 0
+      }
+      newList.push({
+        beforeDiff: row.beforeDiff || 0,
+        size: row.size,
+        beforeForce,
+        afterForce,
+        afterDiff: row.afterDiff || 0
+      })
+    }
+  })
+  /**
+   * 入值与返回值都是正
+   * 在拖拽场合,一般要转为负,即进负出负
+   */
+  return function (n: number) {
+    let acc = 0
+    for (let i = 0; i < newList.length; i++) {
+      const cell = newList[i]
+      let nextAcc = acc + cell.size
+      if (acc < n && n < nextAcc) {
+        //在什么区域返回
+        const totalForce = cell.beforeForce + cell.afterForce
+        if (totalForce) {
+          const pc = cell.beforeForce * cell.size / totalForce
+          if (n - acc > pc) {
+            return nextAcc + cell.afterDiff
+          }
+          return acc + cell.beforeDiff
+        }
+        //不变化
+        return n
+      }
+      nextAcc = acc
+    }
+    return n
   }
 }

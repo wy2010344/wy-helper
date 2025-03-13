@@ -58,7 +58,8 @@ export class MomentumIScroll {
   destinationWithMargin(
     {
       current, velocity,
-      lowerMargin, upperMargin, containerSize
+      lowerMargin, upperMargin,
+      containerSize
     }: MomentumEndArg
   ): MomentumCallOut {
     if (lowerMargin < current && current < upperMargin) {
