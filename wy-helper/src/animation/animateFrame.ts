@@ -3,7 +3,7 @@ import { GetValue, SetValue } from "../setStateHelper"
 import { EmptyFun, emptyFun, emptyObject } from '../util'
 import { ReadValueCenter, ValueCenter, valueCenterOf } from "../ValueCenter"
 import { StoreRef } from "../storeRef"
-import { addEffect, batchSignalEnd, createSignal, setSignalRealTime, signalOnUpdate } from "../signal"
+import { addEffect, batchSignalEnd, createSignal, signalOnUpdate } from "../signal"
 /**
  * 或者视着实例而非消息,即是可变的,只在事件中不变
  */
@@ -90,6 +90,10 @@ export class AbsAnimateFrameValue {
    * 如果正在发生动画,这个值存在
    */
   private animateConfig: AnimateToImpl | undefined = undefined
+
+  protected setAnimateConfig(v?: AnimateToImpl) {
+    this.animateConfig = v
+  }
   getAnimateConfig() {
     return this.animateConfig
   }
@@ -104,7 +108,7 @@ export class AbsAnimateFrameValue {
 
   private clear() {
     this.lastCancel = emptyFun
-    this.animateConfig = undefined
+    this.setAnimateConfig()
   }
   slientChange(target: number) {
     if (this.animateConfig) {
@@ -196,9 +200,13 @@ export class AbsAnimateFrameValue {
       baseValue
     }
   }
-  private beginAnimate(animateTo: AnimateToImpl, needReset: boolean, onFinish: SetValue<boolean>) {
+  private beginAnimate(
+    animateTo: AnimateToImpl,
+    needReset: boolean,
+    onFinish: SetValue<boolean>
+  ) {
     const that = this
-    this.animateConfig = animateTo
+    this.setAnimateConfig(animateTo)
     const timePeriod = performance.now()
     if (needReset) {
       animateTo.reDo()
@@ -263,7 +271,7 @@ export class SignalAnimateFrameValue extends AbsAnimateFrameValue {
         if (signalOnUpdate()) {
           addEffect(() => {
             signal.set(v)
-            setSignalRealTime()
+            batchSignalEnd()
           })
         } else {
           signal.set(v)
@@ -272,5 +280,15 @@ export class SignalAnimateFrameValue extends AbsAnimateFrameValue {
       requestAnimateFrame,
       eachCommit
     )
+  }
+  private onAnimate = createSignal(false)
+  protected setAnimateConfig(v?: AnimateToImpl): void {
+    super.setAnimateConfig(v)
+    this.onAnimate.set(Boolean(v))
+  }
+  getAnimateConfig(): AnimateToImpl | undefined {
+    //使其可观察
+    this.onAnimate.get()
+    return super.getAnimateConfig()
   }
 }

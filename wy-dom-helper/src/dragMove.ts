@@ -1,4 +1,4 @@
-import { PointKey, StoreRef } from "wy-helper";
+import { createSignal, PointKey, storeRef, StoreRef } from "wy-helper";
 import { subscribeEventListener } from "./util";
 
 
@@ -155,10 +155,13 @@ export function resizeHelper(p: {
   }
 }
 
+export type PointerDirMoveUp = {
+  onPointerMove(e: PointerEvent): void
+  onPointerUp(e: PointerEvent): void
+}
 
-
-export type PointerBeginDirMove = (initE: PointerEvent, secondE: PointerEvent, direction: PointKey) => void
-export default function pointerMoveDir(
+export type PointerBeginDirMove = (initE: PointerEvent, direction: PointKey) => PointerDirMoveUp | void
+export function pointerMoveDir(
   beginMove: PointerBeginDirMove,
   eq: PointKey = 'y'
 ) {
@@ -169,16 +172,26 @@ export default function pointerMoveDir(
       destroyUp()
       const absY = Math.abs(e.pageY - initE.pageY)
       const absX = Math.abs(e.pageX - initE.pageX)
+      let out: PointerDirMoveUp | void = undefined
       if (absX == absY) {
-        beginMove(initE, e, eq)
+        out = beginMove(initE, eq)
       } else {
         if (absX > absY) {
           //左右移动
-          beginMove(initE, e, 'x')
+          out = beginMove(initE, 'x')
         } else {
           //上下移动
-          beginMove(initE, e, 'y')
+          out = beginMove(initE, 'y')
         }
+      }
+      if (out) {
+        out.onPointerMove(e)
+        const destroyMove = subscribeEventListener(document, 'pointermove', out.onPointerMove)
+        const destroyEnd = subscribeEventListener(document, 'pointerup', e => {
+          out.onPointerUp(e)
+          destroyMove()
+          destroyEnd()
+        })
       }
     })
     //避免点击后没有移动.
@@ -187,18 +200,4 @@ export default function pointerMoveDir(
       destroyUp()
     })
   }
-}
-
-export function pointerMoveDirWithLock(
-  lock: StoreRef<PointKey | undefined>,
-  beginMove: PointerBeginDirMove,
-  eq: PointKey = 'y'
-) {
-  return pointerMoveDir(function (initE, secondE, dir) {
-    if (lock.get() && lock.get() != dir) {
-      return
-    }
-    lock.set(dir)
-    beginMove(initE, secondE, dir)
-  }, eq)
 }

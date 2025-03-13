@@ -29,6 +29,8 @@ const signalCache = m[DepKey] as {
   recycleBatches: CurrentBatch[]
   currentRelay?: Map<GetValue<any>, any>
   realTimeCall?: boolean
+  //在执行effect期间
+  onEffectRun?: boolean
 }
 
 /**
@@ -182,17 +184,20 @@ function commitSignal(signal: Signal<any>) {
   signal.commit()
 }
 
-export function setSignalRealTime() {
-  signalCache.realTimeCall = true
-}
 export function batchSignalEnd() {
+  if (signalCache.onEffectRun) {
+    signalCache.realTimeCall = true
+    return
+  }
   if (signalCache.currentEffects) {
-    console.warn("更新期间重复更新")
+    signalCache.realTimeCall = true
     return
   }
   const currentBatch = signalCache.currentBatch
   if (currentBatch) {
     signalCache.realTimeCall = false
+
+    //执行观察事件,即trackSignal的两个函数参数,与上游的memo参数
     currentBatch.signals.forEach(commitSignal)
     currentBatch.signals.clear()
 
@@ -204,15 +209,18 @@ export function batchSignalEnd() {
     listeners.clear()
     signalCache.currentEffects = undefined
 
+    ///执行effect事件
+    signalCache.onEffectRun = true
     const effects = currentBatch.effects
     const keys = iterableToList(effects.keys()).sort(numberSortAsc)
     for (const key of keys) {
       effects.get(key)?.forEach(run)
     }
     effects.clear()
-
     signalCache.recycleBatches.push(currentBatch)
+    signalCache.onEffectRun = undefined
 
+    //实时更新...
     if (signalCache.realTimeCall) {
       batchSignalEnd()
     }
@@ -226,7 +234,10 @@ export function batchSignalEnd() {
 }
 /**
  * 跟踪信号
- * @param get 通过信号计算出来的值
+ * 这里get函数是常执行的,set函数会在必要时执行,跟memo的结果一样
+ * 是否可以合并只有一个函数,则始终是memo的.毕竟现在set里,也不能设置状态了
+ * 而且由于是终节点,get在批量时,每次只执行一次
+ * @param get 通过信号计算出来的值 
  * @returns 同步事件
  */
 export function trackSignal<T>(get: GetValue<T>, set?: SetValue<T>): EmptyFun

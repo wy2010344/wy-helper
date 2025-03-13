@@ -1,11 +1,10 @@
-import { AnimationConfig, SpringOutValue } from "../animation"
 
-export function getDestination(value: number, lowerMargin: number, upperMargin: number) {
-  if (value <= lowerMargin) {
-    return lowerMargin
+export function getDestination(value: number, beginMargin: number, endMargin: number) {
+  if (value <= beginMargin) {
+    return beginMargin
   }
-  if (upperMargin <= value) {
-    return upperMargin
+  if (endMargin <= value) {
+    return endMargin
   }
   return value
 }
