@@ -1,7 +1,6 @@
-import { MomentumEndArg, MomentumJudge, MomentumJudgeBack } from "../scroller"
-import { getDestination } from "../scroller/util"
+import { MomentumCallOut, MomentumEndArg } from "../scroller"
+import { getDestination, getMaxScroll } from "../scroller/util"
 import { AnimationConfig } from "./AnimationConfig"
-import { SpringOutValue } from "./spring"
 
 
 /**
@@ -10,7 +9,7 @@ import { SpringOutValue } from "./spring"
 export class FrictionalFactory {
   constructor(
     /**
-     * 减速度
+     * 减速度,默认0.0006
      */
     public readonly deceleration = 0.0006,
   ) {
@@ -36,10 +35,14 @@ export class FrictionalFactory {
     const initVelocity = dir * Math.sqrt(distance * this.deceleration * dir * 2)
     return this.getFromVelocity(initVelocity)
   }
-  momentumJudge({
+  destinationWithMargin({
     current, velocity,
-    lowerMargin, upperMargin
-  }: MomentumEndArg): MomentumJudgeBack {
+    containerSize,
+    contentSize
+  }: MomentumEndArg): MomentumCallOut {
+
+    const lowerMargin = 0
+    const upperMargin = getMaxScroll(containerSize, contentSize)
     const frictional = this.getFromVelocity(velocity)
     if (lowerMargin < current && current < upperMargin) {
       const destination = current + frictional.maxDistance
@@ -56,13 +59,16 @@ export class FrictionalFactory {
         return {
           type: "scroll-edge",
           from: current,
-          target: edge
+          target: destination,
+          finalPosition: edge,
+          duration: frictional.duration
         }
       } else {
         return {
           type: "scroll",
           from: current,
-          target: destination
+          target: destination,
+          duration: frictional.duration
         }
       }
     } else {

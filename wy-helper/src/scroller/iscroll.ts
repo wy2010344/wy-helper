@@ -1,5 +1,5 @@
 import { MomentumCallOut, MomentumEndArg } from ".";
-import { getDestination } from "./util";
+import { getDestination, getMaxScroll } from "./util";
 
 export class MomentumIScroll {
   private constructor(
@@ -58,10 +58,12 @@ export class MomentumIScroll {
   destinationWithMargin(
     {
       current, velocity,
-      lowerMargin, upperMargin,
-      containerSize
+      containerSize,
+      contentSize
     }: MomentumEndArg
   ): MomentumCallOut {
+    const lowerMargin = 0
+    const upperMargin = getMaxScroll(containerSize, contentSize)
     if (lowerMargin < current && current < upperMargin) {
       //在边界内部
       let { absSpeed, duration, distance } = this.getWithSpeedIdeal(velocity)
@@ -71,13 +73,13 @@ export class MomentumIScroll {
       let finalPosition = 0
       //超出边界的时间,减少位移
       if (destination < lowerMargin) {
-        destination = containerSize ? lowerMargin - containerSize / 2.5 * (absSpeed / 8) : lowerMargin;
+        destination = lowerMargin - containerSize / 2.5 * (absSpeed / 8);
         let distance = Math.abs(destination - current);
         duration = distance / absSpeed;
         edge = true
         finalPosition = lowerMargin
       } else if (destination > upperMargin) {
-        destination = containerSize ? upperMargin + containerSize / 2.5 * (absSpeed / 8) : upperMargin;
+        destination = upperMargin + containerSize / 2.5 * (absSpeed / 8);
         let distance = Math.abs(current) + destination;
         duration = distance / absSpeed;
         edge = true

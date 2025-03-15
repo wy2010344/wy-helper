@@ -232,6 +232,19 @@ export function batchSignalEnd() {
     // console.log("未在批量任务中,没必要更新")
   }
 }
+
+export function memoFun<T extends Function>(
+  get: MemoGet<T> | MemoFun<T>,
+  after: SetValue<T> = emptyFun
+): T {
+  const value = memo(get, after) as any
+  if (!value.memoFun) {
+    value.memoFun = function () {
+      return value().apply(null, arguments)
+    } as any
+  }
+  return value.memoFun as any
+}
 /**
  * 跟踪信号
  * 这里get函数是常执行的,set函数会在必要时执行,跟memo的结果一样

@@ -79,9 +79,9 @@ export const mb = {
     stopPropagation(e: any) {
       e.stopPropagation()
     },
-    getSelectionRange(editor: HTMLElement): MbRange {
+    getSelectionRange(editor: HTMLElement): MbRange | null {
       let { anchorNode, anchorOffset, focusNode, focusOffset } = getSelection(editor);
-      if (!anchorNode || !focusNode) throw 'error1'
+      if (!anchorNode || !focusNode) return null
       if (anchorNode == editor && focusNode == editor) {
         // If the anchor and focus are the editor element, return either a full
         // highlight or a start/end cursor position depending on the selection
@@ -144,7 +144,12 @@ export const mb = {
       return pos;
     },
 
-    setSelectionRange(editor: HTMLElement, _pos: MbRange) {
+    setSelectionRange(editor: HTMLElement, _pos: MbRange | null) {
+      if (!_pos) {
+        const s = getSelection(editor)
+        s.removeAllRanges()
+        return s
+      }
       const pos = { ..._pos }
       const s = getSelection(editor)
       let startNode: Node | undefined, startOffset = 0

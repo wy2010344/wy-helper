@@ -12,6 +12,12 @@ export function simpleEqualsEqual<T extends {
   return a.equals(b)
 }
 
+export function simpleEqualsNotEqual<T extends {
+  equals(b: T): boolean
+}>(a: T, b: T) {
+  return !a.equals(b)
+}
+
 export function simpleNotEqual<T>(a: T, b: T) {
   return a != b
 }

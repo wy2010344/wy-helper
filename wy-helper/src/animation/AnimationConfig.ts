@@ -82,8 +82,11 @@ export type SpringBaseAnimationConfigArg = {
 
 export function springBaseAnimationConfig(deltaX: number, {
   config,
+  /**默认0 */
   initialVelocity = 0,
+  /**默认0.01 */
   displacementThreshold = 0.01,
+  /**默认2 */
   velocityThreshold = 2
 }: SpringBaseAnimationConfigArg = emptyObject): AnimationConfig {
   return function (diffTime) {
@@ -126,4 +129,8 @@ export function getSpringBaseAnimationConfig(arg?: SpringBaseAnimationConfigArg)
   }
 }
 
+/**
+ * 使用默认zta=1
+ * omega0=0
+ */
 export const defaultSpringBaseAnimationConfig = getSpringBaseAnimationConfig()
