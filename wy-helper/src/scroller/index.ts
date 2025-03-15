@@ -2,9 +2,10 @@ import { AbsAnimateFrameValue, AnimateFrameEvent, AnimationConfig, easeFns, GetD
 import { SetValue } from "../setStateHelper"
 import { emptyFun, emptyObject, quote } from "../util"
 import { MomentumIScroll } from "./iscroll"
+import { getMaxScroll } from "./util"
 export * from './bscroll'
 export * from './iscroll'
-
+export { getMaxScroll } from './util'
 export interface EaseItem {
   style: string
   fn: EaseFn
@@ -82,20 +83,14 @@ export interface MomentumEndArg {
    */
   velocity: number,
   /**最上滚动,一般为0 */
-  lowerMargin: number,
+  // lowerMargin?: number,
   /**最下滚动,一般为wrapperHeight-clientHeight,即maxScroll,为负数 */
-  upperMargin: number,
+  // upperMargin: number,
   // /** 容器尺寸,如wrapperHeight  */
   containerSize: number,
   contentSize: number
-  maxScroll: number
+  // maxScroll: number
 }
-export interface MomentumJudgeBack {
-  type: "scroll" | "scroll-edge" | "edge-back"
-  from: number
-  target: number
-}
-
 export type MomentumCallOut = {
   /**滚动 */
   type: "scroll"
@@ -173,89 +168,174 @@ export type OldGetValue = {
   onEdgeBack(deltaX: number): AnimationConfig
 }
 
-export function startScroll(
-  n: number,
-  {
-    beginTime = performance.now(),
-    edgeSlow = 3,
-    beginScrollDiff = 0,
-    endScrollDiff = 0,
-    containerSize,
-    contentSize,
-    getCurrentValue,
-    changeTo,
-    finish
-  }: {
-    beginTime?: number
-    /**到达边缘时拖拽减速 */
-    edgeSlow?: number
-    beginScrollDiff?: number
-    endScrollDiff?: number
-    //滚动容器
-    containerSize(): number
-    //滚动内容
-    contentSize(): number
-    getCurrentValue(): number
-    changeTo(value: number): void
-    finish(v: MomentumEndArg): void
+export type WithTimeStampEvent = {
+  timeStamp: number
+}
+
+type ScrollDelta = (delta: number, velocity: number) => void
+
+/**
+ * 将拖动的page定位转化成scroll
+ * @param page 
+ */
+export class ScrollFromPage<T extends WithTimeStampEvent> {
+  private lastPage: number
+  constructor(
+    private lastEvent: T,
+    private getPage: (n: T) => number,
+    private scrollDelta: ScrollDelta,
+    private onFinish: SetValue<number>
+  ) {
+    this.lastPage = getPage(lastEvent)
+  }
+  static from<T extends WithTimeStampEvent>(e: T, arg: {
+    getPage(n: T): number,
+    scrollDelta: ScrollDelta,
+    onFinish: SetValue<number>
   }) {
-  const beginValue = n
-  let latestValue = beginValue
-  function setMove(n: number) {
-    let diff = n - latestValue
-    const cv = getCurrentValue()
-    if (diff) {
-      const { beginMargin, endMargin } = getMargin()
-      if (cv < beginMargin || cv > endMargin) {
-        diff = diff / edgeSlow
-      }
-      const newValue = cv - diff
-      changeTo(newValue)
-      latestValue = n
-      return newValue
-    } else {
-      return cv
-    }
+    return new ScrollFromPage(
+      e,
+      arg.getPage,
+      arg.scrollDelta,
+      arg.onFinish
+    )
   }
-  function getMargin() {
-    const _contentSize = contentSize()
-    const _containerSize = containerSize()
-    const maxScroll = Math.max(_contentSize - _containerSize, 0)
-    const beginMargin = beginScrollDiff
-    const endMargin = maxScroll + endScrollDiff
-    return {
-      beginMargin,
-      endMargin,
-      maxScroll,
-      contentSize: _contentSize,
-      containerSize: _containerSize
-    }
+  private velocity = 0
+  move(e: T) {
+    this.inMove(e, true)
+    return this.velocity
   }
-  return {
-    move(n: number) {
-      return setMove(n)
-    },
-    end(n?: number, velocity?: number) {
-      if (typeof n != 'number') {
-        n = latestValue
-      }
-      const newY = setMove(n)
-      const { beginMargin, endMargin, containerSize, contentSize, maxScroll } = getMargin()
-      if (typeof velocity != 'number') {
-        velocity = (beginValue - n) / (performance.now() - beginTime) //默认使用平均速度,因为最后的瞬间速度可能为0?
-      }
-      finish({
-        current: newY,
-        velocity,
-        maxScroll,
-        lowerMargin: beginMargin,
-        upperMargin: endMargin,
-        contentSize,
-        containerSize
-      })
+  end(e: T) {
+    this.inMove(e)
+    this.onFinish(this.velocity)
+    return this.velocity
+  }
+  private inMove(e: T, cVelocity?: boolean) {
+    const page = this.getPage(e)
+    //拖拽与之相反
+    const delta = this.lastPage - page
+    const diffTime = e.timeStamp - this.lastEvent.timeStamp
+    if (cVelocity && diffTime > 0) {
+      this.velocity = delta / diffTime
+    }
+    this.lastEvent = e
+    if (delta) {
+      this.scrollDelta(delta, this.velocity)
+      this.lastPage = page
     }
   }
 }
+
+export function eventGetPageY<T extends {
+  pageY: number
+}>(e: T) {
+  return e.pageY
+}
+
+export function eventGetPageX<T extends {
+  pageX: number
+}>(e: T) {
+  return e.pageX
+}
+
+
+export function overScrollSlow(
+  current: number,
+  delta: number,
+  containerSize: number,
+  contentSize: number,
+  slow = 3
+) {
+  const maxScroll = getMaxScroll(containerSize, contentSize)
+  if (current > 0 && current < maxScroll) {
+    return delta
+  }
+  return delta / slow
+}
+
+// export function startScroll(
+//   n: number,
+//   {
+//     beginTime = performance.now(),
+//     edgeSlow = 3,
+//     beginScrollDiff = 0,
+//     endScrollDiff = 0,
+//     containerSize,
+//     contentSize,
+//     getCurrentValue,
+//     changeTo,
+//     finish
+//   }: {
+//     beginTime?: number
+//     /**到达边缘时拖拽减速 */
+//     edgeSlow?: number
+//     beginScrollDiff?: number
+//     endScrollDiff?: number
+//     //滚动容器
+//     containerSize(): number
+//     //滚动内容
+//     contentSize(): number
+//     getCurrentValue(): number
+//     changeTo(value: number): void
+//     finish(v: MomentumEndArg): void
+//   }) {
+//   const beginValue = n
+//   let latestValue = beginValue
+//   function setMove(n: number) {
+//     let diff = n - latestValue
+//     const cv = getCurrentValue()
+//     if (diff) {
+//       const { beginMargin, endMargin } = getMargin()
+//       if (cv < beginMargin || cv > endMargin) {
+//         diff = diff / edgeSlow
+//       }
+//       const newValue = cv - diff
+//       changeTo(newValue)
+//       latestValue = n
+//       return newValue
+//     } else {
+//       return cv
+//     }
+//   }
+//   function getMargin() {
+//     const _contentSize = contentSize()
+//     const _containerSize = containerSize()
+//     const maxScroll = Math.max(_contentSize - _containerSize, 0)
+//     const beginMargin = beginScrollDiff
+//     const endMargin = maxScroll + endScrollDiff
+//     return {
+//       beginMargin,
+//       endMargin,
+//       maxScroll,
+//       contentSize: _contentSize,
+//       containerSize: _containerSize
+//     }
+//   }
+//   return {destinationWithMargin
+//     move(n: number) {
+//       return setMove(n)
+//     },
+//     end(n?: number, velocity?: number) {
+//       if (typeof n != 'number') {
+//         n = latestValue
+//       }
+//       const newY = setMove(n)
+//       const { beginMargin, endMargin, containerSize, contentSize, maxScroll } = getMargin()
+//       if (typeof velocity != 'number') {
+//         velocity = (beginValue - n) / (performance.now() - beginTime) //默认使用平均速度,因为最后的瞬间速度可能为0?
+//       }
+//       finish({
+//         current: newY,
+//         velocity,
+//         maxScroll,
+//         lowerMargin: beginMargin,
+//         upperMargin: endMargin,
+//         contentSize,
+//         containerSize
+//       })
+//     }
+//   }
+// }
 
 /**
  * 
@@ -366,6 +446,11 @@ class CacheVelocity {
     return this.velocity
   }
 }
+/**
+ * @deprecated
+ * @param BEFORE_LAST_KINEMATICS_DELAY 
+ * @returns 
+ */
 export function cacheVelocity(BEFORE_LAST_KINEMATICS_DELAY = 32) {
   return new CacheVelocity(BEFORE_LAST_KINEMATICS_DELAY)
 }
@@ -408,8 +493,8 @@ export function destinationWithMarginTrans(
       event
     )
   } else if (out.type == 'scroll-edge') {
-    const forceStop = getForceStop(out.from, out.target)
-    if (forceStop > out.finalPosition) {
+    const forceStop = getForceStop(out.from, out.finalPosition)
+    if (forceStop < out.finalPosition) {
       //在范围内
       trans.changeTo(
         targetSnap(forceStop),
@@ -419,7 +504,7 @@ export function destinationWithMarginTrans(
       return
     }
     //到达边界外
-    trans.changeTo(forceStop, getToAnimateConfig(out.duration), {
+    trans.changeTo(out.target, getToAnimateConfig(out.duration), {
       onFinish(v) {
         trans.changeTo(out.finalPosition, backAnimateConfig, event)
       },

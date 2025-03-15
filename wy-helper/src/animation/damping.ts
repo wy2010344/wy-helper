@@ -1,7 +1,6 @@
-import { MomentumEndArg, MomentumJudgeBack } from "../scroller"
-import { getDestination } from "../scroller/util"
+import { MomentumCallOut, MomentumEndArg } from "../scroller"
+import { getDestination, getMaxScroll } from "../scroller/util"
 import { AnimationConfig } from "./AnimationConfig"
-import { SpringOutValue } from "./spring"
 
 
 /**
@@ -54,10 +53,13 @@ export class DammpingFactory {
    * @param param0 
    * @returns 
    */
-  momentumJudge({
+  destinationWithMargin({
     current, velocity,
-    lowerMargin, upperMargin
-  }: MomentumEndArg): MomentumJudgeBack {
+    containerSize,
+    contentSize,
+  }: MomentumEndArg): MomentumCallOut {
+    const lowerMargin = 0
+    const upperMargin = getMaxScroll(containerSize, contentSize)
     velocity = velocity * 1000
     const dammping = this.getFromVelocity(velocity)
     if (lowerMargin < current && current < upperMargin) {
@@ -75,13 +77,16 @@ export class DammpingFactory {
         return {
           type: "scroll-edge",
           from: current,
-          target: edge
+          target: destination,
+          finalPosition: edge,
+          duration: dammping.duration
         }
       } else {
         return {
           type: "scroll",
           from: current,
-          target: destination
+          target: destination,
+          duration: dammping.duration
         }
       }
     } else {

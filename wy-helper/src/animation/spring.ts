@@ -5,6 +5,7 @@ export type SpringBaseArg = {
   omega0?: number
   /**阻尼比:0~1~无穷,0~1是欠阻尼,即会来回,1~无穷不会来回*/
   zta?: number
+  //在zta大于1时计算速度
   velocityWhenZta1Plus?: boolean
 }
 export function springBase(
@@ -14,10 +15,14 @@ export function springBase(
   /**初始速度 v0 (可选) */
   initialVelocity: number,
   {
+    /**默认1 */
     zta = 1,
+    /**默认8 */
     omega0 = 8,
     velocityWhenZta1Plus
   }: SpringBaseArg = emptyObject) {
+  //设想的正向是下落,与位移一致
+  initialVelocity = -initialVelocity
   // value = to - displacement
   if (zta < 1) {
     const omegaD = omega0 * Math.sqrt(1 - zta * zta)

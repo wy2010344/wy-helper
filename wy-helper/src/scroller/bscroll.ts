@@ -1,6 +1,6 @@
 import { MomentumCallOut, MomentumEndArg } from "."
 import { emptyObject } from "../util"
-import { getDestination } from "./util"
+import { getDestination, getMaxScroll } from "./util"
 
 export class MomentumBScoll {
   private constructor(
@@ -26,9 +26,12 @@ export class MomentumBScoll {
   destinationWithMargin(
     {
       current, velocity,
-      lowerMargin, upperMargin, containerSize
+      containerSize,
+      contentSize,
     }: MomentumEndArg
   ): MomentumCallOut {
+    const lowerMargin = 0
+    const upperMargin = getMaxScroll(containerSize, contentSize)
     if (lowerMargin < current && current < upperMargin) {
       let { distance, duration, absSpeed } = this.getWithSpeedIdeal(velocity)
       let destination = current + distance

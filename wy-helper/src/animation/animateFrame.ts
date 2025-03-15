@@ -120,6 +120,9 @@ export class AbsAnimateFrameValue {
       return true
     }
   }
+  changeDiff(diff: number, getConfig?: GetDeltaXAnimationConfig, event: Omit<AnimateFrameEvent, 'from'> = emptyObject) {
+    return this.changeTo(this.get() + diff, getConfig, event)
+  }
   slientDiff(diff: number) {
     if (this.animateConfig) {
       this.animateConfig.from = this.animateConfig.from + diff
@@ -136,13 +139,16 @@ export class AbsAnimateFrameValue {
       from?: number,
       onProcess?: EmptyFun
     } = emptyObject) {
-    return new Promise<boolean>(resolve => {
-      this.changeTo(target, config, {
-        from: c.from,
-        onProcess: c.onProcess,
-        onFinish: resolve
+    const from = c.from || this.get()
+    if (from != target) {
+      return new Promise<boolean>(resolve => {
+        this.changeTo(target, config, {
+          from: c.from,
+          onProcess: c.onProcess,
+          onFinish: resolve
+        })
       })
-    })
+    }
   }
   changeTo(target: number, getConfig?: GetDeltaXAnimationConfig, {
     from,
