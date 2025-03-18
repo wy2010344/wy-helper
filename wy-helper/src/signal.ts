@@ -253,10 +253,10 @@ export function memoFun<T extends Function>(
  * @param get 通过信号计算出来的值 
  * @returns 同步事件
  */
-export function trackSignal<T>(get: GetValue<T>, set?: SetValue<T>): EmptyFun
-export function trackSignal<T, A>(get: GetValue<T>, set: (v: T, a: A) => void, a: A): EmptyFun
-export function trackSignal<T, A, B>(get: GetValue<T>, set: (v: T, a: A, b: B) => void, a: A, b: B): EmptyFun
-export function trackSignal<T, A, B, C>(get: GetValue<T>, set: (v: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): EmptyFun
+export function trackSignal<T>(get: MemoGet<T>, set?: SetValue<T>): EmptyFun
+export function trackSignal<T, A>(get: MemoGet<T>, set: (v: T, a: A) => void, a: A): EmptyFun
+export function trackSignal<T, A, B>(get: MemoGet<T>, set: (v: T, a: A, b: B) => void, a: A, b: B): EmptyFun
+export function trackSignal<T, A, B, C>(get: MemoGet<T>, set: (v: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): EmptyFun
 export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
   let disabled = false
   const a = arguments[2]
@@ -270,7 +270,7 @@ export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
       return
     }
     signalCache.currentFun = addFun
-    const value = get()
+    const value = get(lastValue, inited)
     signalCache.currentFun = undefined
     if (inited) {
       if (value != lastValue) {
@@ -308,7 +308,7 @@ function memoGet<T>(relays: Map<GetValue<any>, any>, get: GetValue<T>, lastValue
   return v
 }
 
-interface MemoGet<T> {
+export interface MemoGet<T> {
   (old: undefined, inited: false): T,
   (old: T, inited: true): T
 }

@@ -78,6 +78,7 @@ export type SpringBaseAnimationConfigArg = {
   initialVelocity?: number
   displacementThreshold?: number,
   velocityThreshold?: number
+  ease?: "in" | "out" | "in-out"
 }
 
 export function springBaseAnimationConfig(deltaX: number, {
@@ -90,15 +91,17 @@ export function springBaseAnimationConfig(deltaX: number, {
   velocityThreshold = 2
 }: SpringBaseAnimationConfigArg = emptyObject): AnimationConfig {
   return function (diffTime) {
-    const out = springBase(diffTime / 1000, deltaX, initialVelocity, config)
+    const out = springBase(diffTime, deltaX, initialVelocity, config, true)
     const stop = springIsStop(out, displacementThreshold, velocityThreshold)
     if (stop) {
       return [deltaX, true]
     } else {
-      return [deltaX - out.displacement, false]
+      const diff = deltaX - out.displacement
+      return [diff, false]
     }
   }
 }
+
 
 export function springBaseAnimationConfigNoEnd(
   deltaX: number,
@@ -113,7 +116,7 @@ export function springBaseAnimationConfigNoEnd(
   } = emptyObject
 ): Quote<number> {
   return function (diffTime) {
-    const out = springBase(diffTime / 1000, deltaX, initialVelocity, config)
+    const out = springBase(diffTime, deltaX, initialVelocity, config)
     const stop = shouldStop(out)
     if (stop) {
       return deltaX

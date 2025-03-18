@@ -1540,7 +1540,7 @@ export namespace React {
     name?: string | undefined;
     required?: boolean | undefined;
     size?: number | undefined;
-    //value?: string | ReadonlyArray<string> | number | undefined;
+    value?: string | ReadonlyArray<string> | number | undefined;
     // onChange?: ChangeEventHandler<T> | undefined;
   }
 
@@ -1583,7 +1583,7 @@ export namespace React {
     required?: boolean | undefined;
     rows?: number | undefined;
     wrap?: string | undefined;
-    //value?: string | ReadonlyArray<string> | number | undefined;
+    value?: string | ReadonlyArray<string> | number | undefined;
     // onChange?: ChangeEventHandler<T> | undefined;
   }
 

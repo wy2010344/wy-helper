@@ -1,4 +1,4 @@
-import { run } from "../util";
+import { Quote } from "../util";
 
 type EaseFn = (n: number) => number
 //N次方:自定义
@@ -6,6 +6,44 @@ function poly(n: number) {
   return function (t: number) {
     return Math.pow(t, n)
   }
+}
+
+export type EaseType = 'in' | 'out' | 'in-out'
+/**
+ * 将一个easeIn的函数,转化成easeOut
+ * @param elapsedTime 
+ * @param easeInFn 
+ * @param distance 
+ * @param duration 
+ * @returns 
+ */
+export function easeOut(
+  elapsedTime: number,
+  easeInFn: Quote<number>,
+  distance: number,
+  duration: number
+) {
+  return distance - easeInFn(duration - elapsedTime)
+}
+
+/**
+ * 将一个easeIn的函数转化成easeInOut
+ * @param elapsedTime 
+ * @param easeInFn 
+ * @param distance 
+ * @param duration 
+ * @returns 
+ */
+export function easeInOut(
+  elapsedTime: number,
+  easeInFn: Quote<number>,
+  distance: number,
+  duration: number
+) {
+  if (elapsedTime < 0.5 * duration) {
+    return easeInFn(elapsedTime * 2) / 2
+  }
+  return distance - easeInFn((duration - elapsedTime) * 2) / 2
 }
 /**
  * 参考reanimated https://github.dev/software-mansion/react-native-reanimated/tree/main/src

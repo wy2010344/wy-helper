@@ -155,12 +155,22 @@ export function resizeHelper(p: {
   }
 }
 
-export type PointerDirMoveUp = {
-  onPointerMove(e: PointerEvent): void
-  onPointerUp(e: PointerEvent): void
+export type MoveEnd<T> = {
+  onMove(e: T): void
+  onEnd(e: T): void
 }
 
-export type PointerBeginDirMove = (initE: PointerEvent, direction: PointKey) => PointerDirMoveUp | void
+export type PointerBeginDirMove = (initE: PointerEvent, direction: PointKey) => MoveEnd<PointerEvent> | void
+export function pointerMove(
+  out: MoveEnd<PointerEvent>
+) {
+  const destroyMove = subscribeEventListener(document, 'pointermove', e => out.onMove(e))
+  const destroyEnd = subscribeEventListener(document, 'pointerup', e => {
+    out.onEnd(e)
+    destroyMove()
+    destroyEnd()
+  })
+}
 export function pointerMoveDir(
   beginMove: PointerBeginDirMove,
   eq: PointKey = 'y'
@@ -172,7 +182,7 @@ export function pointerMoveDir(
       destroyUp()
       const absY = Math.abs(e.pageY - initE.pageY)
       const absX = Math.abs(e.pageX - initE.pageX)
-      let out: PointerDirMoveUp | void = undefined
+      let out: MoveEnd<PointerEvent> | void = undefined
       if (absX == absY) {
         out = beginMove(initE, eq)
       } else {
@@ -185,13 +195,8 @@ export function pointerMoveDir(
         }
       }
       if (out) {
-        out.onPointerMove(e)
-        const destroyMove = subscribeEventListener(document, 'pointermove', out.onPointerMove)
-        const destroyEnd = subscribeEventListener(document, 'pointerup', e => {
-          out.onPointerUp(e)
-          destroyMove()
-          destroyEnd()
-        })
+        out.onMove(e)
+        pointerMove(out)
       }
     })
     //避免点击后没有移动.

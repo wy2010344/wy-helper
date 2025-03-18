@@ -22,10 +22,12 @@ export function createAnimateSignal(
   const destroy = trackSignal(get, v => {
     const to = value.getTargetValue()
     if (to != v) {
-      value.changeTo(v, g._signal_animation_with_ || config, {
-        from: to,
-        onProcess,
-        onFinish
+      addEffect(() => {
+        value.changeTo(v, g._signal_animation_with_ || config, {
+          from: to,
+          onProcess,
+          onFinish
+        })
       })
     }
   })
