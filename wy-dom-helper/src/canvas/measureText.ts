@@ -3,7 +3,18 @@ import { emptyObject } from "wy-helper"
 import { CanvasStyle } from "./canvasStyle";
 import LineBreaker from 'linebreak';
 
-export type OCanvasTextDrawingStyles = Partial<CanvasTextDrawingStyles>
+export type OCanvasTextDrawingStyles = Partial<Omit<CanvasTextDrawingStyles, 'font'>> & {
+  //italic
+  fontStyle?: string
+  //small-caps
+  fontVariant?: string
+  //bold,600,700
+  fontWeight?: string
+  //16px
+  fontSize?: string
+  //Arial, sans-serif
+  fontFamily?: string
+}
 
 function setDrawingStyle(
   ctx: CanvasTextDrawingStyles,
@@ -15,7 +26,23 @@ function setDrawingStyle(
     ctx.textBaseline = n.textBaseline || 'alphabetic'
     ctx.textAlign = n.textAlign || 'start'
   }
-  ctx.font = n.font || ''
+  const fontVS = []
+  if (n.fontStyle) {
+    fontVS.push(n.fontStyle)
+  }
+  if (n.fontVariant) {
+    fontVS.push(n.fontVariant)
+  }
+  if (n.fontWeight) {
+    fontVS.push(n.fontWeight)
+  }
+  if (n.fontSize) {
+    fontVS.push(n.fontSize)
+  }
+  if (n.fontFamily) {
+    fontVS.push(n.fontFamily)
+  }
+  ctx.font = fontVS.join(' ')
   ctx.fontKerning = n.fontKerning || 'auto'
   ctx.fontStretch = n.fontStretch || 'normal'
   ctx.fontVariantCaps = n.fontVariantCaps || 'normal'
@@ -23,6 +50,10 @@ function setDrawingStyle(
   ctx.textRendering = n.textRendering || 'auto'
   ctx.wordSpacing = n.wordSpacing || '0px'
 }
+
+export type MeasuredTextout = {
+  text: string
+} & OCanvasTextDrawingStyles
 export function measureText(
   ctx: MCtx,
   text: string,
@@ -31,21 +62,22 @@ export function measureText(
   return ctx.measureText(text)
 }
 
+export type DrawTextExt = {
+  style?: string | CanvasGradient | CanvasPattern,
+  x?: number
+  y?: number
+  maxWidth?: number
+  stroke?: boolean
+}
 export function drawText(
   ctx: TextCtx,
-  text: string,
-  style: string | CanvasGradient | CanvasPattern,
-  arg?: {
-    config?: OCanvasTextDrawingStyles,
-    x?: number
-    y?: number
-    maxWidth?: number
-    stroke?: boolean
-  }
+  out: MeasuredTextout,
+  arg?: DrawTextExt
 ) {
   const x = arg?.x || 0
   const y = arg?.y || 0
-  setDrawingStyle(ctx, arg?.config)
+  setDrawingStyle(ctx, out)
+  const style = arg?.style || 'black'
   let fun: 'strokeText' | 'fillText'
   if (arg?.stroke) {
     ctx.strokeStyle = style
@@ -54,14 +86,13 @@ export function drawText(
     ctx.fillStyle = style
     fun = 'fillText'
   }
-  ctx[fun](text, x, y)
+  ctx[fun](out.text, x, y)
 }
 
-export type MeasuredTextWrapOut = {
+export type MeasuredTextWrapOut = TextWrapTextConfig & {
   width: number
   height: number
   lineHeight: number
-  config?: TextWrapTextConfig
   lines: {
     width: number
     text: string
@@ -77,25 +108,24 @@ export function measureTextWrap(
   ctx: MCtx,
   text: string,
   config: {
-    config?: TextWrapTextConfig
     lineHeight: number
     width: number
     maxLines?: number
-  }
+  } & TextWrapTextConfig
 ): MeasuredTextWrapOut {
   let maxLines = config.maxLines || Infinity
   if (maxLines < 1) {
     maxLines = Infinity
   }
-  setDrawingStyle(ctx, config.config, true)
+  setDrawingStyle(ctx, config, true)
   const m = ctx.measureText(text)
 
   if (m.width <= config.width) {
     return {
+      ...config,
       width: m.width,
       lineHeight: config.lineHeight,
       height: config.lineHeight,
-      config: config.config,
       lines: [
         {
           width: m.width,
@@ -107,10 +137,8 @@ export function measureTextWrap(
     const breaker = new LineBreaker(text);
     let bk, lastBreak, tryLine, currentLine = '', lastMeasuredWidth
     const measuredSize = {
-      width: config.width,
+      ...config,
       height: 0,
-      lineHeight: config.lineHeight,
-      config: config.config,
       lines: [] as {
         width: number
         text: string
@@ -177,12 +205,12 @@ export type DrawTextWrapExt = {
 
 export function drawTextWrap(
   ctx: TextCtx,
-  text: MeasuredTextWrapOut,
+  out: MeasuredTextWrapOut,
   arg?: DrawTextWrapExt
 ) {
   const x = arg?.x || 0
   const y = arg?.y || 0
-  setDrawingStyle(ctx, text?.config, true)
+  setDrawingStyle(ctx, out, true)
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
   const direction = arg?.direction || 'ltr'
@@ -199,18 +227,18 @@ export function drawTextWrap(
   }
   let curY = y
   const textAlign = arg?.textAlign || 'left'
-  for (let i = 0; i < text.lines.length; i++) {
-    const line = text.lines[i]
+  for (let i = 0; i < out.lines.length; i++) {
+    const line = out.lines[i]
     let curX = x
     if (textAlign == 'center') {
-      curX = x + (text.width - line.width) / 2
+      curX = x + (out.width - line.width) / 2
     } else if (
       (textAlign == 'end' && direction == 'ltr') ||
       (textAlign == 'start' && direction == 'rtl')
     ) {
-      curX = x + text.width - line.width
+      curX = x + out.width - line.width
     }
     ctx[fun](line.text, curX, curY)
-    curY += text.lineHeight
+    curY += out.lineHeight
   }
 }

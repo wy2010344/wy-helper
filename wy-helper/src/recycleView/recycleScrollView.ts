@@ -102,14 +102,14 @@ export function recycleWithFraction(fc: FrictionalFactory) {
       ) => void,
       velocity: number
     ) {
-      endMove(fc.getFromVelocity(velocity).maxDistance, distance => {
+      endMove(fc.getFromVelocity(velocity).distance, distance => {
         return fc.getFromDistance(distance).animationConfig()
       })
     },
     endMoveDispatch(dispatch: (a: RecycleScrollAction) => void, velocity: number) {
       dispatch({
         type: "endMove",
-        idealDistance: fc.getFromVelocity(velocity).maxDistance,
+        idealDistance: fc.getFromVelocity(velocity).distance,
         getConfig(distance) {
           return fc.getFromDistance(distance).animationConfig()
         },

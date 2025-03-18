@@ -1,5 +1,5 @@
-import { simpleEqual } from ".."
 import { ReadValueCenter, ValueCenter, valueCenterOf } from "../ValueCenter"
+import { Compare, simpleEqual } from "../equal"
 import { SetValue } from "../setStateHelper"
 import { emptyFun } from "../util"
 
@@ -40,11 +40,11 @@ export function singleTimeoutCallback() {
 /**
  * 这个是非常实用的,主要是精确定位了动画结束事件:是提前终止还是正常结束
  */
-export class TimeoutAnimate<T, F> implements ReadValueCenter<TimeoutAnimateData<T, F>>{
+export class TimeoutAnimate<T, F> implements ReadValueCenter<TimeoutAnimateData<T, F>> {
   private center: ValueCenter<TimeoutAnimateData<T, F>>
   constructor(
     value: T,
-    private equal: (a: T, b: T) => any = simpleEqual
+    private equal: Compare<T> = simpleEqual
   ) {
     this.center = valueCenterOf({
       value

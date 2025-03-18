@@ -1,7 +1,6 @@
-import { AbsAnimateFrameValue, AnimateFrameEvent, AnimationConfig, easeFns, GetDeltaXAnimationConfig, getTweenAnimationConfig } from "../animation"
+import { AbsAnimateFrameValue, AnimateFrameEvent, AnimationConfig, easeFns, GetDeltaXAnimationConfig, getTweenAnimationConfig, WeightMeasure } from "../animation"
 import { SetValue } from "../setStateHelper"
 import { emptyFun, emptyObject, quote } from "../util"
-import { MomentumIScroll } from "./iscroll"
 import { getMaxScroll } from "./util"
 export * from './bscroll'
 export * from './iscroll'
@@ -201,11 +200,11 @@ export class ScrollFromPage<T extends WithTimeStampEvent> {
     )
   }
   private velocity = 0
-  move(e: T) {
+  onMove(e: T) {
     this.inMove(e, true)
     return this.velocity
   }
-  end(e: T) {
+  onEnd(e: T) {
     this.inMove(e)
     this.onFinish(this.velocity)
     return this.velocity
@@ -474,7 +473,6 @@ export function destinationWithMarginTrans(
     getForceStop = defaultGetForceStop,
     event
   }: {
-    onScrollEnd?: SetValue<boolean>
     backAnimateConfig?: GetDeltaXAnimationConfig
     getToAnimateConfig?: (duration: number) => GetDeltaXAnimationConfig
     /**吸附 */
@@ -487,6 +485,7 @@ export function destinationWithMarginTrans(
   if (out.type == 'scroll') {
     const forceStop = getForceStop(out.from, out.target)
     //最在是0,然后到每一步
+    //自动滚动
     trans.changeTo(
       targetSnap(forceStop),
       getToAnimateConfig(out.duration),
@@ -495,7 +494,6 @@ export function destinationWithMarginTrans(
   } else if (out.type == 'scroll-edge') {
     const forceStop = getForceStop(out.from, out.finalPosition)
     if (forceStop < out.finalPosition) {
-      //在范围内
       trans.changeTo(
         targetSnap(forceStop),
         getToAnimateConfig(out.duration),
@@ -514,9 +512,6 @@ export function destinationWithMarginTrans(
     trans.changeTo(out.target, backAnimateConfig, event)
   }
 }
-
-
-
 
 export type DragSnapParam = {
   beforeDiff?: number
@@ -577,8 +572,6 @@ export function dragSnapWithList(list: DragSnapParam[]) {
           }
           return acc + cell.beforeDiff
         }
-        //不变化
-        return n
       }
       nextAcc = acc
     }

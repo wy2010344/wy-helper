@@ -5,10 +5,9 @@ export type SpringBaseArg = {
   omega0?: number
   /**阻尼比:0~1~无穷,0~1是欠阻尼,即会来回,1~无穷不会来回*/
   zta?: number
-  //在zta大于1时计算速度
-  velocityWhenZta1Plus?: boolean
 }
 export function springBase(
+  /**已使用时间 */
   elapsedTime: number,
   /**起始位置 */
   deltaX: number,
@@ -18,11 +17,15 @@ export function springBase(
     /**默认1 */
     zta = 1,
     /**默认8 */
-    omega0 = 8,
-    velocityWhenZta1Plus
-  }: SpringBaseArg = emptyObject) {
-  //设想的正向是下落,与位移一致
-  initialVelocity = -initialVelocity
+    omega0 = 20
+  }: SpringBaseArg = emptyObject,
+  //在zta大于1时计算速度
+  velocityWhenZta1Plus?: boolean) {
+
+  //时间要从毫秒转化成秒
+  elapsedTime = elapsedTime / 1000
+  //设想的正向是下落,与位移一致,且要乘以时间ms
+  initialVelocity = -initialVelocity * 1000
   // value = to - displacement
   if (zta < 1) {
     const omegaD = omega0 * Math.sqrt(1 - zta * zta)
@@ -113,8 +116,9 @@ export type SpringOutValue = {
  * @param n 
  * @param displacementThreshold FM中是0.5,RNA中是0.01
  * @param velocityThreshold FM中是10,RNA中是2
+ * 使用FM更科学,displayment最终使用的是像素,在0.5时几乎无法察觉
  */
-export function springIsStop(n: SpringOutValue, displacementThreshold = 0.01, velocityThreshold = 2) {
+export function springIsStop(n: SpringOutValue, displacementThreshold = 0.5, velocityThreshold = 10) {
   return Math.abs(n.displacement) < displacementThreshold && Math.abs(n.velocity) < velocityThreshold
 }
 
