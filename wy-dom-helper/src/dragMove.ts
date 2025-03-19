@@ -1,4 +1,4 @@
-import { createSignal, PointKey, storeRef, StoreRef } from "wy-helper";
+import { emptyObject, PointKey } from "wy-helper";
 import { subscribeEventListener } from "./util";
 
 
@@ -162,10 +162,11 @@ export type MoveEnd<T> = {
 
 export type PointerBeginDirMove = (initE: PointerEvent, direction: PointKey) => MoveEnd<PointerEvent> | void
 export function pointerMove(
-  out: MoveEnd<PointerEvent>
+  out: MoveEnd<PointerEvent>,
+  element: HTMLElement | Document | SVGSVGElement = document
 ) {
-  const destroyMove = subscribeEventListener(document, 'pointermove', e => out.onMove(e))
-  const destroyEnd = subscribeEventListener(document, 'pointerup', e => {
+  const destroyMove = subscribeEventListener(element, 'pointermove', e => out.onMove(e))
+  const destroyEnd = subscribeEventListener(element, 'pointerup', e => {
     out.onEnd(e)
     destroyMove()
     destroyEnd()
@@ -173,11 +174,17 @@ export function pointerMove(
 }
 export function pointerMoveDir(
   beginMove: PointerBeginDirMove,
-  eq: PointKey = 'y'
+  {
+    eq = 'y',
+    element = document
+  }: {
+    eq?: PointKey,
+    element?: HTMLElement | Document | SVGSVGElement
+  } = emptyObject as any
 ) {
   return function (e: PointerEvent) {
     const initE = e;
-    const destroyJudgeMove = subscribeEventListener(document, 'pointermove', e => {
+    const destroyJudgeMove = subscribeEventListener(element, 'pointermove', e => {
       destroyJudgeMove();
       destroyUp()
       const absY = Math.abs(e.pageY - initE.pageY)
@@ -196,11 +203,11 @@ export function pointerMoveDir(
       }
       if (out) {
         out.onMove(e)
-        pointerMove(out)
+        pointerMove(out, element)
       }
     })
     //避免点击后没有移动.
-    const destroyUp = subscribeEventListener(document, 'pointerup', e => {
+    const destroyUp = subscribeEventListener(element, 'pointerup', e => {
       destroyJudgeMove()
       destroyUp()
     })
