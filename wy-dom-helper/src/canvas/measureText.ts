@@ -1,5 +1,5 @@
 
-import { emptyObject } from "wy-helper"
+import { emptyObject, quote, Quote, valueOrGetToGet } from "wy-helper"
 import { CanvasStyle } from "./canvasStyle";
 import LineBreaker from 'linebreak';
 
@@ -52,6 +52,7 @@ function setDrawingStyle(
 }
 
 export type MeasuredTextout = {
+  lineDiffStart: number
   text: string
 } & OCanvasTextDrawingStyles
 export function measureText(
@@ -86,13 +87,14 @@ export function drawText(
     ctx.fillStyle = style
     fun = 'fillText'
   }
-  ctx[fun](out.text, x, y)
+  ctx[fun](out.text, x, y + out.lineDiffStart)
 }
 
 export type MeasuredTextWrapOut = TextWrapTextConfig & {
   width: number
   height: number
   lineHeight: number
+  lineDiffStart: number
   lines: {
     width: number
     text: string
@@ -108,7 +110,7 @@ export function measureTextWrap(
   ctx: MCtx,
   text: string,
   config: {
-    lineHeight: number
+    lineHeight?: number | Quote<number>
     width: number
     maxLines?: number
   } & TextWrapTextConfig
@@ -119,13 +121,23 @@ export function measureTextWrap(
   }
   setDrawingStyle(ctx, config, true)
   const m = ctx.measureText(text)
+  const configLineHeight = valueOrGetToGet(config.lineHeight || quote)
+  const fontHeight = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent
+  let lineHeight = configLineHeight(fontHeight)
+  const minLineHeight = fontHeight * 1.5
+  if (lineHeight < minLineHeight) {
+    lineHeight = minLineHeight
+  }
+  const lineDiffStart = (lineHeight - fontHeight) / 2
+
 
   if (m.width <= config.width) {
     return {
       ...config,
+      lineDiffStart,
       width: m.width,
-      lineHeight: config.lineHeight,
-      height: config.lineHeight,
+      lineHeight,
+      height: lineHeight,
       lines: [
         {
           width: m.width,
@@ -139,6 +151,8 @@ export function measureTextWrap(
     const measuredSize = {
       ...config,
       height: 0,
+      lineHeight,
+      lineDiffStart,
       lines: [] as {
         width: number
         text: string
@@ -160,7 +174,7 @@ export function measureTextWrap(
             line.text = line.text.replace(/\,?\s?\w+$/, '…');
             line.width = ctx.measureText(line.text).width
           }
-          measuredSize.height = measuredSize.lines.length * config.lineHeight
+          measuredSize.height = measuredSize.lines.length * lineHeight
           return measuredSize
         }
 
@@ -177,7 +191,7 @@ export function measureTextWrap(
       const textMetrics = ctx.measureText(currentLine);
       measuredSize.lines.push({ width: textMetrics.width, text: currentLine });
     }
-    measuredSize.height = measuredSize.lines.length * config.lineHeight
+    measuredSize.height = measuredSize.lines.length * lineHeight
     return measuredSize
   }
 }
@@ -238,7 +252,7 @@ export function drawTextWrap(
     ) {
       curX = x + out.width - line.width
     }
-    ctx[fun](line.text, curX, curY)
+    ctx[fun](line.text, curX, curY + out.lineDiffStart)
     curY += out.lineHeight
   }
 }

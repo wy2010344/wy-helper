@@ -7,8 +7,10 @@ function poly(n: number) {
     return Math.pow(t, n)
   }
 }
-
-export type EaseType = 'in' | 'out' | 'in-out'
+/**
+ * @todo 没有out-in,其实只有3种,每种动画,做成固定的
+ */
+export type EaseType = 'in' | 'out' | 'in-out' | 'out-in'
 /**
  * 将一个easeIn的函数,转化成easeOut
  * @param elapsedTime 
@@ -64,6 +66,18 @@ export const easeFns = {
         return easing(t * 2) / 2
       }
       return 1 - easing((1 - t) * 2) / 2
+    }
+  },
+  /**
+   * 像bonuceOut,对应的inOut就是这个
+   * @param easing 
+   * @returns 
+   */
+  outIn(easing: EaseFn) {
+    return function (t: number) {
+      return t < 0.5
+        ? (1 - easing(1 - 2 * t)) / 2
+        : (1 + easing(2 * t - 1)) / 2;
     }
   },
   /**N次方 */

@@ -19,7 +19,7 @@ export class FrictionalFactory {
   }
   /**
    * 
-   * @param deceleration 减速度,默认0.0006
+   * @param deceleration 减速度,默认0.0006 500px用时1.296s
    * @returns 
    */
   static get(deceleration = 0.0006) {

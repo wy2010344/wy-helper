@@ -230,12 +230,14 @@ export function subscribeEventListener<
 >(
   target: T,
   type: K,
-  listener: (event: EventMap<T>[K]) => void,
+  listener: (event: Omit<EventMap<T>[K], 'currentTarget'> & {
+    currentTarget: T
+  }) => void,
   options?: boolean | AddEventListenerOptions
 ) {
-  target.addEventListener(type as any, listener as EventListener, options);
+  target.addEventListener(type as any, listener as unknown as EventListener, options);
   return function () {
-    target.removeEventListener(type as any, listener as EventListener, options);
+    target.removeEventListener(type as any, listener as unknown as EventListener, options);
   }
 }
 // 获取特定目标的事件映射表

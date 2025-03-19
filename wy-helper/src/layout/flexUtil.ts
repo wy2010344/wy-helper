@@ -13,7 +13,11 @@ export type DisplayProps = {
   gap?: number
   alignFix?: boolean
 }
-
+/**
+ * 在ext里面使用stretch与grow,在控制在两个轴的伸长
+ * @param param0 
+ * @returns 
+ */
 export function flexDisplayUtil(
   {
     direction = 'y',
@@ -134,10 +138,8 @@ export function flexDisplayUtil(
     return width
   })
   //render两次,是伸缩长度在捣鬼,任何一处auto都有可能
-  // console.log("执行一次", list, d, n.children().length, n.index())
   return {
     getChildInfo(x, i) {
-      // console.log("get", x, i)
       if (x == direction) {
         return getInfo().list[i]
       }
@@ -148,7 +150,17 @@ export function flexDisplayUtil(
       const theWidth = alignFix ? info[os]() : getWidth()
       const stretch = child.getExt().stretch
       if (stretch) {
-        return stretch(x, theWidth)
+        //对于辅轴,开始与宽度,如y与height,x与width
+        if (typeof stretch == 'function') {
+          return stretch(x, theWidth)
+        } else {
+          if (x == od) {
+            return 0
+          }
+          if (x == os) {
+            return theWidth
+          }
+        }
       } else if (x == od) {
         if (alignItems == 'start') {
           return 0
@@ -164,7 +176,6 @@ export function flexDisplayUtil(
       if (def) {
         return 0
       }
-      // console.log("gext", x)
       if (x == s) {
         const { growAll, length } = getInfo()
         if (growAll != 0) {
