@@ -204,9 +204,20 @@ export function cacheGet<T>(fun: () => T) {
   }
 }
 
+export function cacheGetFun<T extends Function>(get: GetValue<T>): T {
+  let value: T
+  return function () {
+    if (!value) {
+      value = get()
+    }
+    return value.apply(null, arguments)
+  } as any
+}
 
 
 
+
+export const promiseTrue = Promise.resolve(true)
 
 export function setToAdd<V>(set: Set<V>, ...vs: V[]) {
   const aSet = new Set(set)

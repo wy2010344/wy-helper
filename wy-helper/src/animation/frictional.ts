@@ -1,6 +1,8 @@
-import { MomentumCallOut } from "../scroller"
 import { getDestination, getMaxScroll } from "../scroller/util"
-import { AnimationConfig } from "./AnimationConfig"
+import { quote } from "../util"
+import { createAnimationTime } from "./animateFrame"
+import { DeltaXSignalAnimationConfig } from "./AnimationConfig"
+import { AnimateSignal, AnimateSignalConfig } from "./baseAnimateFrame"
 import { easeInOut, easeOut, EaseType } from "./tween"
 
 
@@ -50,79 +52,83 @@ export class FrictionalFactory {
    * @param param0 
    * @returns 
    */
-  destinationWithMarginIscroll({
-    current, velocity,
+  async destinationWithMarginIscroll({
+    scroll,
+    velocity,
     containerSize,
-    contentSize
+    contentSize,
+    edgeConfig,
+    edgeBackConfig,
+    targetSnap = quote,
+    getForceStop = defaultGetForceStop
   }: {
-    /** < 0 当前位移 */
-    current: number,
+    scroll: AnimateSignal,
     /**
      * 负是向上,正是向下
      */
     velocity: number,
     containerSize: number,
     contentSize: number
-  }): MomentumCallOut {
+    edgeConfig(velocity: number): AnimateSignalConfig
+    edgeBackConfig: DeltaXSignalAnimationConfig
+    /**吸附 */
+    targetSnap?: (n: number) => number
+    /**获得强制吸附的位置 */
+    getForceStop?: (current: number, idealTarget: number) => number
 
+  }) {
     const lowerMargin = 0
     const upperMargin = getMaxScroll(containerSize, contentSize)
     const frictional = this.getFromVelocity(velocity)
+    const current = scroll.get()
     if (lowerMargin < current && current < upperMargin) {
-      let destination = current + frictional.distance
-      /**
-       * (t: number) => SpringOutValue
-       * 这里其实分两个阶段,
-       * 阶段1,惯性走到edge
-       * 阶段2,走出edge,带着初始速度,摩擦系数增大或如何
-       * 阶段3,到达最大距离,回弹,使用边缘外运行的距离或初始速度或用时
-       *    这里,与拖拽到边缘一致,使用最大距离
-       */
-      let edge = false
-      let finalPosition = 0
-      let duration = 0
+      const idealTarget = current + frictional.distance
+      const forceStop = getForceStop(current, idealTarget)
+      const destination = targetSnap(forceStop)
+      let elapsedTime = 0
+      let edge = 0
       if (destination < lowerMargin) {
-        edge = true
-        finalPosition = lowerMargin
-        const absSpeed = Math.abs(velocity)
-        destination = lowerMargin - containerSize / 2.5 * (absSpeed / 8);
-        const distance = current - destination
-        duration = distance / absSpeed
+        elapsedTime = frictional.getTimeToDistance(lowerMargin - current)
+        edge = lowerMargin
       } else if (destination > upperMargin) {
-        edge = true
-        finalPosition = upperMargin
-        const absSpeed = Math.abs(velocity)
-        destination = upperMargin + containerSize / 2.5 * (absSpeed / 8);
-        const distance = destination - current
-        duration = distance / absSpeed
+        elapsedTime = frictional.getTimeToDistance(upperMargin - current)
+        edge = upperMargin
       }
-
-      if (edge) {
-        return {
-          type: "scroll-edge",
-          from: current,
-          target: destination,
-          finalPosition: finalPosition,
-          duration
+      if (elapsedTime) {
+        const edgeVelocity = frictional.getVelocity(elapsedTime)
+        const step1 = await scroll.change(frictional.animationConfig('in', elapsedTime))
+        if (step1) {
+          const step2 = await scroll.change(edgeConfig(edgeVelocity))
+          // animateSignalChangeTo(
+          //   scroll,
+          //   edge + containerSize / 2.5 * (velocity / 8),
+          //   edgeConfig(edgeVelocity)
+          // )
+          if (step2) {
+            return scroll.changeTo(
+              edge,
+              edgeBackConfig
+            )
+          }
+        }
+        return false
+      } else {
+        if (destination == idealTarget) {
+          return scroll.change(frictional.animationConfig('in'))
+        } else {
+          return scroll.change(this.getFromDistance(destination).animationConfig('in'))
         }
       }
-
-      return {
-        type: "scroll",
-        from: current,
-        target: destination,
-        duration: frictional.duration
-      }
     } else {
-      //从边缘恢复,回弹
-      const edge = getDestination(current, lowerMargin, upperMargin)
-      return {
-        type: "edge-back",
-        from: current,
-        target: edge
-      }
+      return scroll.changeTo(
+        getDestination(current, lowerMargin, upperMargin),
+        edgeBackConfig
+      )
     }
   }
+}
+function defaultGetForceStop(current: number, idealTarget: number) {
+  return idealTarget
 }
 
 export class Frictional {
@@ -215,23 +221,23 @@ export class Frictional {
   }
 
 
-
   animationConfig(
     ease: EaseType = "in",
-    endTime = this.duration): AnimationConfig {
+    endTime = this.duration
+  ) {
     let getDistance = this.getDistance
     if (ease == 'out') {
       getDistance = this.getEasyOutDistance
     } else if (ease == 'in-out') {
       getDistance = this.getEasyInOutDistance
     }
-    return function (diffTime) {
+    return createAnimationTime(function (diffTime, setDisplacement) {
       if (diffTime < endTime) {
-        const value = getDistance(diffTime)
-        return [value, false]
+        setDisplacement(getDistance(diffTime))
       } else {
-        return [getDistance(endTime), true]
+        setDisplacement(getDistance(endTime))
+        return true
       }
-    }
+    })
   }
 }

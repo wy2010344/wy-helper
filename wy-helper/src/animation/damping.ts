@@ -1,6 +1,5 @@
 import { MomentumCallOut, MomentumEndArg } from "../scroller"
 import { getDestination, getMaxScroll } from "../scroller/util"
-import { AnimationConfig } from "./AnimationConfig"
 
 
 /**
@@ -35,19 +34,6 @@ export class DammpingFactory {
     const initialVelocity = distance / this.gamma
     return this.getFromVelocity(initialVelocity)
   }
-  /**
-   * 获得理想惯性动画
-   */
-  momentumIdeal(
-    velocityThreshold = 2
-  ) {
-    const that = this
-    const maxTime = this.getFromVelocity(velocityThreshold).duration
-    return function (velocity: number): AnimationConfig {
-      return that.getFromVelocity(velocity).animationConfig(maxTime)
-    }
-  }
-
   /**
    * 获得惯性动画
    * @param param0 
@@ -186,17 +172,5 @@ export class Dammping {
     elapsedTime: number
   ) {
     return this.initVelocity * Math.exp(-this.gamma * elapsedTime)
-  }
-
-  animationConfig(endTime = this.duration): AnimationConfig {
-    const that = this
-    return function (diffTime) {
-      if (diffTime < endTime) {
-        const value = that.getDistance(diffTime)
-        return [value, false]
-      } else {
-        return [that.getDistance(endTime), true]
-      }
-    }
   }
 }

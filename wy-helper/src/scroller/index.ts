@@ -1,6 +1,4 @@
-import { AbsAnimateFrameValue, AnimateFrameEvent, AnimationConfig, easeFns, GetDeltaXAnimationConfig, getTweenAnimationConfig, WeightMeasure } from "../animation"
 import { SetValue } from "../setStateHelper"
-import { emptyFun, emptyObject, quote } from "../util"
 import { getMaxScroll } from "./util"
 export * from './bscroll'
 export * from './iscroll'
@@ -71,9 +69,6 @@ export interface MomentumJudge {
     target: number
   }
 }
-export interface MomentumCallIdeal {
-  (t: number): AnimationConfig
-}
 export interface MomentumEndArg {
   /** < 0 当前位移 */
   current: number,
@@ -111,61 +106,62 @@ export type MomentumCallOut = {
 }
 
 
-export function changeWithFixWidth({
-  translateY,
-  lineHeight,
-  getLength,
-  setIndex,
-  getBackConfig,
-  getConfig
-}: {
-  translateY: AbsAnimateFrameValue,
-  lineHeight: number,
-  getLength(): number,
-  setIndex(n: number): void,
-  getBackConfig(distance: number): GetDeltaXAnimationConfig,
-  getConfig(duration: number): GetDeltaXAnimationConfig
-}) {
-  function changeValue(n: number) {
-    const index = Math.round(n * -1 / lineHeight)
-    if (index < 0 || index >= getLength()) {
-      return
-    }
-    setIndex(index)
-  }
-  const event: AnimateFrameEvent = {
-    onProcess: changeValue,
-    onFinish(v) {
-      const value = translateY.get()
-      changeValue(value)
-    },
-  }
-  return {
-    changeValue,
-    onFinish(out: MomentumCallOut) {
-      if (out.type == 'scroll') {
-        const index = -Math.round(out.target / lineHeight)
-        const value = index * lineHeight * -1
-        translateY.changeTo(value, getConfig(out.duration), event)
-      } else if (out.type == 'scroll-edge') {
-        translateY.changeTo(out.target, getConfig(out.duration), {
-          onProcess: event.onProcess,
-          onFinish(v) {
-            event.onFinish?.(v)
-            translateY.changeTo(out.finalPosition, getBackConfig(Math.abs(out.target - out.finalPosition)), event)
-          },
-        })
-      } else if (out.type == 'edge-back') {
-        translateY.changeTo(out.target, getBackConfig(Math.abs(out.from - out.target)), event)
-      }
-    }
-  }
-}
+// export function changeWithFixWidth({
+//   translateY,
+//   lineHeight,
+//   getLength,
+//   setIndex,
+//   getBackConfig,
+//   getConfig
+// }: {
+//   translateY: AnimateSignal,
+//   lineHeight: number,
+//   getLength(): number,
+//   setIndex(n: number): void,
+//   getBackConfig(distance: number): GetDeltaXAnimationConfig,
+//   getConfig(duration: number): GetDeltaXAnimationConfig
+// }) {
+//   function changeValue(n: number) {
+//     const index = Math.round(n * -1 / lineHeight)
+//     if (index < 0 || index >= getLength()) {
+//       return
+//     }
+//     setIndex(index)
+//   }
+//   const event: AnimateFrameEvent = {
+//     onProcess: changeValue,
+//     onFinish(v) {
+//       const value = translateY.get()
+//       changeValue(value)
+//     },
+//   }
+//   return {
+//     changeValue,
+//     onFinish(out: MomentumCallOut) {
+//       if (out.type == 'scroll') {
+//         const index = -Math.round(out.target / lineHeight)
+//         const value = index * lineHeight * -1
+//         animateSignalChangeTo(translateY,value,)
+//         translateY.changeTo(value, getConfig(out.duration), event)
+//       } else if (out.type == 'scroll-edge') {
+//         translateY.changeTo(out.target, getConfig(out.duration), {
+//           onProcess: event.onProcess,
+//           onFinish(v) {
+//             event.onFinish?.(v)
+//             translateY.changeTo(out.finalPosition, getBackConfig(Math.abs(out.target - out.finalPosition)), event)
+//           },
+//         })
+//       } else if (out.type == 'edge-back') {
+//         translateY.changeTo(out.target, getBackConfig(Math.abs(out.from - out.target)), event)
+//       }
+//     }
+//   }
+// }
 
-export type OldGetValue = {
-  getOnDragEnd(duration: number, deltaX: number, edge: boolean): AnimationConfig
-  onEdgeBack(deltaX: number): AnimationConfig
-}
+// export type OldGetValue = {
+//   getOnDragEnd(duration: number, deltaX: number, edge: boolean): AnimationConfig
+//   onEdgeBack(deltaX: number): AnimationConfig
+// }
 
 export type WithTimeStampEvent = {
   timeStamp: number
@@ -252,89 +248,6 @@ export function overScrollSlow(
   return delta / slow
 }
 
-// export function startScroll(
-//   n: number,
-//   {
-//     beginTime = performance.now(),
-//     edgeSlow = 3,
-//     beginScrollDiff = 0,
-//     endScrollDiff = 0,
-//     containerSize,
-//     contentSize,
-//     getCurrentValue,
-//     changeTo,
-//     finish
-//   }: {
-//     beginTime?: number
-//     /**到达边缘时拖拽减速 */
-//     edgeSlow?: number
-//     beginScrollDiff?: number
-//     endScrollDiff?: number
-//     //滚动容器
-//     containerSize(): number
-//     //滚动内容
-//     contentSize(): number
-//     getCurrentValue(): number
-//     changeTo(value: number): void
-//     finish(v: MomentumEndArg): void
-//   }) {
-//   const beginValue = n
-//   let latestValue = beginValue
-//   function setMove(n: number) {
-//     let diff = n - latestValue
-//     const cv = getCurrentValue()
-//     if (diff) {
-//       const { beginMargin, endMargin } = getMargin()
-//       if (cv < beginMargin || cv > endMargin) {
-//         diff = diff / edgeSlow
-//       }
-//       const newValue = cv - diff
-//       changeTo(newValue)
-//       latestValue = n
-//       return newValue
-//     } else {
-//       return cv
-//     }
-//   }
-//   function getMargin() {
-//     const _contentSize = contentSize()
-//     const _containerSize = containerSize()
-//     const maxScroll = Math.max(_contentSize - _containerSize, 0)
-//     const beginMargin = beginScrollDiff
-//     const endMargin = maxScroll + endScrollDiff
-//     return {
-//       beginMargin,
-//       endMargin,
-//       maxScroll,
-//       contentSize: _contentSize,
-//       containerSize: _containerSize
-//     }
-//   }
-//   return {destinationWithMargin
-//     move(n: number) {
-//       return setMove(n)
-//     },
-//     end(n?: number, velocity?: number) {
-//       if (typeof n != 'number') {
-//         n = latestValue
-//       }
-//       const newY = setMove(n)
-//       const { beginMargin, endMargin, containerSize, contentSize, maxScroll } = getMargin()
-//       if (typeof velocity != 'number') {
-//         velocity = (beginValue - n) / (performance.now() - beginTime) //默认使用平均速度,因为最后的瞬间速度可能为0?
-//       }
-//       finish({
-//         current: newY,
-//         velocity,
-//         maxScroll,
-//         lowerMargin: beginMargin,
-//         upperMargin: endMargin,
-//         contentSize,
-//         containerSize
-//       })
-//     }
-//   }
-// }
 
 /**
  * 
@@ -445,74 +358,6 @@ class CacheVelocity {
     return this.velocity
   }
 }
-/**
- * @deprecated
- * @param BEFORE_LAST_KINEMATICS_DELAY 
- * @returns 
- */
-export function cacheVelocity(BEFORE_LAST_KINEMATICS_DELAY = 32) {
-  return new CacheVelocity(BEFORE_LAST_KINEMATICS_DELAY)
-}
-
-
-const defaultBackAnimateConfig = getTweenAnimationConfig(300, easeFns.out(easeFns.circ))
-function defaultGetToAnimateConfig(duration: number) {
-  return getTweenAnimationConfig(duration, easeFns.out(easeFns.circ))
-}
-
-function defaultGetForceStop(current: number, idealTarget: number) {
-  return idealTarget
-}
-export function destinationWithMarginTrans(
-  out: MomentumCallOut,
-  trans: AbsAnimateFrameValue,
-  {
-    backAnimateConfig = defaultBackAnimateConfig,
-    getToAnimateConfig = defaultGetToAnimateConfig,
-    targetSnap = quote,
-    getForceStop = defaultGetForceStop,
-    event
-  }: {
-    backAnimateConfig?: GetDeltaXAnimationConfig
-    getToAnimateConfig?: (duration: number) => GetDeltaXAnimationConfig
-    /**吸附 */
-    targetSnap?: (n: number) => number
-    /**获得强制吸附的位置 */
-    getForceStop?: (current: number, idealTarget: number) => number
-    event?: AnimateFrameEvent
-  } = emptyObject
-) {
-  if (out.type == 'scroll') {
-    const forceStop = getForceStop(out.from, out.target)
-    //最在是0,然后到每一步
-    //自动滚动
-    trans.changeTo(
-      targetSnap(forceStop),
-      getToAnimateConfig(out.duration),
-      event
-    )
-  } else if (out.type == 'scroll-edge') {
-    const forceStop = getForceStop(out.from, out.finalPosition)
-    if (forceStop < out.finalPosition) {
-      trans.changeTo(
-        targetSnap(forceStop),
-        getToAnimateConfig(out.duration),
-        event
-      )
-      return
-    }
-    //到达边界外
-    trans.changeTo(out.target, getToAnimateConfig(out.duration), {
-      onFinish(v) {
-        trans.changeTo(out.finalPosition, backAnimateConfig, event)
-      },
-    })
-  } else if (out.type == 'edge-back') {
-    //已经在边界外
-    trans.changeTo(out.target, backAnimateConfig, event)
-  }
-}
-
 export type DragSnapParam = {
   beforeDiff?: number
   //在这块区域内前面的吸附力
