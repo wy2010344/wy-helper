@@ -1,4 +1,4 @@
-import { emptyObject, PointKey } from "wy-helper";
+import { EmptyFun, emptyObject, PointKey, run } from "wy-helper";
 import { subscribeEventListener } from "./util";
 
 
@@ -158,6 +158,8 @@ export function resizeHelper(p: {
 export type MoveEnd<T> = {
   onMove(e: T): void
   onEnd(e: T): void
+  leave?: boolean
+  cancel?: boolean
 }
 
 export type PointerBeginDirMove = (initE: PointerEvent, direction: PointKey) => MoveEnd<PointerEvent> | void
@@ -165,12 +167,19 @@ export function pointerMove(
   out: MoveEnd<PointerEvent>,
   element: HTMLElement | Document | SVGSVGElement = document
 ) {
-  const destroyMove = subscribeEventListener(element, 'pointermove', e => out.onMove(e))
-  const destroyEnd = subscribeEventListener(element, 'pointerup', e => {
+  const destroyList: EmptyFun[] = []
+  destroyList.push(subscribeEventListener(element, 'pointermove', e => out.onMove(e)))
+  function endFun(e: PointerEvent) {
     out.onEnd(e)
-    destroyMove()
-    destroyEnd()
-  })
+    destroyList.forEach(run)
+  }
+  destroyList.push(subscribeEventListener(element, 'pointerup', endFun))
+  if (out.leave) {
+    destroyList.push(subscribeEventListener(element, 'pointerleave', endFun))
+  }
+  if (out.cancel) {
+    destroyList.push(subscribeEventListener(element, 'pointercancel', endFun))
+  }
 }
 export function pointerMoveDir(
   beginMove: PointerBeginDirMove,

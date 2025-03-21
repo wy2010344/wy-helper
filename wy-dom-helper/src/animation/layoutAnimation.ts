@@ -1,6 +1,6 @@
-import { EmptyFun, FalseType, GetDeltaXAnimationConfig, Point, createAnimateSignal, emptyObject, pointEqual, run, trackSignal } from "wy-helper";
-import { signalAnimateFrame } from "./animateFrameValue";
+import { DeltaXSignalAnimationConfig, EmptyFun, FalseType, Point, createAnimateSignal, emptyObject, pointEqual, run, trackSignal } from "wy-helper";
 import { getPageOffset } from "../util";
+import { animateSignal } from "./animateFrameValue";
 
 
 
@@ -14,8 +14,8 @@ export function layoutFrameAnimation({
   didInit?(v: EmptyFun): EmptyFun | FalseType
 } = emptyObject) {
   let lastPS = init
-  const transX = signalAnimateFrame(0)
-  const transY = signalAnimateFrame(0)
+  const transX = animateSignal(0)
+  const transY = animateSignal(0)
   function setLastPs(ps: Point) {
     lastPS = ps
     saveTo?.(ps)
@@ -23,13 +23,13 @@ export function layoutFrameAnimation({
   /**
    * 如果靠render来驱动,则需要如此
    */
-  return function (div: HTMLElement, config: GetDeltaXAnimationConfig) {
+  return function (div: HTMLElement, config: DeltaXSignalAnimationConfig) {
     function locationChange(ps: Point, lastPS: Point) {
-      transX.changeTo(transX.get() + ps.x - lastPS.x)
-      transY.changeTo(transY.get() + ps.y - lastPS.y)
+      transX.set(transX.get() + ps.x - lastPS.x)
+      transY.set(transY.get() + ps.y - lastPS.y)
 
-      transX.changeTo(0, config)
-      transY.changeTo(0, config)
+      transX.change(config(-transX.get()))
+      transY.change(config(-transY.get()))
     }
 
     function notifyChange() {

@@ -5,7 +5,6 @@
  * 速度逐渐加快,是一个ease-in函数
  */
 
-import { AnimationConfig } from "./AnimationConfig";
 import { easeInOut, easeOut, EaseType } from "./tween";
 
 /**
@@ -62,24 +61,5 @@ export class WeightMeasure {
   }
   getEasyOutDistance = (elapsedTime: number) => {
     return easeOut(elapsedTime, this.getDistance, this.height, this.duration)
-  }
-  animationConfig(
-    ease: EaseType = "in",
-    endTime = this.duration,
-  ): AnimationConfig {
-    let getDistance = this.getDistance
-    if (ease == 'out') {
-      getDistance = this.getEasyOutDistance
-    } else if (ease == 'in-out') {
-      getDistance = this.getEasyInOutDistance
-    }
-    return function (diffTime) {
-      if (diffTime < endTime) {
-        const value = getDistance(diffTime)
-        return [value, false]
-      } else {
-        return [getDistance(endTime), true]
-      }
-    }
   }
 }

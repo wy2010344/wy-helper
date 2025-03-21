@@ -122,24 +122,4 @@ export function springIsStop(n: SpringOutValue, displacementThreshold = 0.5, vel
   return Math.abs(n.displacement) < displacementThreshold && Math.abs(n.velocity) < velocityThreshold
 }
 
-/**
- * 如果能能量来计算
- * stiffness*displacement*displacement+mass*velocity*velocity
- * stiffness / mass=omega0*omega0
- * stiffness * mass = Math.pow(damping/zta/2,2)
- * 
- * stiffness=omega0*damping/zta/2
- * mass=damping/zta/2/omega0
- * 这里需要涉及一个damping
- * 但真应该用能量去计算吗?应该用真实的结束时间去计算.
- */
-export function springIsStop2(
-  n: SpringOutValue,
-  damping: number,
-  omega0: number,
-  zta: number
-) {
-  const energy = (Math.pow(n.displacement, 2) * omega0 + Math.pow(n.velocity, 2) / omega0) * damping / zta / 2
-}
-
 

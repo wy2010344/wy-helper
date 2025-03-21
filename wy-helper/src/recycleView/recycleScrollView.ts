@@ -1,85 +1,88 @@
-import { AbsAnimateFrameValue, AnimateFrameEvent, FrictionalFactory, GetDeltaXAnimationConfig } from "../animation"
-import { RecycleScrollAction, getIdxWith } from "./reducer"
+import { AnimateSignal, AnimationTime, DeltaXSignalAnimationConfig, FrictionalFactory } from "../animation"
+import { SetValue } from "../setStateHelper"
+export function getIdxWith(diff: number, rowHeight: number) {
+  // let idx = 0
+  // if (diff >= rowHeight) {
+  //   // idx = -Math.ceil(diff / rowHeight)
+  //   // idx = -Math.floor(diff / rowHeight)
+  //   idx = -Math.round(diff / rowHeight)
+  // } else if (diff <= -rowHeight) {
+  //   // idx = -Math.floor(diff / rowHeight)
+  //   //后面两个步进都是1,第1个步进是2,即1.1时就进2准备着,可以减少空白
+  //   // idx = -Math.ceil(diff / rowHeight)
+  //   idx = -Math.round(diff / rowHeight)
+  // }
+  // return idx
+  /**因为浮点误差,用四舍去五入最合适 */
+  return -Math.round(diff / rowHeight)
+}
 
-
-export function recicleScrollViewView<T extends AbsAnimateFrameValue>(
+/**
+ * 使用css如flex居中,不用控制initScrollHeight
+ * @param addIndex 
+ * @param rowHeight 
+ * @param transY 
+ * @returns 
+ */
+export function recicleScrollViewView(
   addIndex: (n: number, immediately?: boolean) => void,
   rowHeight: number,
-  transY: T
+  transY: AnimateSignal
 ) {
-  let initScrollHeight = 0
+  let nextTarget = 0
   function aUpdate(value: number) {
-    const diff = value - initScrollHeight
+    const diff = value
     const idx = getIdxWith(diff, rowHeight)
     if (idx) {
-      transY.slientDiff(idx * rowHeight)
+      transY.silentDiff(idx * rowHeight)
       addIndex(idx, true)
     }
   }
 
-  function updateIndex(idx: number, getConfig: GetDeltaXAnimationConfig, e?: AnimateFrameEvent) {
-    const nValue = idx * rowHeight + initScrollHeight
-    // const to = transY.getAnimateTo()
-    // let from = transY.get()
-    // if (to?.hasTarget()) {
-    //   aUpdate(to.target)
-    //   from = to.target
-    // }
-    transY.changeTo(nValue, getConfig, {
-      // from,
-      onProcess(v) {
-        aUpdate(v)
-        e?.onProcess?.(v)
-      },
-      onFinish(v) {
-        if (v) {
-          aUpdate(transY.get())
-        }
-        e?.onFinish?.(v)
-      },
+  function updateIndex(idx: number, getConfig: DeltaXSignalAnimationConfig, onProcess?: SetValue<number>) {
+    nextTarget = idx * rowHeight
+    return transY.change(getConfig(nextTarget - transY.get()), function (v) {
+      aUpdate(v)
+      onProcess?.(v)
     })
   }
   return {
     trans: transY,
-    setInitScrollHeight(n: number) {
-      initScrollHeight = n
-      transY.changeTo(n)
-    },
     /**
      * 偏移量
      * @param moveY 
      */
     moveUpdate(diff: number) {
       const target = diff + transY.get()
-      transY.changeTo(target)
+      transY.set(target)
       aUpdate(target)
     },
     //速度
     endMove(
       idealDistance: number,
-      getConfig: GetDeltaXAnimationConfig
+      getConfig: DeltaXSignalAnimationConfig
     ) {
-      const value = transY.get() + idealDistance - initScrollHeight
+      const value = transY.get() + idealDistance
       const idx = Math.round(value / rowHeight)
       updateIndex(idx, getConfig)
     },
     stopScroll(toCurrent?: boolean) {
-      let ato = transY.getAnimateConfig()
+      let ato = transY.onAnimation()
       if (ato) {
-        let nValue = ato.target
+        let nValue = nextTarget
         if (toCurrent) {
-          const v = transY.get() - initScrollHeight
+          const v = transY.get()
           const idx = Math.round(v / rowHeight)
-          nValue = idx * rowHeight + initScrollHeight
+          nValue = idx * rowHeight
         }
-        transY.changeTo(nValue)
+        transY.set(nValue)
         aUpdate(nValue)
       }
     },
-    containerAdd(n: number, config?: GetDeltaXAnimationConfig, event?: AnimateFrameEvent) {
+    containerAdd(n: number, config?: DeltaXSignalAnimationConfig, event?: SetValue<number>) {
       if (n) {
         if (config) {
-          updateIndex(-n, config, event)
+          return updateIndex(-n, config, event)
         } else {
           addIndex(n)
         }
@@ -98,21 +101,12 @@ export function recycleWithFraction(fc: FrictionalFactory) {
   return {
     endMove(
       endMove: (idealDistance: number,
-        getConfig: GetDeltaXAnimationConfig
+        getConfig: DeltaXSignalAnimationConfig
       ) => void,
       velocity: number
     ) {
       endMove(fc.getFromVelocity(velocity).distance, distance => {
         return fc.getFromDistance(distance).animationConfig()
-      })
-    },
-    endMoveDispatch(dispatch: (a: RecycleScrollAction) => void, velocity: number) {
-      dispatch({
-        type: "endMove",
-        idealDistance: fc.getFromVelocity(velocity).distance,
-        getConfig(distance) {
-          return fc.getFromDistance(distance).animationConfig()
-        },
       })
     },
     distanceConfig(n: number) {

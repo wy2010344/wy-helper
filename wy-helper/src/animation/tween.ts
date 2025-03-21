@@ -1,6 +1,5 @@
 import { Quote } from "../util";
 
-type EaseFn = (n: number) => number
 //N次方:自定义
 function poly(n: number) {
   return function (t: number) {
@@ -10,7 +9,7 @@ function poly(n: number) {
 /**
  * @todo 没有out-in,其实只有3种,每种动画,做成固定的
  */
-export type EaseType = 'in' | 'out' | 'in-out' | 'out-in'
+export type EaseType = 'in' | 'out' | 'in-out'
 /**
  * 将一个easeIn的函数,转化成easeOut
  * @param elapsedTime 
@@ -47,20 +46,32 @@ export function easeInOut(
   }
   return distance - easeInFn((duration - elapsedTime) * 2) / 2
 }
+
+export function easeOutIn(
+  elapsedTime: number,
+  easeInFn: Quote<number>,
+  distance: number,
+  duration: number
+) {
+  return elapsedTime < 0.5 * duration
+    ? (distance - easeInFn(duration - 2 * elapsedTime)) / 2
+    : (distance + easeInFn(2 * elapsedTime - duration)) / 2;
+}
+
 /**
  * 参考reanimated https://github.dev/software-mansion/react-native-reanimated/tree/main/src
  * https://easings.net
  */
 export const easeFns = {
-  in(easing: EaseFn) {
+  in(easing: Quote<number>) {
     return easing
   },
-  out(easing: EaseFn) {
+  out(easing: Quote<number>) {
     return function (t: number) {
       return 1 - easing(1 - t)
     }
   },
-  inOut(easing: EaseFn) {
+  inOut(easing: Quote<number>) {
     return function (t: number) {
       if (t < 0.5) {
         return easing(t * 2) / 2
@@ -73,7 +84,7 @@ export const easeFns = {
    * @param easing 
    * @returns 
    */
-  outIn(easing: EaseFn) {
+  outIn(easing: Quote<number>) {
     return function (t: number) {
       return t < 0.5
         ? (1 - easing(1 - 2 * t)) / 2
