@@ -1,7 +1,7 @@
 import { GetValue, SetValue } from "../setStateHelper";
 import { createSignal } from "../signal";
 import { StoreRef } from "../storeRef";
-import { EmptyFun, emptyFun, emptyObject, promiseTrue } from "../util";
+import { emptyFun } from "../util";
 import { SilentDiff, SubscribeRequestAnimationFrame } from "./animateFrame";
 import { defaultSpringAnimationConfig, DeltaXSignalAnimationConfig } from "./AnimationConfig";
 
@@ -115,21 +115,34 @@ export class AnimateSignal {
       })
     } else {
       this._onAnimation.set(false)
-      return promiseTrue
+      return promiseImmediately
     }
   }
 
   changeTo(
     n: number,
+    config?: DeltaXSignalAnimationConfig,
+    onProcess?: SetValue<number>
+  ) {
+    if (config) {
+      return this.animateTo(n, config, onProcess)
+    }
+    return this.set(n)
+  }
+  animateTo(n: number,
     config: DeltaXSignalAnimationConfig = defaultSpringAnimationConfig,
     onProcess?: SetValue<number>) {
     const diff = n - this.get()
     if (diff) {
       return this.change(config(diff), onProcess)
     }
-    return promiseTrue
+    return promiseImmediately
   }
 }
+
+
+
+const promiseImmediately = Promise.resolve<'immediately'>('immediately')
 
 export function createAnimateSignal(
   initValue: number,

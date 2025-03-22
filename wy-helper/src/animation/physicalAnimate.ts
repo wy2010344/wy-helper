@@ -51,7 +51,6 @@ export function scrollInfinityIteration(
       out,
       callback: physicalAnimationFrame(
         function () {
-          const current = scroll.get()
           if (Math.abs(velocity) < minVelocityThreshold) {
             return true
           }

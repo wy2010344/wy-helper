@@ -214,11 +214,6 @@ export function cacheGetFun<T extends Function>(get: GetValue<T>): T {
   } as any
 }
 
-
-
-
-export const promiseTrue = Promise.resolve(true)
-
 export function setToAdd<V>(set: Set<V>, ...vs: V[]) {
   const aSet = new Set(set)
   for (const v of vs) {
