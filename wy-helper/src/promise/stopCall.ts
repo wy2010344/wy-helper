@@ -106,6 +106,11 @@ export type AutoLoadMoreCore<T, K> = {
   list: T[]
   hasMore: boolean
 }
+
+/**
+ * AutoLoadMore,在视图中,可以尾追加视图,跟随视图上的key去加载,类似Pair(A,Pair(B,C))的形式,
+ *  但无法实现关联修改,因为不在一个数据结构中.
+ */
 export class PromiseAutoLoadMore<T, K> {
   constructor(
     public readonly data = PromiseStopCall.empty as PromiseStopCall<{

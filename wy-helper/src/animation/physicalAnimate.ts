@@ -1,5 +1,5 @@
 import { AnimateSignalConfig, batchSignalEnd, emptyFun, emptyObject, getMaxScroll, SetValue, StoreRef } from ".."
-import { SilentDiff, SubscribeRequestAnimationFrame } from "./animateFrame"
+import { SilentDiff, SubscribeRequestAnimationFrame } from "./animateSignal"
 
 
 export function physicalAnimationFrame(
@@ -40,26 +40,22 @@ export function scrollInfinityIteration(
   } = emptyObject
 ): AnimateSignalConfig {
   return function (
-    scroll: StoreRef<number>
+    out: SilentDiff
   ) {
     if (Math.abs(velocity) < minVelocityThreshold) {
       return
     }
-    const out = new SilentDiff(scroll)
     let accValue = 0
-    return {
-      out,
-      callback: physicalAnimationFrame(
-        function () {
-          if (Math.abs(velocity) < minVelocityThreshold) {
-            return true
-          }
-          velocity = nextVelocity(velocity)
-          accValue = accValue + velocity
-          scroll.set(out.getInitValue() + accValue)
+    return physicalAnimationFrame(
+      function () {
+        if (Math.abs(velocity) < minVelocityThreshold) {
+          return true
         }
-      )
-    }
+        velocity = nextVelocity(velocity)
+        accValue = accValue + velocity
+        out.setDisplayment(accValue)
+      }
+    )
   }
 }
 
@@ -96,9 +92,9 @@ export function scrollEdgeIteration({
 }): AnimateSignalConfig {
   minVelocityThreshold = Math.abs(minVelocityThreshold) || defaultMinVelocityThreshold
   return function (
-    scroll: StoreRef<number>
+    out: SilentDiff
   ) {
-    const current = scroll.get()
+    const current = out.getCurrent()
     if (current < 0 && velocity >= 0) {
       onBack(0, velocity)
       return
@@ -108,53 +104,49 @@ export function scrollEdgeIteration({
       onBack(maxScroll, velocity)
       return
     }
-    const out = new SilentDiff(scroll)
     let accValue = 0
     function addVelocity(value: number) {
       accValue = accValue + value
-      scroll.set(out.getInitValue() + accValue)
+      out.setDisplayment(accValue)
     }
-    return {
-      out,
-      callback: physicalAnimationFrame(
-        function () {
-          const current = scroll.get()
-          if (current < 0) {
-            if (velocity < 0) {
-              //惯性向边
-              velocity = edgeNextVelocity(velocity)
-              addVelocity(velocity)
-              if (velocity > -minVelocityThreshold) {
-                //回弹,可以直接使用spring动画或其它
-                onBack(0, velocity = minVelocityThreshold)
-                return true
-              }
-            } else {
-              onBack(0, velocity)
-              return true
-            }
-          } else if (current > maxScroll) {
-            if (velocity > 0) {
-              velocity = edgeNextVelocity(velocity)
-              addVelocity(velocity)
-              if (velocity < minVelocityThreshold) {
-                //回弹,可以直接使用spring动画或其它
-                onBack(maxScroll, minVelocityThreshold - velocity)
-                return true
-              }
-            } else {
-              onBack(maxScroll, velocity)
+    return physicalAnimationFrame(
+      function () {
+        const current = out.getCurrent()
+        if (current < 0) {
+          if (velocity < 0) {
+            //惯性向边
+            velocity = edgeNextVelocity(velocity)
+            addVelocity(velocity)
+            if (velocity > -minVelocityThreshold) {
+              //回弹,可以直接使用spring动画或其它
+              onBack(0, velocity = minVelocityThreshold)
               return true
             }
           } else {
-            if (Math.abs(velocity) < minVelocityThreshold) {
+            onBack(0, velocity)
+            return true
+          }
+        } else if (current > maxScroll) {
+          if (velocity > 0) {
+            velocity = edgeNextVelocity(velocity)
+            addVelocity(velocity)
+            if (velocity < minVelocityThreshold) {
+              //回弹,可以直接使用spring动画或其它
+              onBack(maxScroll, minVelocityThreshold - velocity)
               return true
             }
-            velocity = nextVelocity(velocity)
-            addVelocity(velocity)
+          } else {
+            onBack(maxScroll, velocity)
+            return true
           }
-        })
-    }
+        } else {
+          if (Math.abs(velocity) < minVelocityThreshold) {
+            return true
+          }
+          velocity = nextVelocity(velocity)
+          addVelocity(velocity)
+        }
+      })
   }
 
 }

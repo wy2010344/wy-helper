@@ -46,6 +46,11 @@
       "types": "./dist/forceLayout/index.d.ts",
       "import": "./dist/forceLayout.mjs",
       "require": "./dist/forceLayout.js"
+    },
+    "./viteImportmap": {
+      "types": "./dist/viteImportmap/index.d.ts",
+      "import": "./dist/viteImportmap.mjs",
+      "require": "./dist/viteImportmap.js"
     }
   },
   "files": [

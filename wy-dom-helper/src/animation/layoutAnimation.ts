@@ -1,4 +1,4 @@
-import { DeltaXSignalAnimationConfig, EmptyFun, FalseType, Point, createAnimateSignal, emptyObject, pointEqual, run, trackSignal } from "wy-helper";
+import { DeltaXSignalAnimationConfig, EmptyFun, FalseType, Point, createAnimateSignal, defaultSpringAnimationConfig, emptyObject, pointEqual, run, trackSignal } from "wy-helper";
 import { getPageOffset } from "../util";
 import { animateSignal } from "./animateFrameValue";
 
@@ -23,7 +23,7 @@ export function layoutFrameAnimation({
   /**
    * 如果靠render来驱动,则需要如此
    */
-  return function (div: HTMLElement, config: DeltaXSignalAnimationConfig) {
+  return function (div: HTMLElement, config: DeltaXSignalAnimationConfig = defaultSpringAnimationConfig) {
     function locationChange(ps: Point, lastPS: Point) {
       transX.set(transX.get() + ps.x - lastPS.x)
       transY.set(transY.get() + ps.y - lastPS.y)

@@ -1,14 +1,18 @@
 import { GetValue } from "../setStateHelper";
 import { createSignal, memo, trackSignal } from "../signal";
 import { FalseType, Quote } from "../util";
-import { AbortPromiseResult, serialAbortRequest } from "./buildSerialRequestSingle";
+import { AbortPromiseResult, hookAbortSignalPromise, serialAbortRequest } from "./buildSerialRequestSingle";
+import { AutoLoadMoreCore } from "./stopCall";
 
 export function signalSerialAbortPromise<T>(
   generatePromise: GetValue<GetValue<Promise<T>> | FalseType>
 ) {
-  const memoGeneratePromise = memo(generatePromise)
   const signal = createSignal<AbortPromiseResult<T> | undefined>(undefined)
   const abortRequest = serialAbortRequest<T>(signal.set)
+
+
+
+  const memoGeneratePromise = memo(generatePromise)
   const destroy = trackSignal(memoGeneratePromise, function (getPromise) {
     if (getPromise) {
       abortRequest(getPromise)
@@ -48,5 +52,85 @@ export function signalSerialAbortPromise<T>(
     get,
     reduceSet,
     loading
+  }
+}
+
+
+
+export function signalSerialAbortPromiseLoadMore<T, K>(
+  generateReload: GetValue<{
+    getAfter(k: K): Promise<AutoLoadMoreCore<T, K>>,
+    first: K,
+    getKey?(v: T): K
+  } | FalseType>
+) {
+  const memoGenerateReload = memo(generateReload)
+  const getPromise = memo(() => {
+    const reload = memoGenerateReload()
+    if (reload) {
+      return function () {
+        return reload.getAfter(reload.first)
+      }
+    }
+  })
+  const d = signalSerialAbortPromise(getPromise)
+  const loadingMore = createSignal(false)
+  const lastloadMoreError = createSignal<any>(undefined)
+  return {
+    ...d,
+    loadingMore: loadingMore.get,
+    lastLoadMoreError: lastloadMoreError.get,
+    /**loadMore是阻塞的*/
+    loadMore() {
+      if (d.loading()) {
+        //重新加载中,不行
+        return false
+      }
+      if (loadingMore.get()) {
+        return false
+      }
+      const data = d.get()
+      if (data?.type != 'success') {
+        return false
+      }
+      if (!data.value.hasMore) {
+        return false
+      }
+      const reload = memoGenerateReload()
+      if (!reload) {
+        return false
+      }
+      loadingMore.set(true)
+      reload.getAfter(data.value.nextKey).then(value => {
+        d.reduceSet(oldValue => {
+          const getKey = reload.getKey
+          let newList = oldValue.list
+          if (getKey) {
+            newList = [...oldValue.list]
+            value.list.forEach(row => {
+              const key = getKey(row)
+              const idx = newList.findIndex(x => getKey(x) == key)
+              if (idx < 0) {
+                newList.push(row)
+              } else {
+                newList.splice(idx, 1, row)
+              }
+            })
+          } else {
+            newList = newList.concat(value.list)
+          }
+          return {
+            ...value,
+            list: newList
+          }
+        })
+        lastloadMoreError.set(undefined)
+        loadingMore.set(false)
+      }).catch(error => {
+        lastloadMoreError.set(error)
+        loadingMore.set(false)
+      })
+      return true
+    }
   }
 }
