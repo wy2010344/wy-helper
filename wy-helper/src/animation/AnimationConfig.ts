@@ -1,7 +1,7 @@
 import { EaseFn } from "../scroller"
-import { FalseType, Quote, alawaysFalse, emptyObject } from "../util"
-import { createAnimationTime } from "./animateFrame"
-import { AnimateSignalConfig } from "./baseAnimateFrame"
+import { Quote, alawaysFalse, emptyObject } from "../util"
+import { createAnimationTime } from "./animateSignal"
+import { AnimateSignalConfig } from "./animateSignal"
 import { SpringBaseArg, SpringOutValue, springBase, springIsStop } from "./spring"
 
 

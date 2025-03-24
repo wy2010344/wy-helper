@@ -16,6 +16,7 @@ export default defineConfig({
         ObserverCenter: resolve(__dirname, 'src/observerCenter/index.ts'),
         router: resolve(__dirname, 'src/router/index.ts'),
         forceLayout: resolve(__dirname, 'src/forceLayout/index.ts'),
+        viteImportMap: resolve(__dirname, 'src/viteImportMap/index.ts'),
       },
       formats: ["es", "cjs"]
     },

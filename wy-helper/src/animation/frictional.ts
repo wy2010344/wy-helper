@@ -1,9 +1,10 @@
 import { getDestination, getMaxScroll } from "../scroller/util"
 import { quote } from "../util"
-import { createAnimationTime } from "./animateFrame"
+import { createAnimationTime } from "./animateSignal"
 import { DeltaXSignalAnimationConfig } from "./AnimationConfig"
-import { AnimateSignal, AnimateSignalConfig } from "./baseAnimateFrame"
+import { AnimateSignal, AnimateSignalConfig } from "./animateSignal"
 import { easeInOut, easeOut, EaseType } from "./tween"
+import { SetValue } from "../setStateHelper"
 
 
 /**
@@ -60,7 +61,9 @@ export class FrictionalFactory {
     edgeConfig,
     edgeBackConfig,
     targetSnap = quote,
-    getForceStop = defaultGetForceStop
+    getForceStop = defaultGetForceStop,
+    onProcess,
+    onOutProcess
   }: {
     scroll: AnimateSignal,
     /**
@@ -75,7 +78,8 @@ export class FrictionalFactory {
     targetSnap?: (n: number) => number
     /**获得强制吸附的位置 */
     getForceStop?: (current: number, idealTarget: number) => number
-
+    onProcess?: SetValue<number>
+    onOutProcess?: SetValue<number>
   }) {
     const lowerMargin = 0
     const upperMargin = getMaxScroll(containerSize, contentSize)
@@ -96,34 +100,33 @@ export class FrictionalFactory {
       }
       if (elapsedTime) {
         const edgeVelocity = frictional.getVelocity(elapsedTime)
-        const step1 = await scroll.change(frictional.animationConfig('in', elapsedTime))
+        const step1 = await scroll.change(frictional.animationConfig('in', elapsedTime), onProcess)
         if (step1) {
-          const step2 = await scroll.change(edgeConfig(edgeVelocity))
-          // animateSignalChangeTo(
-          //   scroll,
-          //   edge + containerSize / 2.5 * (velocity / 8),
-          //   edgeConfig(edgeVelocity)
-          // )
+          const step2 = await scroll.change(edgeConfig(edgeVelocity), onOutProcess)
           if (step2) {
-            return scroll.changeTo(
+            return scroll.animateTo(
               edge,
-              edgeBackConfig
-            )
+              edgeBackConfig,
+              onOutProcess)
           }
         }
         return false
       } else {
         if (destination == idealTarget) {
-          return scroll.change(frictional.animationConfig('in'))
+          return scroll.change(
+            frictional.animationConfig('in'),
+            onProcess)
         } else {
-          return scroll.change(this.getFromDistance(destination).animationConfig('in'))
+          return scroll.change(
+            this.getFromDistance(destination).animationConfig('in'),
+            onProcess)
         }
       }
     } else {
-      return scroll.changeTo(
+      return scroll.animateTo(
         getDestination(current, lowerMargin, upperMargin),
-        edgeBackConfig
-      )
+        edgeBackConfig,
+        onProcess)
     }
   }
 }
