@@ -331,21 +331,30 @@ export function memo<T>(
   let lastValue!: T
   let inited = false
   const myGet = function () {
+    let shouldAfter = false;
     if (inited) {
-      if (relayChange(relays)) {
+      //这个relayChange,会检查上游的更新
+      const old = signalCache.currentRelay
+      signalCache.currentRelay = undefined
+      const change = relayChange(relays)
+      signalCache.currentRelay = old
+      if (change) {
         const value = memoGet(relays, get, lastValue, inited)
         if (value != lastValue) {
           lastValue = value
-          //是需要控制每次函数执行后执行,还是每次结果不同才执行?
-          after(lastValue)
+          shouldAfter = true
         }
       }
     } else {
       lastValue = memoGet(relays, get, lastValue, inited)
       inited = true
-      after(lastValue)
+      shouldAfter = true
     }
     addRelay(myGet, lastValue)
+    if (shouldAfter) {
+      //是需要控制每次函数执行后执行,还是每次结果不同才执行?
+      after(lastValue)
+    }
     return lastValue
   } as MemoFun<T>
   myGet.memorized = true
