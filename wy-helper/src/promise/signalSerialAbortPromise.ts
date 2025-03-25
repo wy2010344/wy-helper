@@ -1,3 +1,4 @@
+import { Compare } from "../equal";
 import { GetValue } from "../setStateHelper";
 import { createSignal, memo, trackSignal } from "../signal";
 import { FalseType, Quote } from "../util";
@@ -60,9 +61,9 @@ export function signalSerialAbortPromise<T>(
 export function signalSerialAbortPromiseLoadMore<T, K>(
   generateReload: GetValue<{
     getAfter(k: K): Promise<AutoLoadMoreCore<T, K>>,
-    first: K,
-    getKey?(v: T): K
-  } | FalseType>
+    first: K
+  } | FalseType>,
+  equals?: Compare<T>
 ) {
   const memoGenerateReload = memo(generateReload)
   const getPromise = memo(() => {
@@ -103,13 +104,11 @@ export function signalSerialAbortPromiseLoadMore<T, K>(
       loadingMore.set(true)
       reload.getAfter(data.value.nextKey).then(value => {
         d.reduceSet(oldValue => {
-          const getKey = reload.getKey
           let newList = oldValue.list
-          if (getKey) {
+          if (equals) {
             newList = [...oldValue.list]
             value.list.forEach(row => {
-              const key = getKey(row)
-              const idx = newList.findIndex(x => getKey(x) == key)
+              const idx = newList.findIndex(x => equals(row, x))
               if (idx < 0) {
                 newList.push(row)
               } else {

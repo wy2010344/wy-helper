@@ -21,8 +21,15 @@ class MatchNode {
       const value = query.slice(
         query.indexOf(this.before) + this.before.length,
         query.lastIndexOf(this.after))
+      if (!value) {
+        return
+      }
       if (this.type == 'number') {
-        return Number(value)
+        const n = Number(value)
+        if (isNaN(n)) {
+          return
+        }
+        return n
       } else if (this.type == "min-1") {
         if (value.length < 1) {
           return
