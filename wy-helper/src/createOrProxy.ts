@@ -24,3 +24,21 @@ export function createOrProxy<K extends string, V>(keys: K[], create: (v: K) => 
     return cacheDom
   }
 }
+
+
+const proxyMapArg = {
+  get(target: any, p: string) {
+    return target.get(p)
+  },
+  set(target: any, p: string, newValue: any) {
+    if (typeof newValue == 'undefined') {
+      target.delete(p)
+    } else {
+      target.set(p, newValue)
+    }
+    return true
+  },
+}
+export function proxyMap<T>(map: Map<string | symbol, T>) {
+  return new Proxy(map, proxyMapArg) as Record<string | symbol, T>
+}

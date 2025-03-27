@@ -1,4 +1,4 @@
-import { quote } from "../util"
+import { emptyObject, quote } from "../util"
 
 /**
  * 将路径按/拆分成节点
@@ -14,7 +14,7 @@ class MatchNode {
     public readonly before: string,
     public readonly key: string,
     public readonly after: string,
-    public readonly type: string
+    public readonly type: (v: string) => any
   ) { }
   match(query: string) {
     if (query.startsWith(this.before) && query.endsWith(this.after)) {
@@ -24,18 +24,7 @@ class MatchNode {
       if (!value) {
         return
       }
-      if (this.type == 'number') {
-        const n = Number(value)
-        if (isNaN(n)) {
-          return
-        }
-        return n
-      } else if (this.type == "min-1") {
-        if (value.length < 1) {
-          return
-        }
-      }
-      return value
+      return this.type(value)
     }
   }
 }
@@ -65,7 +54,7 @@ export type MatchRule = (pathNodes: readonly string[]) => void | {
  * @param startWith 
  * @returns 
  */
-export function locationMatch(queryPath: string): MatchRule {
+export function locationMatch(queryPath: string, typeDefMap: Record<string, (v: string) => any> = emptyObject): MatchRule {
   let queryNodes = queryPath.split('/').filter(quote)
   let ignoreMore = false
   if (queryNodes.at(-1) == '...') {
@@ -82,7 +71,7 @@ export function locationMatch(queryPath: string): MatchRule {
       const before = node.slice(0, idx1)
       const varDef = node.slice(idx1 + 1, idx2).split(':')
       const after = node.slice(idx2 + 1)
-      return new MatchNode(before, varDef[0], after, varDef[1])
+      return new MatchNode(before, varDef[0], after, typeDefMap[varDef[1]] || quote)
     }
     throw new Error("变量区域需要匹配的]")
   })

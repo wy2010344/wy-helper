@@ -179,11 +179,13 @@ export class ScrollFromPage<T extends WithTimeStampEvent> {
     private lastEvent: T,
     private getPage: (n: T) => number,
     private scrollDelta: ScrollDelta,
-    private onFinish: SetValue<number>
+    private onFinish: SetValue<number>,
+    private opposite: 1 | -1
   ) {
     this.lastPage = getPage(lastEvent)
   }
   static from<T extends WithTimeStampEvent>(e: T, arg: {
+    opposite?: boolean
     getPage(n: T): number,
     scrollDelta: ScrollDelta,
     onFinish: SetValue<number>
@@ -192,7 +194,8 @@ export class ScrollFromPage<T extends WithTimeStampEvent> {
       e,
       arg.getPage,
       arg.scrollDelta,
-      arg.onFinish
+      arg.onFinish,
+      arg.opposite ? -1 : 1
     )
   }
   private velocity = 0
@@ -202,7 +205,7 @@ export class ScrollFromPage<T extends WithTimeStampEvent> {
   }
   onEnd(e: T) {
     this.inMove(e)
-    this.onFinish(this.velocity)
+    this.onFinish(this.velocity * this.opposite)
     return this.velocity
   }
   private inMove(e: T, cVelocity?: boolean) {
@@ -215,7 +218,7 @@ export class ScrollFromPage<T extends WithTimeStampEvent> {
     }
     this.lastEvent = e
     if (delta) {
-      this.scrollDelta(delta, this.velocity)
+      this.scrollDelta(delta * this.opposite, this.velocity * this.opposite)
       this.lastPage = page
     }
   }

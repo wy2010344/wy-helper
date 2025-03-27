@@ -1,6 +1,11 @@
 import { GetValue } from "./setStateHelper";
 
 
+export type ReadSet<V> = Omit<Set<V>, 'add' | 'clear'>
+export type ReadMap<K, V> = Omit<Map<K, V>, 'set' | 'delete' | 'clear'>
+export type ReadWrite<T> = {
+  -readonly [P in keyof T]: T[P];
+};
 export type NullType = undefined | null | void;
 /**6种情况为false,NaN是数字类型*/
 export type FalseType = false | 0 | 0n | "" | NullType
