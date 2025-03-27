@@ -301,10 +301,8 @@ function relayChange(relays: Map<GetValue<any>, any>) {
 }
 function memoGet<T>(relays: Map<GetValue<any>, any>, get: GetValue<T>, lastValue: T, init: boolean) {
   relays.clear()
-  const last = signalCache.currentRelay
   signalCache.currentRelay = relays
   const v = get(lastValue, init)
-  signalCache.currentRelay = last
   return v
 }
 
@@ -332,13 +330,13 @@ export function memo<T>(
   let inited = false
   const myGet = function () {
     let shouldAfter = false;
+
+
+    const oldRelay = signalCache.currentRelay
+    signalCache.currentRelay = undefined
     if (inited) {
       //这个relayChange,会检查上游的更新
-      const old = signalCache.currentRelay
-      signalCache.currentRelay = undefined
-      const change = relayChange(relays)
-      signalCache.currentRelay = old
-      if (change) {
+      if (relayChange(relays)) {
         const value = memoGet(relays, get, lastValue, inited)
         if (value != lastValue) {
           lastValue = value
@@ -350,6 +348,10 @@ export function memo<T>(
       inited = true
       shouldAfter = true
     }
+    signalCache.currentRelay = oldRelay
+
+
+
     addRelay(myGet, lastValue)
     if (shouldAfter) {
       //是需要控制每次函数执行后执行,还是每次结果不同才执行?
