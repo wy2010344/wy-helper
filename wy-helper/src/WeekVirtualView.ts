@@ -50,7 +50,15 @@ export class WeekVirtualView {
     readonly cells: readonly Readonly<YearMonthDayVirtualView>[],
     readonly firstWeek: number
   ) { }
-
+  /**
+   * 星期的列表，如"一二三四五六日".split("")
+   * 下标映射下标
+   * @param i 下标，0-6
+   * @returns 映射下标
+   */
+  weekDay(i: number) {
+    return (i + this.firstWeek - 1) % 7;
+  }
   equals(n: WeekVirtualView) {
     return n.firstWeek == this.firstWeek && arrayEqual(n.cells, this.cells, yearMonthDayEqual)
   }

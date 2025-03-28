@@ -70,7 +70,7 @@ export class SilentDiff {
   constructor(
     private value: StoreRef<number>,
     private onProcess?: SetValue<number>,
-    private target?: number
+    readonly target?: number
   ) {
     this.initValue = value.get()
     this.getCurrent = value.get
@@ -122,6 +122,17 @@ export class AnimateSignal {
     this.get = this.value.get
   }
   get: GetValue<number>
+
+  getTarget() {
+    const out = this.lastCancel?.out
+    if (out) {
+      const target = out.target
+      if (typeof target == 'number') {
+        return target
+      }
+    }
+    return this.get()
+  }
   private value: StoreRef<number>
   lastCancel: AnimateSignalResult | void = undefined
   lastResolve: SetValue<boolean> = emptyFun

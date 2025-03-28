@@ -52,29 +52,37 @@ export type SpringBaseAnimationConfigArg = {
   velocityThreshold?: number
 }
 
-export function spring(
+export function spring(arg: SpringBaseAnimationConfigArg = emptyObject) {
+  return function (deltaX: number) {
+    return springDetla(arg, deltaX)
+  }
+}
+
+export const defaultSpringVocityThreshold = 2
+export function springDetla(
   {
+    initialVelocity = 0,
     config,
     /**默认0 */
-    initialVelocity = 0,
     /**默认0.01 */
     displacementThreshold = 0.01,
     /**默认2 */
-    velocityThreshold = 2
-  }: SpringBaseAnimationConfigArg = emptyObject) {
-  return function (deltaX: number) {
-    return createAnimationTime(function (diffTime, setDisplacement) {
-      const out = springBase(diffTime, deltaX, initialVelocity, config, true)
-      const stop = springIsStop(out, displacementThreshold, velocityThreshold)
-      if (stop) {
-        setDisplacement(deltaX)
-      } else {
-        setDisplacement(deltaX - out.displacement)
-      }
-      return stop
-    })
-  }
+    velocityThreshold = defaultSpringVocityThreshold
+  }: SpringBaseAnimationConfigArg,
+  deltaX: number,
+) {
+  return createAnimationTime(function (diffTime, setDisplacement) {
+    const out = springBase(diffTime, deltaX, initialVelocity, config, true)
+    const stop = springIsStop(out, displacementThreshold, velocityThreshold)
+    if (stop) {
+      setDisplacement(deltaX)
+    } else {
+      setDisplacement(deltaX - out.displacement)
+    }
+    return stop
+  })
 }
+
 export const defaultSpringAnimationConfig = spring()
 
 export function springBaseAnimationConfigNoEnd(
