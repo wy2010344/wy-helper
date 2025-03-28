@@ -1,5 +1,5 @@
 import { AnimateSignalConfig, batchSignalEnd, emptyFun, emptyObject, getMaxScroll, SetValue, StoreRef } from ".."
-import { SilentDiff, SubscribeRequestAnimationFrame } from "./animateSignal"
+import { AnimateSignal, SilentDiff, SubscribeRequestAnimationFrame } from "./animateSignal"
 
 
 export function physicalAnimationFrame(
@@ -18,9 +18,9 @@ export function physicalAnimationFrame(
     lastTime = time
   }
 }
-
+//0.99一次416格左右,每格44px0.,9972,一次208格左右
 function defaultNextVelocity(n: number) {
-  return n * 0.99
+  return n * 0.9978
 }
 
 /**
@@ -61,10 +61,20 @@ export function scrollInfinityIteration(
 
 
 function defaultEdgeNextVelocity(n: number) {
-  return n * 0.95
+  return n * 0.93
 }
 
 const defaultMinVelocityThreshold = 0.08
+
+
+interface EdgeIterationArg {
+  containerSize: number
+  contentSize: number
+  velocity: number
+  nextVelocity?(n: number): number
+  edgeNextVelocity?(n: number): number
+  minVelocityThreshold?: number
+}
 
 /**
  * 需要外部停止动画,比如滚动未停止,但另一个方向的滚动已经发生了,就需要它停止
@@ -73,23 +83,14 @@ const defaultMinVelocityThreshold = 0.08
  * @param physicalAnimate 
  * @returns 
  */
-export function scrollEdgeIteration({
+function scrollEdgeIterationFn({
   containerSize,
   contentSize,
   velocity,
   nextVelocity = defaultNextVelocity,
   edgeNextVelocity = defaultEdgeNextVelocity,
   minVelocityThreshold = defaultMinVelocityThreshold,
-  onBack
-}: {
-  containerSize: number
-  contentSize: number
-  velocity: number
-  nextVelocity?(n: number): number
-  edgeNextVelocity?(n: number): number
-  minVelocityThreshold?: number
-  onBack(target: number, velocity: number,): void
-}): AnimateSignalConfig {
+}: EdgeIterationArg, onBack: (target: number, velocity: number) => void): AnimateSignalConfig {
   minVelocityThreshold = Math.abs(minVelocityThreshold) || defaultMinVelocityThreshold
   return function (
     out: SilentDiff
@@ -151,4 +152,24 @@ export function scrollEdgeIteration({
 
 }
 
+/**
+ * 有一个缺点,由于是迭代的,不知道中止位置,当连续滚动时,不能定位到上一次的结尾
+ */
+export async function scrollEdgeIteration(
+  scroll: AnimateSignal,
+  arg: EdgeIterationArg
+) {
+  let backTarget = 0, backVelocity = 0, then = false
+  const value = await scroll.change(scrollEdgeIterationFn(arg, function (target, velocity) {
+    backTarget = target
+    backVelocity = velocity
+    then = true
+  }))
+  if (value && then) {
+    return {
+      target: backTarget,
+      velocity: backVelocity
+    }
+  }
+}
 

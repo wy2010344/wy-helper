@@ -1,7 +1,6 @@
 import { SetValue } from "../setStateHelper"
 import { getMaxScroll } from "./util"
 export * from './bscroll'
-export * from './iscroll'
 export { getMaxScroll } from './util'
 export interface EaseItem {
   style: string

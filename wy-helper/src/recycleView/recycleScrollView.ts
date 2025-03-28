@@ -41,7 +41,7 @@ export function recicleScrollViewView(
 
   function updateIndex(idx: number, getConfig: DeltaXSignalAnimationConfig, onProcess?: SetValue<number>) {
     nextTarget = idx * rowHeight
-    return transY.change(getConfig(nextTarget - transY.get()), function (v) {
+    return transY.changeTo(nextTarget, getConfig, function (v) {
       aUpdate(v)
       onProcess?.(v)
     })

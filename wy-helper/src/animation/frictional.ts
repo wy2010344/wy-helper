@@ -1,10 +1,11 @@
 import { getDestination, getMaxScroll } from "../scroller/util"
-import { quote } from "../util"
+import { emptyObject, quote } from "../util"
 import { createAnimationTime } from "./animateSignal"
-import { DeltaXSignalAnimationConfig } from "./AnimationConfig"
+import { defaultSpringVocityThreshold, DeltaXSignalAnimationConfig, springDetla } from "./AnimationConfig"
 import { AnimateSignal, AnimateSignalConfig } from "./animateSignal"
 import { easeInOut, easeOut, EaseType } from "./tween"
 import { SetValue } from "../setStateHelper"
+import { springBase } from "./spring"
 
 
 /**
@@ -22,7 +23,7 @@ export class FrictionalFactory {
   }
   /**
    * 
-   * @param deceleration 减速度,默认0.0006 500px用时1.296s
+   * @param deceleration 减速度,默认0.0006 500px用时1.296s,一次滚动800 * 44,结束时不平滑..
    * @returns 
    */
   static get(deceleration = 0.0006) {
@@ -54,6 +55,7 @@ export class FrictionalFactory {
    * @returns 
    */
   async destinationWithMarginIscroll({
+    multiple = 1,
     scroll,
     velocity,
     containerSize,
@@ -65,6 +67,7 @@ export class FrictionalFactory {
     onProcess,
     onOutProcess
   }: {
+    multiple?: number
     scroll: AnimateSignal,
     /**
      * 负是向上,正是向下
@@ -72,6 +75,8 @@ export class FrictionalFactory {
     velocity: number,
     containerSize: number,
     contentSize: number
+
+
     edgeConfig(velocity: number): AnimateSignalConfig
     edgeBackConfig: DeltaXSignalAnimationConfig
     /**吸附 */
@@ -100,9 +105,17 @@ export class FrictionalFactory {
       }
       if (elapsedTime) {
         const edgeVelocity = frictional.getVelocity(elapsedTime)
-        const step1 = await scroll.change(frictional.animationConfig('in', elapsedTime), onProcess)
+        const step1 = await scroll.change(
+          frictional.animationConfig('in', {
+            multiple,
+            endTime: elapsedTime
+          }),
+          onProcess,
+          edge)
         if (step1) {
-          const step2 = await scroll.change(edgeConfig(edgeVelocity), onOutProcess)
+          const step2 = await scroll.change(
+            edgeConfig(edgeVelocity),
+            onOutProcess)
           if (step2) {
             return scroll.animateTo(
               edge,
@@ -112,14 +125,21 @@ export class FrictionalFactory {
         }
         return false
       } else {
+        //另一种方法,最后速度到一定程度,转为spring动画
         if (destination == idealTarget) {
           return scroll.change(
-            frictional.animationConfig('in'),
-            onProcess)
+            frictional.animationConfig("in", {
+              multiple
+            }),
+            onProcess,
+            destination)
         } else {
           return scroll.change(
-            this.getFromDistance(destination).animationConfig('in'),
-            onProcess)
+            this.getFromDistance(destination).animationConfig("in", {
+              multiple
+            }),
+            onProcess,
+            destination)
         }
       }
     } else {
@@ -130,6 +150,7 @@ export class FrictionalFactory {
     }
   }
 }
+
 function defaultGetForceStop(current: number, idealTarget: number) {
   return idealTarget
 }
@@ -226,7 +247,13 @@ export class Frictional {
 
   animationConfig(
     ease: EaseType = "in",
-    endTime = this.duration
+    {
+      multiple = 1,
+      endTime = this.duration
+    }: {
+      multiple?: number
+      endTime?: number
+    } = emptyObject
   ) {
     let getDistance = this.getDistance
     if (ease == 'out') {
@@ -234,9 +261,10 @@ export class Frictional {
     } else if (ease == 'in-out') {
       getDistance = this.getEasyInOutDistance
     }
+    const theEndTime = endTime * multiple
     return createAnimationTime(function (diffTime, setDisplacement) {
-      if (diffTime < endTime) {
-        setDisplacement(getDistance(diffTime))
+      if (diffTime < theEndTime) {
+        setDisplacement(getDistance(diffTime / multiple))
       } else {
         setDisplacement(getDistance(endTime))
         return true
