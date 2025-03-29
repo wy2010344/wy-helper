@@ -1,3 +1,5 @@
+
+
 export * from './timeoutAnimaton'
 export * from './tween'
 export * from './bezier'
@@ -9,3 +11,5 @@ export * from './frictional'
 export * from './bigSpin'
 export * from './weight'
 export * from './physicalAnimate'
+export * from './clamping'
+export * from './destinationWithMargin'

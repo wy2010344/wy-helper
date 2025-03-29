@@ -107,6 +107,11 @@ export type SpringOutValue = {
   displacement: number
   velocity: number
 }
+
+/**
+ * 停止距离
+ */
+export const globalDefaultDisplacementThreshold = 0.5
 /**
  * 按理说应该用能量剩余来计算
  * JC使用了较复杂的牛顿法去预估时间.
@@ -118,7 +123,7 @@ export type SpringOutValue = {
  * @param velocityThreshold FM中是10,RNA中是2
  * 使用FM更科学,displayment最终使用的是像素,在0.5时几乎无法察觉
  */
-export function springIsStop(n: SpringOutValue, displacementThreshold = 0.5, velocityThreshold = 10) {
+export function springIsStop(n: SpringOutValue, displacementThreshold = globalDefaultDisplacementThreshold, velocityThreshold = 10) {
   return Math.abs(n.displacement) < displacementThreshold && Math.abs(n.velocity) < velocityThreshold
 }
 

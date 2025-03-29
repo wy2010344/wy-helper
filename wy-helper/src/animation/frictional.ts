@@ -1,11 +1,11 @@
 import { getDestination, getMaxScroll } from "../scroller/util"
 import { emptyObject, quote } from "../util"
 import { createAnimationTime } from "./animateSignal"
-import { defaultSpringVocityThreshold, DeltaXSignalAnimationConfig, springDetla } from "./AnimationConfig"
+import { DeltaXSignalAnimationConfig } from "./AnimationConfig"
 import { AnimateSignal, AnimateSignalConfig } from "./animateSignal"
 import { easeInOut, easeOut, EaseType } from "./tween"
 import { SetValue } from "../setStateHelper"
-import { springBase } from "./spring"
+import { ScrollHelper } from "./destinationWithMargin"
 
 
 /**
@@ -49,113 +49,9 @@ export class FrictionalFactory {
     const initVelocity = dir * Math.sqrt(distance * this.deceleration * dir * 2)
     return this.getFromVelocity(initVelocity)
   }
-  /**
-   * 像iScroll一样,滚动到外部,有最大距离
-   * @param param0 
-   * @returns 
-   */
-  async destinationWithMarginIscroll({
-    multiple = 1,
-    scroll,
-    velocity,
-    containerSize,
-    contentSize,
-    edgeConfig,
-    edgeBackConfig,
-    targetSnap = quote,
-    getForceStop = defaultGetForceStop,
-    onProcess,
-    onOutProcess
-  }: {
-    multiple?: number
-    scroll: AnimateSignal,
-    /**
-     * 负是向上,正是向下
-     */
-    velocity: number,
-    containerSize: number,
-    contentSize: number
-
-
-    edgeConfig(velocity: number): AnimateSignalConfig
-    edgeBackConfig: DeltaXSignalAnimationConfig
-    /**吸附 */
-    targetSnap?: (n: number) => number
-    /**获得强制吸附的位置 */
-    getForceStop?: (current: number, idealTarget: number) => number
-    onProcess?: SetValue<number>
-    onOutProcess?: SetValue<number>
-  }) {
-    const lowerMargin = 0
-    const upperMargin = getMaxScroll(containerSize, contentSize)
-    const frictional = this.getFromVelocity(velocity)
-    const current = scroll.get()
-    if (lowerMargin < current && current < upperMargin) {
-      const idealTarget = current + frictional.distance
-      const forceStop = getForceStop(current, idealTarget)
-      const destination = targetSnap(forceStop)
-      let elapsedTime = 0
-      let edge = 0
-      if (destination < lowerMargin) {
-        elapsedTime = frictional.getTimeToDistance(lowerMargin - current)
-        edge = lowerMargin
-      } else if (destination > upperMargin) {
-        elapsedTime = frictional.getTimeToDistance(upperMargin - current)
-        edge = upperMargin
-      }
-      if (elapsedTime) {
-        const edgeVelocity = frictional.getVelocity(elapsedTime)
-        const step1 = await scroll.change(
-          frictional.animationConfig('in', {
-            multiple,
-            endTime: elapsedTime
-          }),
-          onProcess,
-          edge)
-        if (step1) {
-          const step2 = await scroll.change(
-            edgeConfig(edgeVelocity),
-            onOutProcess)
-          if (step2) {
-            return scroll.animateTo(
-              edge,
-              edgeBackConfig,
-              onOutProcess)
-          }
-        }
-        return false
-      } else {
-        //另一种方法,最后速度到一定程度,转为spring动画
-        if (destination == idealTarget) {
-          return scroll.change(
-            frictional.animationConfig("in", {
-              multiple
-            }),
-            onProcess,
-            destination)
-        } else {
-          return scroll.change(
-            this.getFromDistance(destination).animationConfig("in", {
-              multiple
-            }),
-            onProcess,
-            destination)
-        }
-      }
-    } else {
-      return scroll.animateTo(
-        getDestination(current, lowerMargin, upperMargin),
-        edgeBackConfig,
-        onProcess)
-    }
-  }
 }
 
-function defaultGetForceStop(current: number, idealTarget: number) {
-  return idealTarget
-}
-
-export class Frictional {
+export class Frictional implements ScrollHelper {
   //初速度的绝对值
   public readonly absInitVelocity: number
   public readonly deceleration: number
@@ -173,6 +69,9 @@ export class Frictional {
     this.deceleration = factory.deceleration * this.dir
     this.duration = this.initVelocity / this.deceleration
     this.distance = 0.5 * initVelocity ** 2 / this.deceleration
+  }
+  cloneFromDistance(distance: number): ScrollHelper {
+    return this.factory.getFromDistance(distance)
   }
   //持续时间
   readonly duration: number
@@ -245,28 +144,13 @@ export class Frictional {
   }
 
 
-  animationConfig(
-    ease: EaseType = "in",
-    {
-      multiple = 1,
-      endTime = this.duration
-    }: {
-      multiple?: number
-      endTime?: number
-    } = emptyObject
-  ) {
-    let getDistance = this.getDistance
-    if (ease == 'out') {
-      getDistance = this.getEasyOutDistance
-    } else if (ease == 'in-out') {
-      getDistance = this.getEasyInOutDistance
-    }
-    const theEndTime = endTime * multiple
+  animationConfig(duration = this.duration) {
+    const it = this
     return createAnimationTime(function (diffTime, setDisplacement) {
-      if (diffTime < theEndTime) {
-        setDisplacement(getDistance(diffTime / multiple))
+      if (diffTime < duration) {
+        setDisplacement(it.getDistance(diffTime))
       } else {
-        setDisplacement(getDistance(endTime))
+        setDisplacement(it.getDistance(duration))
         return true
       }
     })

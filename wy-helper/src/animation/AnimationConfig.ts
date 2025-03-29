@@ -58,16 +58,12 @@ export function spring(arg: SpringBaseAnimationConfigArg = emptyObject) {
   }
 }
 
-export const defaultSpringVocityThreshold = 2
 export function springDetla(
   {
     initialVelocity = 0,
     config,
-    /**默认0 */
-    /**默认0.01 */
-    displacementThreshold = 0.01,
-    /**默认2 */
-    velocityThreshold = defaultSpringVocityThreshold
+    displacementThreshold,
+    velocityThreshold
   }: SpringBaseAnimationConfigArg,
   deltaX: number,
 ) {
