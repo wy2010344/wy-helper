@@ -2,7 +2,8 @@ import { getDestination, getMaxScroll } from '../scroller/util'
 import { SetValue } from '../setStateHelper'
 import { quote } from '../util'
 import { AnimateSignal, AnimateSignalConfig } from './animateSignal'
-import { DeltaXSignalAnimationConfig } from './AnimationConfig'
+import { defaultSpringAnimationConfig, DeltaXSignalAnimationConfig } from './AnimationConfig'
+import { ClampingScrollFactory } from './clamping'
 
 
 export interface ScrollHelper {
@@ -23,8 +24,8 @@ export async function destinationWithMargin(
     // velocity,
     containerSize,
     contentSize,
-    edgeConfig,
-    edgeBackConfig,
+    edgeConfig = ClampingScrollFactory.edgeClampingConfig,
+    edgeBackConfig = defaultSpringAnimationConfig,
     targetSnap = quote,
     getForceStop = defaultGetForceStop,
     onProcess,
@@ -38,8 +39,8 @@ export async function destinationWithMargin(
     contentSize: number
 
 
-    edgeConfig(velocity: number): AnimateSignalConfig
-    edgeBackConfig: DeltaXSignalAnimationConfig
+    edgeConfig?(velocity: number): AnimateSignalConfig
+    edgeBackConfig?: DeltaXSignalAnimationConfig
     /**吸附 */
     targetSnap?: (n: number) => number
     /**获得强制吸附的位置 */

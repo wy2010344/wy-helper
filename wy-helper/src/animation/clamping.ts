@@ -15,6 +15,11 @@ export class ClampingScrollFactory {
   static get(drag: number = 2, displacementThreshold: number = globalDefaultDisplacementThreshold) {
     return new ClampingScrollFactory(drag, displacementThreshold)
   }
+
+  static edgeClampingConfig(velocity: number, displacementThreshold = globalDefaultDisplacementThreshold) {
+    return ClampingScrollFactory.get(100, displacementThreshold).getFromVelocity(velocity).animationConfig()
+  }
+
   getFromDistance(n: number) {
     const initVelocity = n * this.drag / 1000
     return new ClampingScroll(this, initVelocity)

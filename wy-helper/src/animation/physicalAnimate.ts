@@ -60,7 +60,7 @@ export function scrollInfinityIteration(
 }
 
 
-function defaultEdgeNextVelocity(n: number) {
+export function defaultEdgeNextVelocity(n: number) {
   return n * 0.93
 }
 
