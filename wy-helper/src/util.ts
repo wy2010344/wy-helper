@@ -81,7 +81,7 @@ export function objectDeepFreezeThrow<T>(n: T, before: any[] = []) {
 
 
 
-export const emptyArray = objectFreezeThrow([]) as readonly any[]
+export const emptyArray = objectFreeze([])// objectFreezeThrow([]) as readonly any[]
 export function getTheEmptyArray<T>() {
   return emptyArray as T[]
 }

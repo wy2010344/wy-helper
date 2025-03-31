@@ -104,64 +104,6 @@ export type MomentumCallOut = {
   duration: number
 }
 
-
-// export function changeWithFixWidth({
-//   translateY,
-//   lineHeight,
-//   getLength,
-//   setIndex,
-//   getBackConfig,
-//   getConfig
-// }: {
-//   translateY: AnimateSignal,
-//   lineHeight: number,
-//   getLength(): number,
-//   setIndex(n: number): void,
-//   getBackConfig(distance: number): GetDeltaXAnimationConfig,
-//   getConfig(duration: number): GetDeltaXAnimationConfig
-// }) {
-//   function changeValue(n: number) {
-//     const index = Math.round(n * -1 / lineHeight)
-//     if (index < 0 || index >= getLength()) {
-//       return
-//     }
-//     setIndex(index)
-//   }
-//   const event: AnimateFrameEvent = {
-//     onProcess: changeValue,
-//     onFinish(v) {
-//       const value = translateY.get()
-//       changeValue(value)
-//     },
-//   }
-//   return {
-//     changeValue,
-//     onFinish(out: MomentumCallOut) {
-//       if (out.type == 'scroll') {
-//         const index = -Math.round(out.target / lineHeight)
-//         const value = index * lineHeight * -1
-//         animateSignalChangeTo(translateY,value,)
-//         translateY.changeTo(value, getConfig(out.duration), event)
-//       } else if (out.type == 'scroll-edge') {
-//         translateY.changeTo(out.target, getConfig(out.duration), {
-//           onProcess: event.onProcess,
-//           onFinish(v) {
-//             event.onFinish?.(v)
-//             translateY.changeTo(out.finalPosition, getBackConfig(Math.abs(out.target - out.finalPosition)), event)
-//           },
-//         })
-//       } else if (out.type == 'edge-back') {
-//         translateY.changeTo(out.target, getBackConfig(Math.abs(out.from - out.target)), event)
-//       }
-//     }
-//   }
-// }
-
-// export type OldGetValue = {
-//   getOnDragEnd(duration: number, deltaX: number, edge: boolean): AnimationConfig
-//   onEdgeBack(deltaX: number): AnimationConfig
-// }
-
 export type WithTimeStampEvent = {
   timeStamp: number
 }
