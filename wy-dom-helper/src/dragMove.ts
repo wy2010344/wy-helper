@@ -162,7 +162,7 @@ export type MoveEnd<T> = {
   cancel?: boolean
 }
 
-export type PointerBeginDirMove = (initE: PointerEvent, direction: PointKey) => MoveEnd<PointerEvent> | void
+export type PointerBeginDirMove = (initE: PointerEvent, direction: PointKey | '=') => MoveEnd<PointerEvent> | void
 export function pointerMove(
   out: MoveEnd<PointerEvent>,
   element: HTMLElement | Document | SVGSVGElement = document
@@ -182,32 +182,35 @@ export function pointerMove(
   }
 }
 export function pointerMoveDir(
-  beginMove: PointerBeginDirMove,
+  getBeginMove: () => {
+    onMove: PointerBeginDirMove,
+    onCancel?(e: PointerEvent): void
+  },
   {
-    eq = 'y',
     element = document
   }: {
-    eq?: PointKey,
     element?: HTMLElement | Document | SVGSVGElement
   } = emptyObject as any
 ) {
   return function (e: PointerEvent) {
     const initE = e;
+    const beginMove = getBeginMove()
     const destroyJudgeMove = subscribeEventListener(element, 'pointermove', e => {
+      //第一次移动
       destroyJudgeMove();
       destroyUp()
       const absY = Math.abs(e.pageY - initE.pageY)
       const absX = Math.abs(e.pageX - initE.pageX)
       let out: MoveEnd<PointerEvent> | void = undefined
       if (absX == absY) {
-        out = beginMove(initE, eq)
+        out = beginMove.onMove(initE, '=')
       } else {
         if (absX > absY) {
           //左右移动
-          out = beginMove(initE, 'x')
+          out = beginMove.onMove(initE, 'x')
         } else {
           //上下移动
-          out = beginMove(initE, 'y')
+          out = beginMove.onMove(initE, 'y')
         }
       }
       if (out) {
@@ -217,8 +220,10 @@ export function pointerMoveDir(
     })
     //避免点击后没有移动.
     const destroyUp = subscribeEventListener(element, 'pointerup', e => {
+      //第一次直接cancel了
       destroyJudgeMove()
       destroyUp()
+      beginMove.onCancel?.(e)
     })
   }
 }
