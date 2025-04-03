@@ -232,6 +232,9 @@ export class AnimateSignal {
     }
     return this.set(n)
   }
+  stop() {
+    this.set(this.get())
+  }
   animateTo(
     n: number,
     config: DeltaXSignalAnimationConfig = defaultSpringAnimationConfig,

@@ -1,3 +1,4 @@
+import { AnimateSignal } from "../animation"
 import { SetValue } from "../setStateHelper"
 import { getMaxScroll } from "./util"
 export * from './bscroll'
@@ -367,3 +368,16 @@ export function dragSnapWithList(list: DragSnapParam[]) {
     return n
   }
 }
+
+
+
+export function scrollForEdge(
+  scroll: AnimateSignal,
+  delta: number, containerSize: number, contentSize: number) {
+  const y = scroll.get()
+  scroll.set(
+    y +
+    overScrollSlow(y, delta, containerSize, contentSize)
+  )
+}
+

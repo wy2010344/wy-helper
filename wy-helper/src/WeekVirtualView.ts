@@ -1,5 +1,5 @@
 import { arrayEqual } from "./equal"
-import { dateFromYearMonthDay, DAYMILLSECONDS, yearMonthDayEqual } from "./util"
+import { dateFromYearMonthDay, DAYMILLSECONDS, getWeekOfMonth, getWeekOfYear, yearMonthDayEqual } from "./date"
 import { YearMonthDayVirtualView } from "./YearMonthDayVirtualView"
 import { formatFirstWeek } from "./YearMonthVirtualView"
 
@@ -44,12 +44,29 @@ export class WeekVirtualView {
       cells.push(YearMonthDayVirtualView.fromDate(d))
       d.setTime(d.getTime() + DAYMILLSECONDS)
     }
-    return new WeekVirtualView(cells, firstWeek)
+    return new WeekVirtualView(cells, firstWeek, d)
   }
   private constructor(
-    readonly cells: readonly Readonly<YearMonthDayVirtualView>[],
-    readonly firstWeek: number
+    readonly cells: readonly YearMonthDayVirtualView[],
+    readonly firstWeek: number,
+    private lastDate: Date
   ) { }
+
+  private _weekOfYear = -1
+  weekOfYear() {
+    if (this._weekOfYear < 0) {
+      this._weekOfYear = getWeekOfYear(this.lastDate, this.firstWeek)
+    }
+    return this._weekOfYear
+  }
+
+  private _weekOfMonth = -1
+  weekOfMonth() {
+    if (this._weekOfMonth < 0) {
+      this._weekOfMonth = getWeekOfMonth(this.lastDate, this.firstWeek)
+    }
+    return this._weekOfMonth
+  }
   /**
    * 星期的列表，如"一二三四五六日".split("")
    * 下标映射下标

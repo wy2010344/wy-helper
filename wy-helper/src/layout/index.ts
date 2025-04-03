@@ -1,7 +1,5 @@
-import { Compare } from "../equal"
 import { PointKey } from "../geometry"
 import { GetValue } from "../setStateHelper"
-import { memo } from "../signal"
 import { asLazy } from "../util"
 
 export type SizeKey = "width" | "height"

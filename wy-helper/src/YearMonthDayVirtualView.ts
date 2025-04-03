@@ -1,19 +1,40 @@
-import { dateFromYearMonthDay, DAYMILLSECONDS, yearMonthDayEqual } from "./util"
+import { dateFromYearMonthDay, DAYMILLSECONDS, getDayOfYear, yearMonthDayEqual } from "./date"
+import { WeekVirtualView } from "./WeekVirtualView"
+import { YearMonthVirtualView } from "./YearMonthVirtualView"
 
 export class YearMonthDayVirtualView {
   private constructor(
     public readonly year: number,
     public readonly month: number,
-    public readonly day: number
+    public readonly day: number,
+    private flagDate: Date
   ) { }
 
   static from(year: number, month: number, day: number) {
-    return new YearMonthDayVirtualView(year, month, day)
+    return this.fromDate(dateFromYearMonthDay({ year, month, day }))
   }
   static fromDate(d: Date) {
-    return this.from(d.getFullYear(), d.getMonth() + 1, d.getDate())
+    return new YearMonthDayVirtualView(d.getFullYear(), d.getMonth() + 1, d.getDate(), d)
   }
-  _beforeDay!: YearMonthDayVirtualView
+
+  private _dayOfYear = -1
+  dayOfYear() {
+    if (this._dayOfYear < 0) {
+      this._dayOfYear = getDayOfYear(this.flagDate)
+    }
+    return this._dayOfYear
+  }
+  private _beforeDay!: YearMonthDayVirtualView
+
+
+  getWeek(weekStart: number) {
+    return WeekVirtualView.from(this.year, this.month, this.day, weekStart)
+  }
+
+  getMonth(weekStart: number) {
+    return new YearMonthVirtualView(this.year, this.month, weekStart)
+  }
+
   beforeDay() {
     if (!this._beforeDay) {
       const d = dateFromYearMonthDay(this)
@@ -25,7 +46,7 @@ export class YearMonthDayVirtualView {
     return this._beforeDay
 
   }
-  _nextDay!: YearMonthDayVirtualView
+  private _nextDay!: YearMonthDayVirtualView
   nextDay() {
     if (!this._nextDay) {
       const d = dateFromYearMonthDay(this)
