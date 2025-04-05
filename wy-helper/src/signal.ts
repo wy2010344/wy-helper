@@ -28,7 +28,6 @@ const signalCache = m[DepKey] as {
   currentEffects?: Map<number, EmptyFun[]>
   recycleBatches: CurrentBatch[]
   currentRelay?: Map<GetValue<any>, any>
-  realTimeCall?: boolean
   //在执行effect期间
   onEffectRun?: boolean
 }
@@ -186,50 +185,46 @@ function commitSignal(signal: Signal<any>) {
 
 export function batchSignalEnd() {
   if (signalCache.onEffectRun) {
-    signalCache.realTimeCall = true
+    console.log("执行effect中不能batchSignalEnd")
     return
   }
   if (signalCache.currentEffects) {
-    signalCache.realTimeCall = true
+    console.log("执行listener中中不能batchSignalEnd")
     return
   }
-  const currentBatch = signalCache.currentBatch
-  if (currentBatch) {
-    signalCache.realTimeCall = false
+  while (true) {
+    const currentBatch = signalCache.currentBatch
+    if (currentBatch) {
+      //执行观察事件,即trackSignal的两个函数参数,与上游的memo参数
+      currentBatch.signals.forEach(commitSignal)
+      currentBatch.signals.clear()
 
-    //执行观察事件,即trackSignal的两个函数参数,与上游的memo参数
-    currentBatch.signals.forEach(commitSignal)
-    currentBatch.signals.clear()
+      signalCache.currentBatch = undefined
+      signalCache.currentEffects = currentBatch.effects
 
-    signalCache.currentBatch = undefined
-    signalCache.currentEffects = currentBatch.effects
+      const listeners = currentBatch.listeners
+      listeners.forEach(run)
+      listeners.clear()
+      signalCache.currentEffects = undefined
 
-    const listeners = currentBatch.listeners
-    listeners.forEach(run)
-    listeners.clear()
-    signalCache.currentEffects = undefined
-
-    ///执行effect事件
-    signalCache.onEffectRun = true
-    const effects = currentBatch.effects
-    const keys = iterableToList(effects.keys()).sort(numberSortAsc)
-    for (const key of keys) {
-      effects.get(key)?.forEach(run)
+      ///执行effect事件
+      signalCache.onEffectRun = true
+      const effects = currentBatch.effects
+      const keys = iterableToList(effects.keys()).sort(numberSortAsc)
+      for (const key of keys) {
+        effects.get(key)?.forEach(run)
+      }
+      effects.clear()
+      signalCache.recycleBatches.push(currentBatch)
+      signalCache.onEffectRun = undefined
+      if (signalCache.recycleBatches.length > 2) {
+        console.log("出现多个recycleBatches", signalCache.recycleBatches.length)
+      }
+    } else {
+      //主要是提前执行了,所以messageChannelCallback里的回调是自然的空
+      // console.log("未在批量任务中,没必要更新")
+      break
     }
-    effects.clear()
-    signalCache.recycleBatches.push(currentBatch)
-    signalCache.onEffectRun = undefined
-
-    //实时更新...
-    if (signalCache.realTimeCall) {
-      batchSignalEnd()
-    }
-    if (signalCache.recycleBatches.length > 2) {
-      console.log("出现多个recycleBatches", signalCache.recycleBatches.length)
-    }
-  } else {
-    //主要是提前执行了,所以messageChannelCallback里的回调是自然的空
-    // console.log("未在批量任务中,没必要更新")
   }
 }
 
