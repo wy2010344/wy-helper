@@ -1,6 +1,6 @@
 import { createAnimateSignal, defaultSpringAnimationConfig, DeltaXSignalAnimationConfig, SubscribeRequestAnimationFrame } from "./animation"
 import { GetValue, SetValue } from "./setStateHelper"
-import { addEffect, batchSignalEnd, trackSignal } from "./signal"
+import { addEffect, trackSignal } from "./signal"
 import { emptyObject } from "./util"
 
 
@@ -28,7 +28,6 @@ export function createObserverAnimateSignal(
           //先急设置
           value.set(tempValue)
           value.change(config(v - tempValue), onProcess)
-          batchSignalEnd()
         })
       }
     })

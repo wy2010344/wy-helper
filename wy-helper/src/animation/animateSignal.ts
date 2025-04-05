@@ -80,7 +80,6 @@ export class SilentDiff {
   silentDiff(n: number) {
     this.initValue = this.initValue + n
     this.value.set(this.value.get() + n)
-    batchSignalEnd()
   }
   silentChangeTo(n: number) {
     if (typeof this.target == 'number') {
