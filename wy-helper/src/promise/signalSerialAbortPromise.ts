@@ -58,9 +58,9 @@ export function signalSerialAbortPromise<T>(
 
 
 
-export function signalSerialAbortPromiseLoadMore<T, K>(
+export function signalSerialAbortPromiseLoadMore<T, K, M = {}>(
   generateReload: GetValue<{
-    getAfter(k: K): Promise<AutoLoadMoreCore<T, K>>,
+    getAfter(k: K): Promise<AutoLoadMoreCore<T, K> & M>,
     first: K
   } | FalseType>,
   equals?: Compare<T>

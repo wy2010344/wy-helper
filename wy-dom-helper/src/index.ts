@@ -20,3 +20,8 @@ export * from './html/mhtml'
 export * from './input'
 export { isEvent, addEvent } from './html/fx'
 export type { UpdateProp } from './html/fx';
+
+
+
+
+export type ReadURLSearchParam = Omit<URLSearchParams, 'append' | 'delete' | 'set'>
