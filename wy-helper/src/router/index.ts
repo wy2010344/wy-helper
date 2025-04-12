@@ -1,10 +1,10 @@
 import { KVPair } from "../KVPair"
-import { emptyObject, Quote, quote } from "../util"
+import { emptyArray, emptyObject, Quote, quote } from "../util"
 import { matchMatch, MatchNode, toMatchNode } from "./match"
 
 
 
-type RouteBranch<BranchLoader, LeafLoader, MoreLoader> = {
+type RouteBranch<BranchLoader, LeafLoader, NotfoundLoader> = {
   //名称
   key: string
   match: MatchNode
@@ -14,8 +14,8 @@ type RouteBranch<BranchLoader, LeafLoader, MoreLoader> = {
   //无子路径页面
   index?(): Promise<LeafLoader>
   //如果所有匹配失败,则转向它
-  default?(): Promise<MoreLoader>
-  children?: RouteBranch<BranchLoader, LeafLoader, MoreLoader>[]
+  default?(): Promise<NotfoundLoader>
+  children?: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader>[]
 }
 function sortBranch(a: RouteBranch<any, any, any>, b: RouteBranch<any, any, any>) {
   return a.order - b.order
@@ -24,11 +24,16 @@ function sortBranch(a: RouteBranch<any, any, any>, b: RouteBranch<any, any, any>
 
 
 
-export class TreeRoute<BranchLoader, LeafLoader, MoreLoader> {
+export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
   constructor(
-    private typeDefMap: Record<string, (v: string) => any>
+    private typeDefMap: Record<string, (v: string) => any>,
+    private transLoader: {
+      (x: () => Promise<LeafLoader>): () => Promise<LeafLoader>
+      (x: () => Promise<NotfoundLoader>): () => Promise<NotfoundLoader>
+      (x: () => Promise<BranchLoader>): () => Promise<BranchLoader>
+    } = quote
   ) { }
-  private rootBranch: RouteBranch<BranchLoader, LeafLoader, MoreLoader> = {
+  private rootBranch: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader> = {
     key: "",
     match: "",
     order: 0
@@ -46,18 +51,18 @@ export class TreeRoute<BranchLoader, LeafLoader, MoreLoader> {
       if (queryPath.endsWith(INDEX)) {
         const nodes = queryPath.slice(0, queryPath.length - INDEX.length).split('/').filter(quote)
         const tempBranch = this.buildRoot(nodes)
-        tempBranch.index = pages[key] as any
+        tempBranch.index = this.transLoader(pages[key]) as any
       }
       if (queryPath.endsWith(LAYOUT)) {
         const nodes = queryPath.slice(0, queryPath.length - LAYOUT.length).split('/').filter(quote)
         const tempBranch = this.buildRoot(nodes)
-        tempBranch.layout = pages[key] as any
+        tempBranch.layout = this.transLoader(pages[key]) as any
       }
 
       if (queryPath.endsWith(DEFAULT)) {
         const nodes = queryPath.slice(0, queryPath.length - DEFAULT.length).split('/').filter(quote)
         const tempBranch = this.buildRoot(nodes)
-        tempBranch.default = pages[key] as any
+        tempBranch.default = this.transLoader(pages[key]) as any
       }
     }
   }
@@ -94,7 +99,7 @@ export class TreeRoute<BranchLoader, LeafLoader, MoreLoader> {
     return tempBranch
   }
 
-  private sort(vs: RouteBranch<BranchLoader, LeafLoader, MoreLoader>[]) {
+  private sort(vs: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader>[]) {
     vs.sort(sortBranch)
     for (let i = 0; i < vs.length; i++) {
       const children = vs[i].children
@@ -111,124 +116,116 @@ export class TreeRoute<BranchLoader, LeafLoader, MoreLoader> {
     return rootChildren
   }
   matchNodes(nodes: string[]) {
-    const branches: BranchWithQuery<BranchLoader, LeafLoader, MoreLoader>[] = [
-      {
-        branch: this.rootBranch
+    let ret = this.buildBranch(nodes, 0, this.rootBranch, undefined)
+    // ret = this.buildBranch(ret, this.rootBranch)
+    return ret
+  }
+  private buildBranch(
+    nodes: string[],
+    index: number,
+    branch: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader>,
+    currentQuery?: KVPair<any>
+  ): PairNode<BranchLoader, LeafLoader, NotfoundLoader> {
+    const ret = this.foundInner(nodes, index, branch, currentQuery)
+    if (branch.layout) {
+      return {
+        type: "branch",
+        loader: (branch.layout!),
+        currentQuery,
+        next: ret,
+        query: ret.query
       }
-    ]
-    let tempBranch = this.rootBranch
-    let query: KVPair<any> | undefined = undefined
-
-    let findDefault = false
-    for (let i = 0; i < nodes.length && !findDefault; i++) {
-      const node = nodes[i]
-      try {
-        if (tempBranch.children) {
-          //寻找匹配的分支
-          let foundMath: RouteBranch<BranchLoader, LeafLoader, MoreLoader> | undefined = undefined
-          for (let i = 0; i < tempBranch.children.length && !foundMath; i++) {
-            const cacheTempBranch = tempBranch.children[i]
-            const match = cacheTempBranch.match
-            try {
-              query = matchMatch(node, match, query)
-              foundMath = cacheTempBranch
-            } catch (err) { }
-          }
-          if (foundMath) {
-            //@todo 这里,递进尝试,失败了,并不会返回上一处栈,最好使用递归
-            branches.push({
-              branch: foundMath,
-              query
-            })
-            tempBranch = foundMath
-          } else {
-            throw new Error('not found')
+    }
+    return ret
+  }
+  private foundInner(
+    nodes: string[],
+    index: number,
+    tempBranch: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader>,
+    currentQuery: KVPair<any> | undefined
+  ): PairNode<BranchLoader, LeafLoader, NotfoundLoader> {
+    try {
+      if (index == nodes.length) {
+        //叶子节点
+        if (tempBranch.index) {
+          return {
+            type: "leaf",
+            loader: (tempBranch.index!),
+            currentQuery,
+            query: currentQuery?.toObject() || emptyObject
           }
         } else {
           throw new Error('not found')
         }
-      } catch (err) {
-        if (tempBranch.default) {
-          branches.push({
-            branch: tempBranch,
-            query,
-            restNodes: nodes.slice(i)
-          })
-          findDefault = true
-        } else {
-          throw err
+      } else if (tempBranch.children) {
+        //枝节点
+        const node = nodes[index]
+        let foundMath: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader> | undefined = undefined
+        for (let i = 0; i < tempBranch.children.length && !foundMath; i++) {
+          const cacheTempBranch = tempBranch.children[i]
+          const match = cacheTempBranch.match
+          try {
+            currentQuery = matchMatch(node, match, currentQuery)
+            foundMath = cacheTempBranch
+          } catch (err) { }
         }
+        if (foundMath) {
+          return this.buildBranch(
+            nodes,
+            index + 1,
+            foundMath,
+            currentQuery
+          )
+        } else {
+          throw new Error('not found')
+        }
+      } else {
+        throw new Error('not found')
+      }
+    } catch (err) {
+      if (tempBranch.default) {
+        //leaf
+        return {
+          type: "notfound",
+          loader: (tempBranch.default!),
+          currentQuery,
+          restNodes: nodes.slice(index),
+          query: currentQuery?.toObject() || emptyObject
+        }
+      } else {
+        throw err
       }
     }
-    return branches
   }
 }
 
-
-type BranchWithQuery<BranchLoader, LeafLoader, MoreLoader> = {
-  branch: RouteBranch<BranchLoader, LeafLoader, MoreLoader>
-  query?: KVPair<any> | undefined
-  restNodes?: string[]
-}
 export type PairLeaf<LeafLoader> = {
-  default?: never
-  index(): Promise<LeafLoader>
-  layout?: never
+  type: "leaf"
+  loader(): Promise<LeafLoader>
   next?: never
   query: Readonly<Record<string, any>>
+  currentQuery?: KVPair<any>
   restNodes?: never
 }
-export type PairMore<MoreLoader> = {
-  index?: never
-  default(): Promise<MoreLoader>
-  layout?: never
+export type PairNotfound<NotfoundLoader> = {
+  type: "notfound"
+  loader(): Promise<NotfoundLoader>
   next?: never
   query: Readonly<Record<string, any>>
+  currentQuery?: KVPair<any>
   restNodes: string[]
 }
-export type PairBranch<BranchLoader, LeafLoader, MoreLoader> = {
-  default?: never
-  index?: never
-  layout(): Promise<BranchLoader>
-  next: PairBranch<BranchLoader, LeafLoader, MoreLoader> | PairLeaf<LeafLoader> | PairMore<MoreLoader>
+export type PairBranch<BranchLoader, LeafLoader, NotfoundLoader> = {
+  type: "branch"
+  loader(): Promise<BranchLoader>
+  next: PairNode<BranchLoader, LeafLoader, NotfoundLoader>
   query: Readonly<Record<string, any>>
+  currentQuery?: KVPair<any>
   restNodes?: never
 }
 
-export function branchesToPairs<BranchLoader, LeafLoader, MoreLoader>(branches: BranchWithQuery<BranchLoader, LeafLoader, MoreLoader>[], trans: <T>(v: T) => T = quote) {
-  const lastBranch = branches.at(-1)
-  if (!lastBranch) {
-    throw new Error('至少需要一个节点')
-  }
-  const query = lastBranch.query?.toObject() || emptyObject
+export type PairNode<BranchLoader, LeafLoader, NotfoundLoader> = PairBranch<BranchLoader, LeafLoader, NotfoundLoader> | PairLeaf<LeafLoader> | PairNotfound<NotfoundLoader>
 
-  let last: PairLeaf<LeafLoader> | PairMore<MoreLoader>
-  if (lastBranch.restNodes) {
-    last = {
-      default: trans(lastBranch.branch.default!),
-      query,
-      restNodes: lastBranch.restNodes
-    }
-  } else {
-    last = {
-      index: trans(lastBranch.branch.index!),
-      query
-    }
-  }
-  let ret: PairBranch<BranchLoader, LeafLoader, MoreLoader> | PairLeaf<LeafLoader> | PairMore<MoreLoader> = last
-  for (let i = branches.length - 1; i > -1; i--) {
-    const branch = branches[i]
-    if (branch.branch.layout) {
-      //新增一个layout
-      ret = {
-        next: ret,
-        layout: trans(branch.branch.layout),
-        query
-      }
-    }
-  }
-  return ret
-}
 /**
  * 格式
  *  /xxx/aa 匹配/xxx/aa
