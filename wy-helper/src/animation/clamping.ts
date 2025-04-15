@@ -43,7 +43,7 @@ export class ClampingScroll implements ScrollHelper {
     this.distance = this.velocitySecond / factory.drag
   }
   cloneFromDistance(distance: number): ScrollHelper {
-    throw this.factory.getFromDistance(distance)
+    return this.factory.getFromDistance(distance)
   }
 
   // 除以1000,变成秒
