@@ -1,12 +1,29 @@
+import { LayoutKey } from "."
 import { GetValue } from "../setStateHelper"
+import { ValueOrGet } from "../signal"
 
 export interface LayoutModel {
+  index(): number
   x: GetValue<number>
   y: GetValue<number>
   width: GetValue<number>
   height: GetValue<number>
-  getExt(): Record<string, any>
+  getExt(): {
+    /**
+     * 这个应该在提供flex的地方过滤
+     * 便需要外部提供key
+     */
+    // notFlex?: boolean,
+    grow?: ValueOrGet<number>
+    align?: AlignSelfFun
+  }
 }
+
+export type AlignSelfFun = {
+  position(pWidth: number, getSelfWidth: GetValue<number>): number
+  size(pWidth: number): number
+}
+
 
 export interface HookInfo {
   width: GetValue<number>

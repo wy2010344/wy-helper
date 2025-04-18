@@ -219,7 +219,7 @@ export function masonryList<T>(list: T[], count: number) {
   return columns;
 }
 
-export function groupToMap<T, F>(list: T[], getKey: (v: T) => F) {
+export function groupToMap<T, F>(list: readonly T[], getKey: (v: T) => F) {
   const map = new Map<F, T[]>()
   for (const row of list) {
     const key = getKey(row)

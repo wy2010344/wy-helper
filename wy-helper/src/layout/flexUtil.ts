@@ -1,18 +1,49 @@
 import { MDisplayOut, SizeKey } from "."
 import { arrayReduceLeft, arrayReduceRight } from "../equal"
 import { PointKey } from "../geometry"
-import { memo } from "../signal"
-import { cacheGet, cacheGetFun, quoteOrLazyGet } from "../util"
-import { hookGetLayoutChildren } from "./util"
+import { getValueOrGet, memo, valueOrGetToGet } from "../signal"
+import { cacheGetFun } from "../util"
+import { AlignSelfFun, hookGetLayoutChildren } from "./util"
 
 export type DisplayProps = {
   direction?: PointKey
   reverse?: boolean
-  directionFix?: 'start' | 'end' | 'center' | 'between' | 'around' | 'evenly'
-  directionFixBetweenWhenOne?: 'center' | 'end' | 'start'
-  alignItems?: 'center' | 'start' | 'end' | 'stretch'
+  /**主轴方向固定时分布方式 */
+  directionFix?: DirectionFix
+  directionFixBetweenWhenOne?: DirectionFixBetweenWhenOne
   gap?: number
+
+
+
+  alignItems?: AlignItem
+  /**辅助轴方向是否固定 */
   alignFix?: boolean
+}
+
+export type DirectionFixBetweenWhenOne = 'center' | 'end' | 'start'
+
+export type DirectionFix = 'start' | 'end' | 'center' | 'between' | 'around' | 'evenly'
+
+export type AlignItem = 'center' | 'start' | 'end' | 'stretch'
+
+export function alignSelf(align: AlignItem): AlignSelfFun {
+  return {
+    position(pWidth, getSelfWidth) {
+      if (align == 'center') {
+        return (pWidth - getSelfWidth()) / 2
+      } else if (align == 'end') {
+        return (pWidth - getSelfWidth())
+      } else {
+        return 0
+      }
+    },
+    size(pWidth) {
+      if (align == 'stretch') {
+        return pWidth
+      }
+      throw 'you should make your own size'
+    }
+  }
 }
 /**
  * 在ext里面使用align与grow,在控制在两个轴的伸长,还有notFlex
@@ -46,15 +77,12 @@ export function flexDisplayUtil(
 
       let children = info.children()
       const forEach = reverse ? arrayReduceRight : arrayReduceLeft
-      children.forEach((child, i) => {
+      children.forEach((child) => {
         const ext = child.getExt()
-        if (ext.notFlex) {
-          return
-        }
-        const grow = ext.grow
+        const grow = getValueOrGet(ext.grow)
         if (typeof grow == 'number' && grow > 0) {
           growAll += grow
-          growIndex.set(i, grow)
+          growIndex.set(child.index(), grow)
         } else {
           totalLength = totalLength + child[s]()
         }
@@ -62,18 +90,14 @@ export function flexDisplayUtil(
 
       if (growAll) {
         let remaing = info[s]() - (gap * children.length - gap) - totalLength
-        forEach(children, (child, i) => {
-          const ext = child.getExt()
-          if (ext.notFlex) {
-            return
-          }
-          const grow = growIndex.get(i)
+        forEach(children, (child) => {
+          const grow = growIndex.get(child.index())
           const childLength = grow
             ? remaing > 0
               ? remaing * grow / growAll
               : 0
             : child[s]()
-          childLengths[i] = childLength
+          childLengths[child.index()] = childLength
           length = length + childLength + gap
           list.push(length)
         })
@@ -107,24 +131,17 @@ export function flexDisplayUtil(
           list[0] = length = rGap
           tGap = rGap
         }
-        forEach(children, (child, i) => {
+        forEach(children, (child) => {
           const ext = child.getExt()
-          if (ext.notFlex) {
-            return
-          }
           const childLength = child[s]()
-          childLengths[i] = childLength
+          childLengths[child.index()] = childLength
           length = length + childLength + tGap
           list.push(length)
         })
       } else {
-        forEach(children, (child, i) => {
-          const ext = child.getExt()
-          if (ext.notFlex) {
-            return
-          }
+        forEach(children, (child) => {
           const childLength = child[s]()
-          childLengths[i] = childLength
+          childLengths[child.index()] = childLength
           length = length + childLength + gap
           list.push(length)
         })
@@ -147,12 +164,9 @@ export function flexDisplayUtil(
   const getWidth = cacheGetFun(() => {
     return memo(() => {
       let width = 0
-      info.children().forEach((child, i) => {
+      info.children().forEach((child) => {
         if (!alignFix) {
           const ext = child.getExt()
-          if (ext.notFlex) {
-            return
-          }
           const align = ext.align
           if (!align) {
             width = Math.max(child[os](), width)
@@ -167,9 +181,6 @@ export function flexDisplayUtil(
     getChildInfo(x, i) {
       const child = info.children()[i]
       const ext = child.getExt()
-      if (ext.notFlex) {
-        throw 'not in flex direction'
-      }
       if (x == direction) {
         return getInfo().list[i]
       }
@@ -180,29 +191,11 @@ export function flexDisplayUtil(
       const align = ext.align
       if (align) {
         //对于辅轴,开始与宽度,如y与height,x与width
-        if (typeof align == 'function') {
-          return align(x, theWidth)
-        } else {
-          if (align == 'stretch') {
-            if (x == od) {
-              return 0
-            }
-            if (x == os) {
-              return theWidth
-            }
-          } else if (align == 'start') {
-            if (x == od) {
-              return 0
-            }
-          } else if (align == 'center') {
-            if (x == od) {
-              return (theWidth - child[os]()) / 2
-            }
-          } else if (align == 'end') {
-            if (x == od) {
-              return theWidth - child[os]()
-            }
-          }
+        if (x == od) {
+          return align.position(theWidth, child[os])
+        }
+        if (x == os) {
+          return align.size(theWidth)
         }
       } else if (alignItems == 'stretch') {
         if (x == od) {
