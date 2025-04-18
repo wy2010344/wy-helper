@@ -1,20 +1,21 @@
 import { MDisplayOut, SizeKey } from "."
 import { arrayReduceLeft, arrayReduceRight } from "../equal"
 import { PointKey } from "../geometry"
-import { getValueOrGet, memo, valueOrGetToGet } from "../signal"
+import { objectMap } from "../setStateHelper"
+import { getValueOrGet, memo, MemoFun, ValueOrGet, valueOrGetToGet } from "../signal"
 import { cacheGetFun } from "../util"
-import { AlignSelfFun, hookGetLayoutChildren } from "./util"
+import { AlignSelfFun, hookGetLayoutChildren, HookInfo } from "./util"
 
-export type DisplayProps = {
-  direction?: PointKey
+
+export type MainAxisConfig = {
   reverse?: boolean
   /**主轴方向固定时分布方式 */
   directionFix?: DirectionFix
   directionFixBetweenWhenOne?: DirectionFixBetweenWhenOne
   gap?: number
 
-
-
+}
+export type CrossAxisConfig = {
   alignItems?: AlignItem
   /**辅助轴方向是否固定 */
   alignFix?: boolean
@@ -26,9 +27,11 @@ export type DirectionFix = 'start' | 'end' | 'center' | 'between' | 'around' | '
 
 export type AlignItem = 'center' | 'start' | 'end' | 'stretch'
 
-export function alignSelf(align: AlignItem): AlignSelfFun {
+export function alignSelf(getAlign: ValueOrGet<AlignItem>): AlignSelfFun {
+  const gAlign = valueOrGetToGet(getAlign)
   return {
     position(pWidth, getSelfWidth) {
+      const align = gAlign()
       if (align == 'center') {
         return (pWidth - getSelfWidth()) / 2
       } else if (align == 'end') {
@@ -38,6 +41,7 @@ export function alignSelf(align: AlignItem): AlignSelfFun {
       }
     },
     size(pWidth) {
+      const align = gAlign()
       if (align == 'stretch') {
         return pWidth
       }
@@ -45,26 +49,26 @@ export function alignSelf(align: AlignItem): AlignSelfFun {
     }
   }
 }
+
 /**
  * 在ext里面使用align与grow,在控制在两个轴的伸长,还有notFlex
  * @param param0 
  * @returns 
  */
-export function flexDisplayUtil(
+export function flexDisplayUtil<K extends string>(
+  direction: K,
   {
-    direction = 'y',
-    alignItems = 'center',
     gap = 0,
-    alignFix = false,
     directionFix,
     directionFixBetweenWhenOne = 'start',
-    reverse
-  }: DisplayProps
-): MDisplayOut {
-  const info = hookGetLayoutChildren()
-  const s = directionToSize(direction)
-  const od = oppositeDirection(direction)
-  const os = directionToSize(od)
+    reverse,
+  }: MainAxisConfig,
+  align: Record<K, CrossAxisConfig>
+): MDisplayOut<K> {
+  const info = hookGetLayoutChildren() as HookInfo<K>
+  // const s = directionToSize(direction)
+  // const od = oppositeDirection(direction)
+  // const os = directionToSize(od)
   const getInfo = cacheGetFun(() => {
     return memo(() => {
       let length = 0
@@ -78,25 +82,24 @@ export function flexDisplayUtil(
       let children = info.children()
       const forEach = reverse ? arrayReduceRight : arrayReduceLeft
       children.forEach((child) => {
-        const ext = child.getExt()
-        const grow = getValueOrGet(ext.grow)
+        const grow = child.getGrow()
         if (typeof grow == 'number' && grow > 0) {
           growAll += grow
           growIndex.set(child.index(), grow)
         } else {
-          totalLength = totalLength + child[s]()
+          totalLength = totalLength + child.getSize(direction)
         }
       })
 
       if (growAll) {
-        let remaing = info[s]() - (gap * children.length - gap) - totalLength
+        let remaing = info.getSize(direction) - (gap * children.length - gap) - totalLength
         forEach(children, (child) => {
           const grow = growIndex.get(child.index())
           const childLength = grow
             ? remaing > 0
               ? remaing * grow / growAll
               : 0
-            : child[s]()
+            : child.getSize(direction)
           childLengths[child.index()] = childLength
           length = length + childLength + gap
           list.push(length)
@@ -104,7 +107,7 @@ export function flexDisplayUtil(
       } else if (directionFix) {
         let tGap = gap
 
-        let allRemaing = info[s]() - totalLength
+        let allRemaing = info.getSize(direction) - totalLength
         let remaing = allRemaing - (gap * children.length - gap)
 
         if (directionFix == 'center') {
@@ -132,15 +135,14 @@ export function flexDisplayUtil(
           tGap = rGap
         }
         forEach(children, (child) => {
-          const ext = child.getExt()
-          const childLength = child[s]()
+          const childLength = child.getSize(direction)
           childLengths[child.index()] = childLength
           length = length + childLength + tGap
           list.push(length)
         })
       } else {
         forEach(children, (child) => {
-          const childLength = child[s]()
+          const childLength = child.getSize(direction)
           childLengths[child.index()] = childLength
           length = length + childLength + gap
           list.push(length)
@@ -161,56 +163,68 @@ export function flexDisplayUtil(
       }
     })
   })
-  const getWidth = cacheGetFun(() => {
-    return memo(() => {
-      let width = 0
-      info.children().forEach((child) => {
-        if (!alignFix) {
-          const ext = child.getExt()
-          const align = ext.align
-          if (!align) {
-            width = Math.max(child[os](), width)
-          }
-        }
+
+  const getAlign: Record<K, {
+    alignItems: AlignItem,
+    alignFix: boolean
+    get: MemoFun<number>
+  }> = objectMap(align, function ({
+    alignItems = 'center',
+    alignFix = false
+  }, key) {
+    return {
+      alignItems,
+      alignFix,
+      get: cacheGetFun(() => {
+        return memo(() => {
+          let width = 0
+          info.children().forEach((child) => {
+            if (!alignFix) {
+              const align = child.getAlign(key as K)
+              if (!align) {
+                width = Math.max(child.getSize(key as K), width)
+              }
+            }
+          })
+          return width
+        })
       })
-      return width
-    })
+    }
   })
   //render两次,是伸缩长度在捣鬼,任何一处auto都有可能
   return {
-    getChildInfo(x, i) {
+    getChildInfo(x, size, i) {
       const child = info.children()[i]
-      const ext = child.getExt()
       if (x == direction) {
-        return getInfo().list[i]
+        if (size) {
+          return getInfo().childLengths[i]
+        } else {
+          return getInfo().list[i]
+        }
       }
-      if (x == s) {
-        return getInfo().childLengths[i]
-      }
-      const theWidth = alignFix ? info[os]() : getWidth()
-      const align = ext.align
+      const cf = getAlign[x]
+      const theWidth = cf.alignFix ? info.getSize(x) : cf.get()
+      const align = child.getAlign(x)
       if (align) {
         //对于辅轴,开始与宽度,如y与height,x与width
-        if (x == od) {
-          return align.position(theWidth, child[os])
-        }
-        if (x == os) {
+        if (size) {
           return align.size(theWidth)
+        } else {
+          return align.position(theWidth, () => child.getSize(x))
         }
-      } else if (alignItems == 'stretch') {
-        if (x == od) {
-          return 0
-        }
-        if (x == os) {
+      } else if (cf.alignItems == 'stretch') {
+        if (size) {
           return theWidth
-        }
-      } else if (x == od) {
-        if (alignItems == 'start') {
+        } else {
           return 0
-        } else if (alignItems == 'center') {
-          return (theWidth - child[os]()) / 2
-        } else if (alignItems == 'end') {
-          return theWidth - child[os]()
+        }
+      } else {
+        if (cf.alignItems == 'start') {
+          return 0
+        } else if (cf.alignItems == 'center') {
+          return (theWidth - child.getSize(x)) / 2
+        } else if (cf.alignItems == 'end') {
+          return theWidth - child.getSize(x)
         }
       }
       throw ''
@@ -219,7 +233,7 @@ export function flexDisplayUtil(
       if (def) {
         return 0
       }
-      if (x == s) {
+      if (x == direction) {
         if (directionFix) {
           throw 'parent or self should make size for directionFix:' + directionFix
         }
@@ -228,13 +242,13 @@ export function flexDisplayUtil(
           throw 'parent or self should make size for child has grow'
         }
         return length
-      } else if (x == os) {
-        if (alignFix) {
+      } else {
+        const cf = getAlign[x]
+        if (cf.alignFix) {
           throw 'self design fix'
         }
-        return getWidth()
+        return cf.get()
       }
-      throw ''
     }
   }
 }
@@ -243,12 +257,5 @@ function directionToSize(x: PointKey): SizeKey {
     return "width"
   } else {
     return "height"
-  }
-}
-function oppositeDirection(x: PointKey): PointKey {
-  if (x == 'x') {
-    return 'y'
-  } else {
-    return 'x'
   }
 }
