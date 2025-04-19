@@ -30,7 +30,6 @@ export function simpleFlex({
   ...args
 }: DisplayProps) {
   return flexDisplayUtil(direction, args, {
-    [direction as 'x']: emptyObject,
     [oppositeDirection(direction) as 'y']: {
       alignFix,
       alignItems
