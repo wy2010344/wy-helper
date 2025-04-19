@@ -4,7 +4,7 @@ import { PointKey } from "../geometry"
 import { objectMap } from "../setStateHelper"
 import { getValueOrGet, memo, MemoFun, ValueOrGet, valueOrGetToGet } from "../signal"
 import { cacheGetFun } from "../util"
-import { AlignSelfFun, hookGetLayoutChildren, HookInfo } from "./util"
+import { AlignSelfFun, hookGetLayoutChildren, HookInfo, LayoutModel } from "./util"
 
 
 export type MainAxisConfig = {
@@ -50,6 +50,7 @@ export function alignSelf(getAlign: ValueOrGet<AlignItem>): AlignSelfFun {
   }
 }
 
+
 /**
  * 在ext里面使用align与grow,在控制在两个轴的伸长,还有notFlex
  * @param param0 
@@ -57,19 +58,123 @@ export function alignSelf(getAlign: ValueOrGet<AlignItem>): AlignSelfFun {
  */
 export function flexDisplayUtil<K extends string>(
   direction: K,
-  {
-    gap = 0,
-    directionFix,
-    directionFixBetweenWhenOne = 'start',
-    reverse,
-  }: MainAxisConfig,
+  axisConfig: MainAxisConfig,
+  align: {
+    [P in K]?: CrossAxisConfig;
+  }
+): MDisplayOut<K> {
+  return new FlexDisplay(direction, axisConfig, align)
+}
+function directionToSize(x: PointKey): SizeKey {
+  if (x == 'x') {
+    return "width"
+  } else {
+    return "height"
+  }
+}
+
+
+type AlignInfos<K extends string> = Record<K, {
+  alignItems: AlignItem,
+  alignFix: boolean
+  get: MemoFun<number>
+}>
+
+class StackDisplay<K extends string> implements MDisplayOut<K> {
+  protected info: HookInfo<K>
+  private alignInfos: AlignInfos<K>
+  constructor(align: Record<K, CrossAxisConfig>) {
+    this.info = hookGetLayoutChildren() as HookInfo<K>
+    this.alignInfos = objectMap(align as Record<K, CrossAxisConfig>, ({
+      alignItems = 'center',
+      alignFix = false
+    }, key) => {
+      return {
+        alignItems,
+        alignFix,
+        get: cacheGetFun(() => {
+          return memo(() => {
+            let width = 0
+            this.info.children().forEach((child) => {
+              if (!alignFix) {
+                const align = child.getAlign(key as K)
+                if (!align) {
+                  width = Math.max(child.getSize(key as K), width)
+                }
+              }
+            })
+            return width
+          })
+        })
+      }
+    }) as AlignInfos<K>
+  }
+
+  getChildInfo(x: K, size: boolean, i: number): number {
+    const child = this.info.children()[i]
+    const cf = this.alignInfos[x]
+    const theWidth = cf.alignFix ? this.info.getSize(x) : cf.get()
+    const align = child.getAlign(x)
+    if (align) {
+      //对于辅轴,开始与宽度,如y与height,x与width
+      if (size) {
+        return align.size(theWidth)
+      } else {
+        return align.position(theWidth, () => child.getSize(x))
+      }
+    } else if (cf.alignItems == 'stretch') {
+      if (size) {
+        return theWidth
+      } else {
+        return 0
+      }
+    } else {
+      if (cf.alignItems == 'start') {
+        return 0
+      } else if (cf.alignItems == 'center') {
+        return (theWidth - child.getSize(x)) / 2
+      } else if (cf.alignItems == 'end') {
+        return theWidth - child.getSize(x)
+      }
+    }
+    throw ''
+  }
+  getSizeInfo(x: K, def?: boolean): number {
+    if (def) {
+      return 0
+    }
+    const cf = this.alignInfos[x]
+    if (cf.alignFix) {
+      throw 'self design fix'
+    }
+    return cf.get()
+  }
+}
+export function stackDisplayUtil<K extends string>(
   align: Record<K, CrossAxisConfig>
 ): MDisplayOut<K> {
-  const info = hookGetLayoutChildren() as HookInfo<K>
-  // const s = directionToSize(direction)
-  // const od = oppositeDirection(direction)
-  // const os = directionToSize(od)
-  const getInfo = cacheGetFun(() => {
+  return new StackDisplay(align)
+}
+
+
+class FlexDisplay<K extends string> extends StackDisplay<K> {
+  constructor(
+    private direction: K,
+    private axisConfig: MainAxisConfig,
+    align: {
+      [P in K]?: CrossAxisConfig;
+    }
+  ) {
+    super(align as Record<K, CrossAxisConfig>)
+  }
+  private itGetInfo = cacheGetFun(() => {
+    const {
+      gap = 0,
+      directionFix,
+      directionFixBetweenWhenOne = 'start',
+      reverse,
+    } = this.axisConfig
+    const direction = this.direction
     return memo(() => {
       let length = 0
       const list: number[] = [0]
@@ -79,7 +184,7 @@ export function flexDisplayUtil<K extends string>(
       let growAll = 0
       let totalLength = 0
 
-      let children = info.children()
+      let children = this.info.children()
       const forEach = reverse ? arrayReduceRight : arrayReduceLeft
       children.forEach((child) => {
         const grow = child.getGrow()
@@ -92,7 +197,7 @@ export function flexDisplayUtil<K extends string>(
       })
 
       if (growAll) {
-        let remaing = info.getSize(direction) - (gap * children.length - gap) - totalLength
+        let remaing = this.info.getSize(direction) - (gap * children.length - gap) - totalLength
         forEach(children, (child) => {
           const grow = growIndex.get(child.index())
           const childLength = grow
@@ -107,7 +212,7 @@ export function flexDisplayUtil<K extends string>(
       } else if (directionFix) {
         let tGap = gap
 
-        let allRemaing = info.getSize(direction) - totalLength
+        let allRemaing = this.info.getSize(direction) - totalLength
         let remaing = allRemaing - (gap * children.length - gap)
 
         if (directionFix == 'center') {
@@ -163,99 +268,31 @@ export function flexDisplayUtil<K extends string>(
       }
     })
   })
+  getChildInfo(x: K, size: boolean, i: number): number {
+    if (x == this.direction) {
+      if (size) {
+        return this.itGetInfo().childLengths[i]
+      } else {
+        return this.itGetInfo().list[i]
+      }
+    }
+    return super.getChildInfo(x, size, i)
+  }
+  getSizeInfo(x: K, def?: boolean): number {
+    if (def) {
+      return 0
+    }
+    if (x == this.direction) {
+      if (this.axisConfig.directionFix) {
+        throw 'parent or self should make size for directionFix:' + this.axisConfig.directionFix
+      }
+      const { growAll, length } = this.itGetInfo()
+      if (growAll != 0) {
+        throw 'parent or self should make size for child has grow'
+      }
+      return length
+    }
+    return super.getSizeInfo(x, def)
+  }
+}
 
-  const getAlign: Record<K, {
-    alignItems: AlignItem,
-    alignFix: boolean
-    get: MemoFun<number>
-  }> = objectMap(align, function ({
-    alignItems = 'center',
-    alignFix = false
-  }, key) {
-    return {
-      alignItems,
-      alignFix,
-      get: cacheGetFun(() => {
-        return memo(() => {
-          let width = 0
-          info.children().forEach((child) => {
-            if (!alignFix) {
-              const align = child.getAlign(key as K)
-              if (!align) {
-                width = Math.max(child.getSize(key as K), width)
-              }
-            }
-          })
-          return width
-        })
-      })
-    }
-  })
-  //render两次,是伸缩长度在捣鬼,任何一处auto都有可能
-  return {
-    getChildInfo(x, size, i) {
-      const child = info.children()[i]
-      if (x == direction) {
-        if (size) {
-          return getInfo().childLengths[i]
-        } else {
-          return getInfo().list[i]
-        }
-      }
-      const cf = getAlign[x]
-      const theWidth = cf.alignFix ? info.getSize(x) : cf.get()
-      const align = child.getAlign(x)
-      if (align) {
-        //对于辅轴,开始与宽度,如y与height,x与width
-        if (size) {
-          return align.size(theWidth)
-        } else {
-          return align.position(theWidth, () => child.getSize(x))
-        }
-      } else if (cf.alignItems == 'stretch') {
-        if (size) {
-          return theWidth
-        } else {
-          return 0
-        }
-      } else {
-        if (cf.alignItems == 'start') {
-          return 0
-        } else if (cf.alignItems == 'center') {
-          return (theWidth - child.getSize(x)) / 2
-        } else if (cf.alignItems == 'end') {
-          return theWidth - child.getSize(x)
-        }
-      }
-      throw ''
-    },
-    getInfo(x, def) {
-      if (def) {
-        return 0
-      }
-      if (x == direction) {
-        if (directionFix) {
-          throw 'parent or self should make size for directionFix:' + directionFix
-        }
-        const { growAll, length } = getInfo()
-        if (growAll != 0) {
-          throw 'parent or self should make size for child has grow'
-        }
-        return length
-      } else {
-        const cf = getAlign[x]
-        if (cf.alignFix) {
-          throw 'self design fix'
-        }
-        return cf.get()
-      }
-    }
-  }
-}
-function directionToSize(x: PointKey): SizeKey {
-  if (x == 'x') {
-    return "width"
-  } else {
-    return "height"
-  }
-}

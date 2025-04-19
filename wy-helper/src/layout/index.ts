@@ -10,7 +10,7 @@ export const absoluteDisplay: MDisplayOut<PointKey> = {
   getChildInfo(x, i) {
     throw 'no child location ' + x
   },
-  getInfo(x, def) {
+  getSizeInfo(x, def) {
     if (def) {
       return 0
     }
@@ -28,7 +28,7 @@ export type MDisplayOut<K extends string> = {
    * @param x 
    * @param def 父节点也没有值,退回自己提供的默认值,以尽量避免抛出错误 
    */
-  getInfo(x: K, def?: boolean): number
+  getSizeInfo(x: K, def?: boolean): number
   /**
    * 有可能影响子节点的尺寸
    * @param x 
