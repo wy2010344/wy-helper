@@ -6,17 +6,13 @@ export type SizeKey = "width" | "height"
 
 export type LayoutKey = SizeKey | PointKey
 
-export const absoluteDisplay: MDisplayOut<PointKey> = {
+export const absoluteDisplay: MDisplayOut<any> = {
   getChildInfo(x, i) {
     throw 'no child location ' + x
   },
   getSizeInfo(x, def) {
     if (def) {
       return 0
-    }
-    if (x == 'x' || x == 'y') {
-      //不定义自身的坐标
-      throw 'no self location ' + x
     }
     throw 'no default value for' + x
   },
@@ -39,10 +35,11 @@ export type MDisplayOut<K extends string> = {
 }
 
 export type InstanceCallbackOrValue<T> = number | ((n: T) => number)
-export function valueInstOrGetToGet<T, M>(
+export function valueInstOrGetToGet<T, M, N>(
   o: InstanceCallbackOrValue<M> | undefined,
   getIns: GetValue<M>,
-  create: (getIns: GetValue<M>) => GetValue<T>
+  create: (getIns: GetValue<M>, x: N) => GetValue<T>,
+  x: N
 ): GetValue<T> {
   const tp = typeof o
   if (tp == 'function') {
@@ -50,7 +47,7 @@ export function valueInstOrGetToGet<T, M>(
       return (o as any)(getIns())
     }
   } else if (tp == 'undefined') {
-    return create(getIns)
+    return create(getIns, x)
   } else {
     return asLazy(o as T)
   }

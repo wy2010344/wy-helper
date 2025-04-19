@@ -246,15 +246,13 @@ export function iteratorToList<V>(iterable: IterableIterator<V>) {
   return list
 }
 
-
-export function objectMap<M, F>(a: Record<string, M>, fun: (v: M, key: string) => F) {
+export function objectMap<K extends string, M, F>(a: Record<K, M>, fun: (v: M, key: K) => F) {
   const out = {} as any
   for (const key in a) {
     out[key] = fun(a[key], key)
   }
-  return out as Record<string, F>
+  return out as Record<K, F>
 }
-
 
 export function getOutResolvePromise<T>() {
   let resolve: (v: T) => void
