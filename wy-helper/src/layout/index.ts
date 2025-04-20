@@ -2,6 +2,7 @@ import { PointKey } from "../geometry"
 import { GetValue } from "../setStateHelper"
 import { asLazy } from "../util"
 export * from './simpleFlex'
+export * from './layoutNode'
 export type SizeKey = "width" | "height"
 
 export type LayoutKey = SizeKey | PointKey

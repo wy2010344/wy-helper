@@ -1,22 +1,13 @@
-import { LayoutKey } from "."
 import { GetValue } from "../setStateHelper"
-import { ValueOrGet } from "../signal"
 
 export type LayoutModel<K extends string> = {
-  getSize(key: K): number
-  getPosition(key: K): number
   index(): number
   getGrow(): number | void
+
+
+  getSize(key: K): number
+  getPosition(key: K): number
   getAlign(key: K): AlignSelfFun | void
-  // getExt(): {
-  //   /**
-  //    * 这个应该在提供flex的地方过滤
-  //    * 便需要外部提供key
-  //    */
-  //   // notFlex?: boolean,
-  //   grow?: ValueOrGet<number>
-  //   align?: Partial<Record<K, AlignSelfFun>>
-  // }
 }
 
 export type AlignSelfFun = {
