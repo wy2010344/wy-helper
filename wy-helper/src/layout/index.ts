@@ -36,11 +36,12 @@ export type MDisplayOut<K extends string> = {
 }
 
 export type InstanceCallbackOrValue<T> = number | ((n: T) => number)
-export function valueInstOrGetToGet<T, M, N>(
+export function valueInstOrGetToGet<T, M, N, N1>(
   o: InstanceCallbackOrValue<M> | undefined,
   getIns: GetValue<M>,
-  create: (getIns: GetValue<M>, x: N) => GetValue<T>,
-  x: N
+  create: (getIns: GetValue<M>, x: N, y: N1) => GetValue<T>,
+  x: N,
+  y: N1
 ): GetValue<T> {
   const tp = typeof o
   if (tp == 'function') {
@@ -48,7 +49,7 @@ export function valueInstOrGetToGet<T, M, N>(
       return (o as any)(getIns())
     }
   } else if (tp == 'undefined') {
-    return create(getIns, x)
+    return create(getIns, x, y)
   } else {
     return asLazy(o as T)
   }

@@ -1,3 +1,5 @@
+import { batchSignalEnd, createSignal } from 'wy-helper'
+
 export * from './dragMove'
 export * from './hightlightHelper'
 export * from './stylis'
@@ -22,6 +24,18 @@ export { isEvent, addEvent } from './html/fx'
 export type { UpdateProp } from './html/fx';
 
 
+
+const w = createSignal(window.innerWidth)
+const h = createSignal(window.innerHeight)
+window.addEventListener("resize", function () {
+  w.set(window.innerWidth)
+  h.set(window.innerHeight)
+  batchSignalEnd()
+})
+export const windowSize = {
+  width: w.get,
+  height: h.get
+}
 
 
 export type ReadURLSearchParam = Omit<URLSearchParams, 'append' | 'delete' | 'set'>

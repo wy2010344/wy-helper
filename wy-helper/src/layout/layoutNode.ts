@@ -76,10 +76,10 @@ export interface LayoutNodeConfigure<M, K extends string> {
   notInLayout?: ValueOrGet<boolean>
 }
 
-export interface LayoutTarget<K extends string> {
-  getParentLayout(): LayoutNode<LayoutTarget<K>, K> | void
-  children: GetValue<readonly LayoutTarget<K>[]>
-  getLayout(): LayoutNode<LayoutTarget<K>, K> | void
+export type LayoutConfig<M, K extends string> = {
+  getParentLayout(m: M): LayoutNode<M, K> | void
+  getChildren(m: M): readonly M[]
+  getLayout(m: M): LayoutNode<M, K> | void
 }
 /**
  * 没有显式定义的时候,如何取值.
@@ -87,8 +87,8 @@ export interface LayoutTarget<K extends string> {
  * @param size 
  * @returns 
  */
-function superCreateGet<M extends LayoutTarget<K>, K extends string>(size: boolean) {
-  return function (getIns: GetValue<LayoutNode<M, K>>, x: K) {
+function superCreateGet<M, K extends string>(size: boolean) {
+  return function (getIns: GetValue<LayoutNode<M, K>>, x: K, c: LayoutConfig<M, K>) {
     return function () {
       const ins = getIns()
       if (size) {
@@ -98,14 +98,14 @@ function superCreateGet<M extends LayoutTarget<K>, K extends string>(size: boole
           return ix
         } catch (err) {
           try {
-            return getFromParent(ins, x, size, err)
+            return getFromParent(ins, c, x, size, err)
           } catch (err) {
             return ins.getSizeInfo(x, true)
           }
         }
       } else {
         try {
-          return getFromParent(ins, x, size, 'define')
+          return getFromParent(ins, c, x, size, 'define')
         } catch (err) {
           return 0
         }
@@ -114,15 +114,16 @@ function superCreateGet<M extends LayoutTarget<K>, K extends string>(size: boole
   }
 }
 
-function getFromParent<M extends LayoutTarget<K>, K extends string>(
+function getFromParent<M, K extends string>(
   ins: LayoutNode<M, K>,
+  c: LayoutConfig<M, K>,
   x: K,
   size: boolean,
   err: any) {
   if (ins.getNotInLayout()) {
     throw err
   }
-  const parent = ins.target.getParentLayout()
+  const parent = c.getParentLayout(ins.target)
   if (parent && parent instanceof LayoutNode) {
     return parent.getChildInfo(x, size, ins.index())
   }
@@ -137,8 +138,9 @@ function emptyThrow(): number {
   throw 'abc'
 }
 
-function getInnerSize<M extends LayoutTarget<K>, K extends string>(
+function getInnerSize<M, K extends string>(
   o: InstanceCallbackOrValue<LayoutNode<M, K>> | undefined,
+  c: LayoutConfig<M, K>,
   getIns: GetValue<LayoutNode<M, K>>,
   key: K,
   begin: GetValue<number>,
@@ -147,7 +149,7 @@ function getInnerSize<M extends LayoutTarget<K>, K extends string>(
   const tp = typeof o
   if (tp == 'undefined') {
     return function () {
-      return getFromParent(getIns(), key, true, '') - begin() - end()
+      return getFromParent(getIns(), c, key, true, '') - begin() - end()
     }
   } else if (tp == 'number') {
     return function () {
@@ -161,9 +163,9 @@ function getInnerSize<M extends LayoutTarget<K>, K extends string>(
     return emptyThrow
   }
 }
-// export type DrawRectConfig = AbsoluteNodeConfigure // & Omit<CNodePathConfigure, 'x' | 'y' | 'draw' | 'withPath'>
-export function createLayoutNode<M extends LayoutTarget<K>, K extends string>(
-  n: LayoutNodeConfigure<M, K>
+export function createLayoutNode<M, K extends string>(
+  c: LayoutConfig<M, K>,
+  n: LayoutNodeConfigure<M, K>,
 ) {
   function getIns(): LayoutNode<M, K> {
     return node
@@ -171,17 +173,17 @@ export function createLayoutNode<M extends LayoutTarget<K>, K extends string>(
   const _layout = valueOrGetToGet(n.layout || absoluteDisplay)
 
   const axis = objectMap(n.axis, function (v, key) {
-    const size = valueInstOrGetToGet(v.size, getIns, createGetSize, key)
+    const size = valueInstOrGetToGet(v.size, getIns, createGetSize, key, c)
     const paddingStart = valueOrGetToGet(v.paddingStart || 0)
     const paddingEnd = valueOrGetToGet(v.paddingEnd || 0)
     return {
       alignSelf: v.alignSelf,
-      position: valueInstOrGetToGet(v.position, getIns, createGetPosition, key),
+      position: valueInstOrGetToGet(v.position, getIns, createGetPosition, key, c),
       size,
       paddingStart,
       paddingEnd,
       drawSize: getInnerSize(
-        v.size, getIns, key,
+        v.size, c, getIns, key,
         paddingStart, paddingEnd)
     }
   })
@@ -190,8 +192,8 @@ export function createLayoutNode<M extends LayoutTarget<K>, K extends string>(
   const children = memo(() => {
     //生成复合结构,所以用memo
     const list: LayoutNode<M, K>[] = []
-    node.target.children().forEach((child, i) => {
-      const rect = child.getLayout() as LayoutNode<M, K>
+    c.getChildren(node.target).forEach((child, i) => {
+      const rect = c.getLayout(child) as LayoutNode<M, K>
       if (rect instanceof LayoutNode && !rect.getNotInLayout()) {
         rect._index = list.length
         rect._get = children
@@ -213,23 +215,9 @@ export function createLayoutNode<M extends LayoutTarget<K>, K extends string>(
   const node = new LayoutNode<M, K>(
     layout,
     axis,
-    // x,
-    // y,
-    // width,
-    // height,
-    // layout,
-    // paddingLeft,
-    // paddingRight,
-    // paddingTop,
-    // paddingBottom,
-    // drawWidth,
-    // drawHeight,
     info.children,
     valueOrGetToGet(n.notInLayout || false),
     valueOrGetToGet(n.grow),
   )
   return node
-  // const tnode = n.render(node)
-  // node.target = tnode
-  // return node
 }
