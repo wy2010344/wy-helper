@@ -25,6 +25,22 @@ export class KVPair<T> {
   add(key: string, value: T) {
     return new KVPair(key, value, this.remove(key));
   }
+
+  addAll(vs: KVPair<T>) {
+    let ret: KVPair<T> = this
+    vs.forEach((key, value) => {
+      ret = this.add(key, value)
+    })
+    return ret
+  }
+
+  forEach(callback: (key: string, value: T) => void) {
+    let temp: KVPair<T> | undefined = this
+    while (temp) {
+      callback(temp.key, temp.value)
+      temp = temp.rest
+    }
+  }
   /**
    * 删除现有
    * @param key 
