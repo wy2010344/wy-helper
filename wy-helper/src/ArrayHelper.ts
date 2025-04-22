@@ -1,6 +1,12 @@
-import { ReadArray, emptyArray, objectFreeze } from "./util"
+import { ReadArray } from "./util"
 
 
+/**
+ * @todo 对Array/Map/Set
+ * 有个helper,当然加工过程
+ * 但是如果是删除移动项,重新构造一份数据是难免的.
+ * 在react/mve中,事实上需要无副作用,因为可能旧数据还在生效.
+ */
 export class ArrayHelper<V> {
   private dirty = false
   private array: V[]

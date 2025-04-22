@@ -1,8 +1,12 @@
 import { GetValue } from "./setStateHelper";
 
 
-export type ReadSet<V> = Omit<Set<V>, 'add' | 'clear'>
-export type ReadMap<K, V> = Omit<Map<K, V>, 'set' | 'delete' | 'clear'>
+export type ReadSet<V> = Omit<Set<V>, 'add' | 'clear' | 'forEach'> & {
+  forEach(callbackfn: (value: V, key: V, map: ReadSet<V>) => void, thisArg?: any): void
+}
+export type ReadMap<K, V> = Omit<Map<K, V>, 'set' | 'delete' | 'clear' | 'forEach'> & {
+  forEach(callbackfn: (value: V, key: K, map: ReadMap<K, V>) => void, thisArg?: any): void
+}
 export type ReadWrite<T> = {
   -readonly [P in keyof T]: T[P];
 };
