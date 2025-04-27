@@ -234,8 +234,6 @@ function forceLinkEqual(a: ForceLink<any, any>, b: ForceLink<any, any>) {
  * 能用memo-reduce,在mve中怎么处理?
  */
 export type ForceConfig = {
-  //全局
-  nDim: DIMType,
   //不影响
   alpha: number
   //不影响,拖拽
@@ -249,9 +247,7 @@ export type ForceConfig = {
 }
 export function initForceConfig(): ForceConfig {
   const alphaMin = 0.001
-  const nDim = 2
   return {
-    nDim,
     alphaTarget: 0,
     alpha: 1,
     alphaMin,
@@ -323,11 +319,12 @@ export function cloneNodesAndLinks<T, V, FDir extends ForceDir = ForceDir>(
  * @returns 
  */
 export function tickForce<T, FDir extends ForceDir = ForceDir>(
+  nDim: DIMType,
   model: ForceConfig,
   nodes: readonly ForceNode<T, FDir>[],
   force: (alpha: number) => void,
 ) {
-  let { alphaDecay, alphaTarget, alpha, nDim, velocityDecay } = model
+  let { alphaDecay, alphaTarget, alpha, velocityDecay } = model
   alpha += (alphaTarget - alpha) * alphaDecay;
   force(alpha)
   gnDim = nDim

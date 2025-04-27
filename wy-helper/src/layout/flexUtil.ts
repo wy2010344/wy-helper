@@ -3,7 +3,7 @@ import { arrayReduceLeft, arrayReduceRight } from "../equal"
 import { PointKey } from "../geometry"
 import { objectMap } from "../setStateHelper"
 import { getValueOrGet, memo, MemoFun, ValueOrGet, valueOrGetToGet } from "../signal"
-import { cacheGetFun } from "../util"
+import { cacheGetFun, emptyObject } from "../util"
 import { AlignSelfFun, hookGetLayoutChildren, HookInfo, LayoutModel } from "./util"
 
 
@@ -58,10 +58,10 @@ export function alignSelf(getAlign: ValueOrGet<AlignItem>): AlignSelfFun {
  */
 export function flexDisplayUtil<K extends string>(
   direction: K,
-  axisConfig: MainAxisConfig,
+  axisConfig: MainAxisConfig = emptyObject,
   align: {
     [P in K]?: CrossAxisConfig;
-  }
+  },
 ): MDisplayOut<K> {
   return new FlexDisplay(direction, axisConfig, align)
 }
@@ -82,32 +82,38 @@ type AlignInfos<K extends string> = Record<K, {
 
 class StackDisplay<K extends string> implements MDisplayOut<K> {
   protected info: HookInfo<K>
-  private alignInfos: AlignInfos<K>
-  constructor(align: Record<K, CrossAxisConfig>) {
+  private alignInfos: AlignInfos<K> = {} as any
+  constructor(align: {
+    [key in K]?: CrossAxisConfig
+  }) {
     this.info = hookGetLayoutChildren() as HookInfo<K>
-    this.alignInfos = objectMap(align as Record<K, CrossAxisConfig>, ({
-      alignItems = 'center',
-      alignFix = false
-    }, key) => {
-      return {
-        alignItems,
-        alignFix,
-        get: cacheGetFun(() => {
-          return memo(() => {
-            let width = 0
-            this.info.children().forEach((child) => {
-              if (!alignFix) {
-                const align = child.getAlign(key as K)
-                if (!align) {
-                  width = Math.max(child.getSize(key as K), width)
-                }
+    this.info.keys.forEach(key => {
+      this.createAlignInfo(key, align[key])
+    })
+  }
+
+  protected createAlignInfo(key: K, {
+    alignItems = 'center',
+    alignFix = false
+  }: CrossAxisConfig = emptyObject) {
+    this.alignInfos[key] = {
+      alignItems,
+      alignFix,
+      get: cacheGetFun(() => {
+        return memo(() => {
+          let width = 0
+          this.info.children().forEach((child) => {
+            if (!alignFix) {
+              const align = child.getAlign(key as K)
+              if (!align) {
+                width = Math.max(child.getSize(key as K), width)
               }
-            })
-            return width
+            }
           })
+          return width
         })
-      }
-    }) as AlignInfos<K>
+      })
+    }
   }
 
   getChildInfo(x: K, size: boolean, i: number): number {
@@ -151,7 +157,9 @@ class StackDisplay<K extends string> implements MDisplayOut<K> {
   }
 }
 export function stackDisplayUtil<K extends string>(
-  align: Record<K, CrossAxisConfig>
+  align: {
+    [key in K]?: CrossAxisConfig
+  } = emptyObject
 ): MDisplayOut<K> {
   return new StackDisplay(align)
 }
@@ -167,6 +175,14 @@ class FlexDisplay<K extends string> extends StackDisplay<K> {
   ) {
     super(align as Record<K, CrossAxisConfig>)
   }
+
+  protected createAlignInfo(key: K, align?: CrossAxisConfig): void {
+    if (key == this.direction) {
+      return
+    }
+    super.createAlignInfo(key, align)
+  }
+
   private itGetInfo = cacheGetFun(() => {
     const {
       gap = 0,

@@ -24,6 +24,8 @@ export const emptyDelayStream: DelayStream<any> = () => null
 /**
  * 增加世界线b
  * 在a流查找后（包括a的所有后继），在b的流继续查找
+ * 
+ * 联合、合集
  * @param a 
  * @param b 
  */
@@ -45,7 +47,10 @@ export type Goal<V> = (sub: V) => Stream<V>
 /**
  * 为所有的世界线应用一个条件，变换成新的世界线列表
  * 在a流中，使用b目标查找，每一个节点的尝试
- * 用于and语句。
+ * 用于and语句
+ * 
+ * 集合的求交集,既满足a,也满足b
+ * mplus
  * @param a 
  * @param b 
  */
