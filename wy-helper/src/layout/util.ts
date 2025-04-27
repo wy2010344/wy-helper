@@ -17,6 +17,7 @@ export type AlignSelfFun = {
 
 
 export interface HookInfo<K extends string> {
+  keys: readonly K[]
   getSize(key: K): number
   children: GetValue<LayoutModel<K>[]>
 }

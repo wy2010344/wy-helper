@@ -64,7 +64,6 @@ export class LayoutNode<M, K extends string> implements MDisplayOut<K>, LayoutMo
 
 export interface LayoutNodeConfigure<M, K extends string> {
   layout?: ((v: LayoutNode<M, K>) => MDisplayOut<K>) | MDisplayOut<K>
-
   axis: Record<K, {
     position?: InstanceCallbackOrValue<LayoutNode<M, K>>,
     size?: InstanceCallbackOrValue<LayoutNode<M, K>>,
@@ -183,8 +182,12 @@ export function createLayoutNode<M, K extends string>(
       paddingStart,
       paddingEnd,
       drawSize: getInnerSize(
-        v.size, c, getIns, key,
-        paddingStart, paddingEnd)
+        v.size,
+        c,
+        getIns,
+        key,
+        paddingStart,
+        paddingEnd)
     }
   })
 
@@ -203,6 +206,7 @@ export function createLayoutNode<M, K extends string>(
     return list
   })
   const info = {
+    keys: Object.keys(axis),
     getSize(n: K) {
       return axis[n].drawSize()
     },

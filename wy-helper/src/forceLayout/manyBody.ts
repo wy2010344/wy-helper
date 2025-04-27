@@ -83,7 +83,11 @@ function accumulate(treeNode: TreeNode<ForceNode<any>>) {
   if (numChildren) {
     for (x = y = z = i = 0; i < numChildren; ++i) {
       if ((q = treeNode[i]) && (c = Math.abs(q.value))) {
-        strength += q.value, weight += c, x += c * (q.x || 0), y += c * (q.y || 0), z += c * (q.z || 0);
+        strength += q.value
+        weight += c
+        x += c * (q.x || 0)
+        y += c * (q.y || 0)
+        z += c * (q.z || 0);
       }
     }
     strength *= Math.sqrt(4 / numChildren); // scale accumulated strength according to number of dimensions
