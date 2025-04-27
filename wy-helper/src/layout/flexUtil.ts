@@ -61,7 +61,7 @@ export function flexDisplayUtil<K extends string>(
   axisConfig: MainAxisConfig = emptyObject,
   align: {
     [P in K]?: CrossAxisConfig;
-  },
+  } = emptyObject,
 ): MDisplayOut<K> {
   return new FlexDisplay(direction, axisConfig, align)
 }
