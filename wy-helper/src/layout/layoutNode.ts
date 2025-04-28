@@ -1,4 +1,4 @@
-import { AlignSelfFun, emptyFun, EmptyFun, GetValue, hookLayout, InstanceCallbackOrValue, LayoutModel, MDisplayOut, memo, valueInstOrGetToGet, ValueOrGet, valueOrGetToGet, absoluteDisplay, objectMap, alignSelf } from ".."
+import { AlignSelfFun, emptyFun, EmptyFun, GetValue, hookLayout, InstanceCallbackOrValue, LayoutModel, MDisplayOut, memo, valueInstOrGetToGet, ValueOrGet, valueOrGetToGet, absoluteDisplay, objectMap, alignSelf, SetValue } from ".."
 
 export function layoutNodeGetTarget<M, K extends string>(n: LayoutNode<M, K>): M {
   return n.target
@@ -206,7 +206,11 @@ export function createLayoutNode<M, K extends string>(
     return list
   })
   const info = {
-    keys: Object.keys(axis),
+    forEach(callback: SetValue<K>) {
+      for (const key in axis) {
+        callback(key)
+      }
+    },
     getSize(n: K) {
       return axis[n].drawSize()
     },
