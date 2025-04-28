@@ -59,9 +59,7 @@ export function alignSelf(getAlign: ValueOrGet<AlignItem>): AlignSelfFun {
 export function flexDisplayUtil<K extends string>(
   direction: K,
   axisConfig: MainAxisConfig = emptyObject,
-  align: {
-    [P in K]?: CrossAxisConfig;
-  } = emptyObject,
+  align: AlignItemsConfig<K> = emptyObject,
 ): MDisplayOut<K> {
   return new FlexDisplay(direction, axisConfig, align)
 }
@@ -80,22 +78,28 @@ type AlignInfos<K extends string> = Record<K, {
   get: MemoFun<number>
 }>
 
+type AlignItemsConfig<K extends string> = {
+  [key in K]?: CrossAxisConfig
+} & CrossAxisConfig
 class StackDisplay<K extends string> implements MDisplayOut<K> {
   protected info: HookInfo<K>
   private alignInfos: AlignInfos<K> = {} as any
-  constructor(align: {
-    [key in K]?: CrossAxisConfig
-  }) {
+  constructor(align: AlignItemsConfig<K>) {
     this.info = hookGetLayoutChildren() as HookInfo<K>
-    this.info.keys.forEach(key => {
-      this.createAlignInfo(key, align[key])
+    const {
+      alignItems: dAlignItems = 'center',
+      alignFix: dAlignFix = false
+    } = align
+    this.info.forEach(key => {
+      const {
+        alignItems = dAlignItems,
+        alignFix = dAlignFix
+      } = align[key] || emptyObject as CrossAxisConfig
+      this.createAlignInfo(key, alignItems, alignFix)
     })
   }
 
-  protected createAlignInfo(key: K, {
-    alignItems = 'center',
-    alignFix = false
-  }: CrossAxisConfig = emptyObject) {
+  protected createAlignInfo(key: K, alignItems: AlignItem, alignFix: boolean) {
     this.alignInfos[key] = {
       alignItems,
       alignFix,
@@ -176,11 +180,11 @@ class FlexDisplay<K extends string> extends StackDisplay<K> {
     super(align as Record<K, CrossAxisConfig>)
   }
 
-  protected createAlignInfo(key: K, align?: CrossAxisConfig): void {
+  protected createAlignInfo(key: K, alignItems: AlignItem, alignFix: boolean): void {
     if (key == this.direction) {
       return
     }
-    super.createAlignInfo(key, align)
+    super.createAlignInfo(key, alignItems, alignFix)
   }
 
   private itGetInfo = cacheGetFun(() => {
