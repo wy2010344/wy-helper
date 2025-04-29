@@ -8,10 +8,10 @@ import { defaultSpringAnimationConfig, DeltaXSignalAnimationConfig } from "./Ani
 import { batchSignalEnd } from "../signal"
 /**
  * 或者视着实例而非消息,即是可变的,只在事件中不变
- * 第一次不处理
  */
 export function createSubscribeRequestAnimationFrame(
   requestAnimationFrame: (fun: SetValue<number>) => void,
+  getNow: GetValue<number>
 ) {
   return function (
     /**返回true就是停止 */
@@ -26,17 +26,19 @@ export function createSubscribeRequestAnimationFrame(
       canceled = true
       onFinish(false)
     }
+    const startTime = getNow()
     function request(time: number) {
       if (canceled) {
         return
       }
-      if (callback(time)) {
+      const diffTime = time - startTime
+      if (diffTime >= 0 && callback(diffTime)) {
         onFinish(true)
         return
       }
       requestAnimationFrame(request)
     }
-    requestAnimationFrame(request)
+    request(0)
     return cancel
   }
 }
@@ -53,15 +55,11 @@ export function createAnimationTime(
   return function (
     out: SilentDiff
   ) {
-    let startTime = performance.now()
     function setDisplacement(n: number) {
       out.setDisplayment(n)
     }
-    return function (time) {
-      const diffTime = time - startTime
-      if (diffTime > 0) {
-        return callback(diffTime, setDisplacement)
-      }
+    return function (diffTime) {
+      return callback(diffTime, setDisplacement)
     }
   }
 }
@@ -101,7 +99,7 @@ export class SilentDiff {
 export interface AnimateSignalConfig {
   (
     value: SilentDiff
-  ): ((time: number) => any) | void
+  ): ((diffTime: number) => any) | void
 }
 
 
