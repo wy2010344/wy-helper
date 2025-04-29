@@ -2,7 +2,10 @@ import { EmptyFun, createSubscribeRequestAnimationFrame, SubscribeRequestAnimati
 import { requestBatchAnimationFrame } from "../util"
 
 
-export const subscribeRequestAnimationFrame = createSubscribeRequestAnimationFrame(requestBatchAnimationFrame)
+export const subscribeRequestAnimationFrame = createSubscribeRequestAnimationFrame(
+  requestBatchAnimationFrame,
+  performance.now.bind(performance)
+)
 
 
 export function animateSignal(value: number,
