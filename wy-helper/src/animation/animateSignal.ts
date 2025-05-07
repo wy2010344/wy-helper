@@ -32,7 +32,7 @@ export function createSubscribeRequestAnimationFrame(
         return
       }
       const diffTime = time - startTime
-      if (diffTime >= 0 && callback(diffTime)) {
+      if (diffTime > 0 && callback(diffTime)) {
         onFinish(true)
         return
       }
