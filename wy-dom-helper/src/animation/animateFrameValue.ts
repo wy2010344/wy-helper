@@ -1,11 +1,13 @@
-import { EmptyFun, createSubscribeRequestAnimationFrame, SubscribeRequestAnimationFrame, createAnimateSignal, createObserverAnimateSignal } from "wy-helper"
+import { createSubscribeRequestAnimationFrame, SubscribeRequestAnimationFrame, createAnimateSignal, createObserverAnimateSignal } from "wy-helper"
 import { requestBatchAnimationFrame } from "../util"
 
 
+export const getPerformanceNow = performance.now.bind(performance)
 export const subscribeRequestAnimationFrame = createSubscribeRequestAnimationFrame(
   requestBatchAnimationFrame,
-  performance.now.bind(performance)
+  getPerformanceNow
 )
+
 
 
 export function animateSignal(value: number,

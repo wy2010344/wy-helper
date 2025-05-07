@@ -192,40 +192,40 @@ export function batchSignalEnd() {
     console.log("执行listener中中不能batchSignalEnd")
     return
   }
-  while (true) {
-    const currentBatch = signalCache.currentBatch
-    if (currentBatch) {
-      //执行观察事件,即trackSignal的两个函数参数,与上游的memo参数
-      currentBatch.signals.forEach(commitSignal)
-      currentBatch.signals.clear()
 
-      signalCache.currentBatch = undefined
-      signalCache.currentEffects = currentBatch.effects
+  let c = 0
+  let currentBatch: CurrentBatch | undefined = undefined
+  while (currentBatch = signalCache.currentBatch) {
+    //执行观察事件,即trackSignal的两个函数参数,与上游的memo参数
+    currentBatch.signals.forEach(commitSignal)
+    currentBatch.signals.clear()
 
-      const listeners = currentBatch.listeners
-      listeners.forEach(run)
-      listeners.clear()
-      signalCache.currentEffects = undefined
+    signalCache.currentBatch = undefined
+    signalCache.currentEffects = currentBatch.effects
 
-      ///执行effect事件
-      signalCache.onEffectRun = true
-      const effects = currentBatch.effects
-      const keys = iterableToList(effects.keys()).sort(numberSortAsc)
-      for (const key of keys) {
-        effects.get(key)?.forEach(run)
-      }
-      effects.clear()
-      signalCache.recycleBatches.push(currentBatch)
-      signalCache.onEffectRun = undefined
-      if (signalCache.recycleBatches.length > 2) {
-        console.log("出现多个recycleBatches", signalCache.recycleBatches.length)
-      }
-    } else {
-      //主要是提前执行了,所以messageChannelCallback里的回调是自然的空
-      // console.log("未在批量任务中,没必要更新")
-      break
+    const listeners = currentBatch.listeners
+    listeners.forEach(run)
+    listeners.clear()
+    signalCache.currentEffects = undefined
+
+    ///执行effect事件
+    signalCache.onEffectRun = true
+    const effects = currentBatch.effects
+    const keys = iterableToList(effects.keys()).sort(numberSortAsc)
+    for (const key of keys) {
+      effects.get(key)?.forEach(run)
     }
+    effects.clear()
+    signalCache.recycleBatches.push(currentBatch)
+    signalCache.onEffectRun = undefined
+    if (signalCache.recycleBatches.length > 2) {
+      console.log("出现多个recycleBatches", signalCache.recycleBatches.length)
+    }
+    c++
   }
+  // if (c) {
+  //   console.log("render", c)
+  // }
 }
 
 export function memoFun<T extends Function>(
