@@ -10,7 +10,7 @@ export default defineConfig({
       // Could also be a dictionary or array of multiple entry points
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
-        kanren: resolve(__dirname, 'src/kanren.ts'),
+        kanren: resolve(__dirname, 'src/kanren/index.ts'),
         tokenParser: resolve(__dirname, 'src/tokenParser/index.ts'),
         infixLang: resolve(__dirname, 'src/infixLang/index.ts'),
         ObserverCenter: resolve(__dirname, 'src/observerCenter/index.ts'),

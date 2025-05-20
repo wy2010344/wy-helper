@@ -73,6 +73,13 @@ export class KVPair<T> {
     }
     return o;
   }
+  static fromObject<T>(v: Record<string, T>) {
+    let ret: KVPair<T> | undefined = undefined
+    for (const key in v) {
+      ret = new KVPair(key, v[key], ret)
+    }
+    return ret!
+  }
 }
 
 

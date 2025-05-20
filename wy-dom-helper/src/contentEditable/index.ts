@@ -13,7 +13,9 @@ export type ContentEditableModel = {
   currentIndex: number
   history: EditRecord[]
 }
-
+export function getCurrentEditRecord(v: ContentEditableModel) {
+  return v.history[v.currentIndex]
+}
 
 export function initContentEditableModel(
   content: string

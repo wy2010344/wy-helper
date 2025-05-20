@@ -1,1 +1,1 @@
-export * from "../dist/ObserverCenter";
+export * from "../dist/kanren";
