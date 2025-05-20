@@ -158,3 +158,18 @@ export function setSome<K>(a: ReadSet<K>, fun: (k: K) => boolean) {
   })
   return ret
 }
+
+
+export function setEqual<T>(a: Set<T>, b: Set<T>) {
+  if (a.size != b.size) {
+    return false
+  }
+  let ret = true
+  a.forEach(v => {
+    if (!ret) {
+      return
+    }
+    ret = ret && b.has(v)
+  })
+  return ret
+}

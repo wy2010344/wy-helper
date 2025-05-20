@@ -28,7 +28,7 @@
       "require": "./dist/infixLang.js"
     },
     "./kanren": {
-      "types": "./dist/kanren.d.ts",
+      "types": "./dist/kanren/index.d.ts",
       "import": "./dist/kanren.mjs",
       "require": "./dist/kanren.js"
     },
