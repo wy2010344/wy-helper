@@ -1,4 +1,4 @@
-import { Box, Point, axisEqual, valueCenterOf } from "."
+import { Box, Point, StoreRef, axisEqual, numberBetween, valueCenterOf } from "."
 
 
 
@@ -27,7 +27,7 @@ type CurrentContainer<C> = {
  * 以事件的周期性建立原子模型
  * C 代表容器
  */
-export class DragMove<C>{
+export class DragMove<C> {
   private fromContainer = valueCenterOf<DragMoveFromInfo<C> | undefined>(undefined)
   private currentContainer = valueCenterOf<CurrentContainer<C> | undefined>(undefined)
 
@@ -97,3 +97,161 @@ export class DragMove<C>{
     }
   }
 }
+
+
+/**
+ * 拖动的时候保证光标对齐
+ * @param callback 返回消耗了多少delta
+ * @returns 
+ */
+export function doMoveAcc(callback: (v: number) => number) {
+  let acc = 0;
+  /**
+   * 每次移动的delta量
+   */
+  return function (delta: number) {
+    if (acc * delta < 0) {
+      const nX = delta + acc;
+      if (nX * acc < 0) {
+        //方向改变
+        acc = 0;
+        delta = nX;
+      } else {
+        //抵消
+        acc = nX;
+        delta = 0;
+      }
+    }
+    if (delta) {
+      const diff = callback(delta);
+      acc = acc + delta - diff;
+    }
+  };
+}
+
+
+
+export function movePanelResizeAutoHeight(
+  size: StoreRef<number>,
+  {
+    direction,
+    init = 0,
+    margin = 0,
+    marginBegin = margin,
+    marginEnd = margin,
+    minSize = 0,
+    getMaxSize,
+  }: {
+    direction: "x" | "y";
+    init?: number;
+    minSize?: number;
+    margin?: number;
+    marginBegin?: number;
+    marginEnd?: number;
+    getMaxSize(): number;
+  }
+) {
+  let position: StoreRef<number>;
+  return {
+    init: numberBetween(marginBegin, init, getMaxSize() - marginEnd - size.get()),
+    setPosition(p: StoreRef<number>) {
+      position = p;
+    },
+    onMove(step: DragMoveStep) {
+      function setPosition(
+        delta: number,
+        max = getMaxSize() - marginEnd - size.get()
+      ) {
+        const newLeft = numberBetween(marginBegin, position.get() + delta, max);
+        const diff = newLeft - position.get();
+        position.set(newLeft);
+        return diff;
+      }
+      return function (delta: number) {
+        if (step.action == "move") {
+          return setPosition(delta);
+        } else if (step.action == "drag") {
+          if (
+            (direction == "y" && step.top) ||
+            (direction == "x" && step.left)
+          ) {
+            const diff = setPosition(
+              delta,
+              position.get() + size.get() - minSize
+            );
+            size.set(size.get() - diff);
+            return diff;
+          } else if (
+            (direction == "x" && step.right) ||
+            (direction == "y" && step.bottom)
+          ) {
+            const newHeight = numberBetween(
+              minSize,
+              size.get() + delta,
+              getMaxSize() - margin - position.get()
+            );
+            const diff = newHeight - size.get();
+            size.set(newHeight);
+            return diff;
+          }
+        }
+        return 0;
+      };
+    },
+    /**
+     * body.offsetHeight
+     * @param contentSize
+     */
+    resizeScroll(contentSize: number, onNoResize: () => void) {
+      const overY = position.get() + contentSize + margin - getMaxSize();
+      if (overY > 0) {
+        //已经溢出,尝试调整top
+        const ot = overY - position.get();
+        const maxHeight = getMaxSize() - margin * 2;
+        if (ot > 0) {
+          //top没有,直接最大
+          position.set(margin);
+          size.set(maxHeight);
+          onNoResize();
+        } else {
+          //top更多,向上移动,底部对齐
+          const newPosition = Math.max(position.get() - overY, margin);
+          position.set(newPosition);
+          size.set(getMaxSize() - margin - position.get());
+          if (newPosition == margin) {
+            onNoResize();
+          }
+        }
+      } else {
+        //尝试扩展到最大
+        size.set(contentSize);
+        onNoResize();
+      }
+    },
+    fixResize() {
+      const overY = position.get() + size.get() + margin - getMaxSize();
+      if (overY > 0) {
+        //溢出了,先减少高度,再减少位置
+        const less = size.get() - overY;
+        if (less > minSize) {
+          size.set(less);
+        } else {
+          size.set(minSize);
+          position.set(Math.max(position.get() + less - minSize, marginBegin));
+        }
+      }
+    },
+  };
+}
+export type DragMoveStep =
+  | {
+    action: "move";
+  }
+  | ({
+    action: "drag";
+  } & {
+    top?: boolean;
+    left?: boolean;
+    right?: boolean;
+    bottom?: boolean;
+  });
