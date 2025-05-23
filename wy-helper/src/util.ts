@@ -446,3 +446,12 @@ export function genTemplateStringS2(
 export function tw(strings: TemplateStringsArray, ...vs: string[]) {
   return genTemplateStringS1(strings, vs)
 }
+
+
+export function numberBetween(min: number, value: number, max: number) {
+  if (min > max) {
+    console.log("erroro");
+    throw new Error("min must less than max");
+  }
+  return Math.min(Math.max(min, value), max);
+}
