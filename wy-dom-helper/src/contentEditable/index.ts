@@ -1,3 +1,5 @@
+import { GetValue, SetValue, StoreRef } from "wy-helper"
+import { React } from "../html/html"
 import { MbRange, browser, initRecord, mb } from "../mb"
 export * from '../mb'
 export * from './editFix'
@@ -245,6 +247,35 @@ export function fixScroll(div: HTMLElement, current: EditRecord) {
 }
 
 
+export function redo(model: ContentEditableModel) {
+  const ndx = model.currentIndex + 1
+  if (ndx < model.history.length) {
+    return {
+      ...model,
+      currentIndex: ndx
+    }
+  }
+  return model
+}
+
+export function undo(model: ContentEditableModel) {
+  if (model.currentIndex) {
+    return {
+      ...model,
+      currentIndex: model.currentIndex - 1
+    }
+  }
+  return model
+}
+
+export function reset(record: EditRecord) {
+  return {
+    currentIndex: 0,
+    history: [
+      record
+    ]
+  }
+}
 
 /**
  * 减少历史数量,如果只是追加,也许不用那么频繁
@@ -287,4 +318,53 @@ export function appendRecord(model: ContentEditableModel, record: EditRecord, ma
     currentIndex: cdx + 1,
     history
   }
+}
+function isCtrl(e: KeyboardEvent) {
+  return e.metaKey || e.ctrlKey
+}
+export function addSimpleEvent(
+  div: HTMLElement,
+  model: StoreRef<ContentEditableModel>
+) {
+  div.addEventListener("input", function (e: React.FormEvent) {
+    if (e.isComposing) {
+      return
+    }
+    model.set(appendRecord(model.get(), getCurrentRecord(div)))
+  } as any)
+  div.addEventListener("compositionend", function () {
+    model.set(appendRecord(model.get(), getCurrentRecord(div)))
+  })
+
+  div.addEventListener("keydown", function (e) {
+    if (mb.DOM.keyCode.TAB(e)) {
+      e.preventDefault()
+      const record = contentTab(div, e.shiftKey)
+      if (record) {
+        model.set(appendRecord(model.get(), record))
+      }
+    } else if (mb.DOM.keyCode.ENTER(e)) {
+      e.preventDefault()
+      const record = contentEnter(div)
+      model.set(appendRecord(model.get(), record))
+    } else if (mb.DOM.keyCode.Z(e)) {
+      if (isCtrl(e)) {
+        if (e.shiftKey) {
+          //redo
+          e.preventDefault()
+          model.set(redo(model.get()))
+        } else {
+          //undo
+          e.preventDefault()
+          model.set(undo(model.get()))
+        }
+      }
+    } else if (mb.DOM.keyCode.BACKSPACE(e)) {
+      e.preventDefault()
+      const record = contentDelete(div)
+      if (record) {
+        model.set(appendRecord(model.get(), record))
+      }
+    }
+  })
 }
