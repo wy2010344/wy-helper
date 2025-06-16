@@ -323,8 +323,8 @@ function isCtrl(e: KeyboardEvent) {
   return e.metaKey || e.ctrlKey
 }
 export function addSimpleEvent(
+  model: StoreRef<ContentEditableModel>,
   div: HTMLElement,
-  model: StoreRef<ContentEditableModel>
 ) {
   div.addEventListener("input", function (e: React.FormEvent) {
     if (e.isComposing) {
@@ -367,4 +367,5 @@ export function addSimpleEvent(
       }
     }
   })
+  return div
 }

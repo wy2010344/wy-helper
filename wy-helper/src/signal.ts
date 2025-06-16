@@ -7,11 +7,22 @@ import { asLazy, emptyFun, EmptyFun, emptyObject, iterableToList, messageChannel
 const m = globalThis as any
 const DepKey = 'wy-helper-signal-cache'
 if (!m[DepKey]) {
-  m[DepKey] = {
+  let uid = Number.MIN_SAFE_INTEGER
+  const o = {
     batchListeners: new Set(),
     effects: new Map(),
-    recycleBatches: []
+    recycleBatches: [],
+
+    state: {
+      uid,
+      version: uid,
+    },
+    listener: {
+      uid,
+      version: uid
+    },
   }
+  m[DepKey] = o
 }
 
 
@@ -20,16 +31,32 @@ type CurrentBatch = {
   listeners: Set<EmptyFun>
   effects: Map<number, EmptyFun[]>
 }
-
+interface Version {
+  uid: number
+  version: any
+}
 const signalCache = m[DepKey] as {
   currentFun?: EmptyFun
   currentBatch?: CurrentBatch
   //在更新期间,放置effects
   currentEffects?: Map<number, EmptyFun[]>
   recycleBatches: CurrentBatch[]
-  currentRelay?: Map<GetValue<any>, any>
+  currentRelay?: MapGetDep
   //在执行effect期间
-  onEffectRun?: boolean
+  onEffectRun?: boolean,
+
+  //是否在注入期间
+  inReject?: boolean
+  state: Version
+  listener: Version
+}
+function updateGlobalVersion(v: Version) {
+  if (v.uid == Number.MAX_SAFE_INTEGER) {
+    v.version = Symbol()
+    return
+  }
+  v.uid = v.uid + 1
+  v.version = v.uid
 }
 
 /**
@@ -64,7 +91,10 @@ export function addEffect(effect: EmptyFun, level = 0) {
 }
 
 function addRelay(get: GetValue<any>, value: any) {
-  signalCache.currentRelay?.set(get, value)
+  const relay = signalCache.currentRelay
+  if (relay) {
+    relay.set(get, value)
+  }
 }
 function addListener(listener: EmptyFun) {
   signalCache.currentBatch!.listeners.add(listener)
@@ -92,6 +122,10 @@ class Signal<T> {
     }
     if (signalCache.currentEffects) {
       throw '计算期间不允许修改值1'
+    }
+
+    if (this.shouldChange(v, this.getValue())) {
+      updateGlobalVersion(signalCache.state)
     }
     /**
      * 是否可以在批量结束时,才检查哪些需要改变?
@@ -265,7 +299,10 @@ export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
       return
     }
     signalCache.currentFun = addFun
+    signalCache.inReject = true
+    updateGlobalVersion(signalCache.listener)
     const value = get(lastValue, inited)
+    signalCache.inReject = false
     signalCache.currentFun = undefined
     if (inited) {
       if (value != lastValue) {
@@ -285,8 +322,10 @@ export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
   }
 }
 
-function relayChange(relays: Map<GetValue<any>, any>) {
+type MapGetDep = Map<GetValue<any>, any>
+function relayChange(relays: MapGetDep) {
   for (const [get, old] of relays) {
+    //这里负责着注入
     const v = get()
     if (v != old) {
       return true
@@ -294,7 +333,7 @@ function relayChange(relays: Map<GetValue<any>, any>) {
   }
   return false
 }
-function memoGet<T>(relays: Map<GetValue<any>, any>, get: GetValue<T>, lastValue: T, init: boolean) {
+function memoGet<T>(relays: MapGetDep, get: GetValue<T>, lastValue: T, init: boolean) {
   relays.clear()
   signalCache.currentRelay = relays
   const v = get(lastValue, init)
@@ -311,6 +350,9 @@ export interface MemoFun<T> {
   memorized: true
   after: SetValue<T>
 }
+function mapInject(value: any, key: GetValue<any>) {
+  key()
+}
 export function memo<T>(
   get: MemoGet<T> | MemoFun<T>,
   after: SetValue<T> = emptyFun
@@ -320,13 +362,25 @@ export function memo<T>(
     //减少不必要的声明
     return get as MemoFun<T>
   }
-  const relays = new Map<GetValue<any>, any>()
+  const relays = new Map<GetValue<any>, any>() as MapGetDep
   let lastValue!: T
   let inited = false
+  let stateVersion: any = relays
+  let listenerVersion: any = relays
   const myGet = function () {
+    //每一次都不能跳过,主要是trackSignal需要流入依赖
+    if (stateVersion == signalCache.state.version) {
+      if (signalCache.inReject && listenerVersion != signalCache.listener.version) {
+        //在依赖注入期间
+        listenerVersion = signalCache.listener.version
+        relays.forEach(mapInject)
+      }
+      addRelay(myGet, lastValue)
+      return lastValue
+    }
+    stateVersion = signalCache.state.version
+
     let shouldAfter = false;
-
-
     const oldRelay = signalCache.currentRelay
     signalCache.currentRelay = undefined
     if (inited) {
