@@ -2,6 +2,7 @@
  * 大转盘
  */
 
+import { createSignal } from "../signal";
 import { StoreRef } from "../storeRef";
 import { EmptyFun, emptyObject, Quote } from "../util";
 import { ReadValueCenter, valueCenterOf } from "../ValueCenter";
@@ -65,8 +66,8 @@ export function createBigSpin({
   onFinish(): void
   timeout?: number
 }) {
-  const drawValue = valueCenterOf(false)
   let distance = 0
+  const drawValue = createSignal(false)
   return {
     onDrawEffect() {
       const beginFn = createBeginTime(beginConfig);
@@ -102,7 +103,7 @@ export function createBigSpin({
         }
       }
     },
-    drawValue: drawValue as ReadValueCenter<boolean>,
+    drawValue: drawValue.get,
     beginDraw() {
       if (drawValue.get()) {
         return;

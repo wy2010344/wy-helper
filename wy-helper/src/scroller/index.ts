@@ -373,7 +373,9 @@ export function dragSnapWithList(list: DragSnapParam[]) {
 
 export function scrollForEdge(
   scroll: AnimateSignal,
-  delta: number, containerSize: number, contentSize: number) {
+  delta: number,
+  containerSize: number,
+  contentSize: number) {
   const y = scroll.get()
   scroll.set(
     y +

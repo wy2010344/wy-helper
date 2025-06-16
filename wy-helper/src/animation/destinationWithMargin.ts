@@ -24,6 +24,7 @@ export async function destinationWithMargin(
     // velocity,
     containerSize,
     contentSize,
+    scrollToEdge,
     edgeConfig = ClampingScrollFactory.edgeClampingConfig,
     edgeBackConfig = defaultSpringAnimationConfig,
     targetSnap = quote,
@@ -39,10 +40,13 @@ export async function destinationWithMargin(
     contentSize: number
 
 
+    /**滚动到边界,是否滚出去 */
+    scrollToEdge?(velocity: number): boolean | void
     edgeConfig?(velocity: number): AnimateSignalConfig
     edgeBackConfig?: DeltaXSignalAnimationConfig
     /**吸附 */
     targetSnap?: (n: number) => number
+
     /**获得强制吸附的位置 */
     getForceStop?: (current: number, idealTarget: number) => number
     onProcess?: SetValue<number>
@@ -73,6 +77,10 @@ export async function destinationWithMargin(
         onProcess,
         edge)
       if (step1) {
+        //到达边界
+        if (scrollToEdge?.(edgeVelocity)) {
+          return false
+        }
         const step2 = await scroll.change(
           edgeConfig(edgeVelocity),
           onOutProcess)

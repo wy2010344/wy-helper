@@ -1,5 +1,4 @@
 import { getAttributeAlias } from "../getAttributeAlias"
-import { BDomAttribute, BSvgAttribute, DomElementType, SvgElementType } from "./html"
 
 // export type FDomAttributeC<T extends DomElementType> = Omit<BDomAttribute<T>, 'className'>
 // export type FSvgAttributeC<T extends SvgElementType> = Omit<BSvgAttribute<T>, 'className'>
@@ -22,7 +21,7 @@ export function setHtml(value: string, node: any) {
  * @param key 
  */
 export function updateDom(value: any, node: any, key: string,) {
-  if (key == 'href') {
+  if (key == 'href' || key == 'className') {
     node[key] = value || ''
   } else {
     node[key] = value
