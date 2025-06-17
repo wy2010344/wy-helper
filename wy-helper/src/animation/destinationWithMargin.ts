@@ -19,11 +19,13 @@ export interface ScrollHelper {
 }
 export async function destinationWithMargin(
   {
+    minScroll = 0,
+    maxScroll,
     scroll,
     frictional,
     // velocity,
-    containerSize,
-    contentSize,
+    // containerSize,
+    // contentSize,
     scrollToEdge,
     edgeConfig = ClampingScrollFactory.edgeClampingConfig,
     edgeBackConfig = defaultSpringAnimationConfig,
@@ -32,13 +34,11 @@ export async function destinationWithMargin(
     onProcess,
     onOutProcess
   }: {
+    minScroll?: number
+    maxScroll: number
     scroll: AnimateSignal,
 
     frictional: ScrollHelper,
-
-    containerSize: number,
-    contentSize: number
-
 
     /**滚动到边界,是否滚出去 */
     scrollToEdge?(velocity: number): boolean | void
@@ -52,23 +52,20 @@ export async function destinationWithMargin(
     onProcess?: SetValue<number>
     onOutProcess?: SetValue<number>
   }) {
-  const lowerMargin = 0
-  const upperMargin = getMaxScroll(containerSize, contentSize)
-  // const frictional = this.getFromVelocity(velocity)
   const current = scroll.get()
-  if (lowerMargin < current && current < upperMargin) {
+  if (minScroll < current && current < maxScroll) {
     const idealTarget = current + frictional.distance
     const forceStop = getForceStop(current, idealTarget)
     const destination = targetSnap(forceStop)
     let elapsedTime = 0
     let edge = 0
 
-    if (destination < lowerMargin) {
-      elapsedTime = frictional.getTimeToDistance(lowerMargin - current)
-      edge = lowerMargin
-    } else if (destination > upperMargin) {
-      elapsedTime = frictional.getTimeToDistance(upperMargin - current)
-      edge = upperMargin
+    if (destination < minScroll) {
+      elapsedTime = frictional.getTimeToDistance(minScroll - current)
+      edge = minScroll
+    } else if (destination > maxScroll) {
+      elapsedTime = frictional.getTimeToDistance(maxScroll - current)
+      edge = maxScroll
     }
     if (elapsedTime) {
       const edgeVelocity = frictional.getVelocity(elapsedTime)
@@ -107,8 +104,9 @@ export async function destinationWithMargin(
       }
     }
   } else {
+    //拉到容许区域外
     return scroll.animateTo(
-      getDestination(current, lowerMargin, upperMargin),
+      getDestination(current, minScroll, maxScroll),
       edgeBackConfig,
       onProcess)
   }
