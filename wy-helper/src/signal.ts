@@ -12,7 +12,7 @@ if (!m[DepKey]) {
     batchListeners: new Set(),
     effects: new Map(),
     recycleBatches: [],
-
+    newDeps: [],
     state: {
       uid,
       version: uid,
@@ -40,13 +40,14 @@ const signalCache = m[DepKey] as {
   currentBatch?: CurrentBatch
   //在更新期间,放置effects
   currentEffects?: Map<number, EmptyFun[]>
+  newDeps: EmptyFun[]
   recycleBatches: CurrentBatch[]
   currentRelay?: MapGetDep
   //在执行effect期间
   onEffectRun?: boolean,
 
   //是否在注入期间
-  inReject?: boolean
+  // inReject?: boolean
   state: Version
   listener: Version
 }
@@ -223,7 +224,7 @@ export function batchSignalEnd() {
     return
   }
   if (signalCache.currentEffects) {
-    console.log("执行listener中中不能batchSignalEnd")
+    console.log("执行listener中不能batchSignalEnd")
     return
   }
 
@@ -240,6 +241,13 @@ export function batchSignalEnd() {
     const listeners = currentBatch.listeners
     listeners.forEach(run)
     listeners.clear()
+
+    const deps = signalCache.newDeps
+    while (deps.length) {
+      //因为可能在执行中动态增加,所以使用这个shift的方式
+      const fun = deps.shift()!
+      fun()
+    }
     signalCache.currentEffects = undefined
 
     ///执行effect事件
@@ -299,10 +307,10 @@ export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
       return
     }
     signalCache.currentFun = addFun
-    signalCache.inReject = true
+    // signalCache.inReject = true
     updateGlobalVersion(signalCache.listener)
     const value = get(lastValue, inited)
-    signalCache.inReject = false
+    // signalCache.inReject = false
     signalCache.currentFun = undefined
     if (inited) {
       if (value != lastValue) {
@@ -315,7 +323,12 @@ export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
       set(value, a, b, c)
     }
   }
-  addFun()
+  addFun.abc = get.abc
+  if (!signalCache.currentEffects && !signalCache.newDeps.length) {
+    //非构造中
+    beginCurrentBatch()
+  }
+  signalCache.newDeps.push(addFun)
   //销毁
   return function () {
     disabled = true
@@ -370,7 +383,7 @@ export function memo<T>(
   const myGet = function () {
     //每一次都不能跳过,主要是trackSignal需要流入依赖
     if (stateVersion == signalCache.state.version) {
-      if (signalCache.inReject && listenerVersion != signalCache.listener.version) {
+      if (signalCache.currentEffects && listenerVersion != signalCache.listener.version) {
         //在依赖注入期间
         listenerVersion = signalCache.listener.version
         relays.forEach(mapInject)
