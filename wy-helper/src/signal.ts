@@ -66,13 +66,13 @@ function updateGlobalVersion(v: Version) {
  * @param fun 
  */
 export function memoKeep(fun: EmptyFun) {
-  const oldCurrent = signalCache.currentFun //在memo时存在
-  const oldCurrentRelay = signalCache.currentRelay //在memo时存在
-  signalCache.currentFun = undefined
-  signalCache.currentRelay = undefined
+  // const oldCurrent = signalCache.currentFun //在memo时存在
+  // const oldCurrentRelay = signalCache.currentRelay //在memo时存在
+  // signalCache.currentFun = undefined
+  // signalCache.currentRelay = undefined
   fun()
-  signalCache.currentFun = oldCurrent
-  signalCache.currentRelay = oldCurrentRelay
+  // signalCache.currentFun = oldCurrent
+  // signalCache.currentRelay = oldCurrentRelay
 }
 
 export function addEffect(effect: EmptyFun, level = 0) {

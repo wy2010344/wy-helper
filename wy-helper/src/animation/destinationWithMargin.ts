@@ -41,7 +41,7 @@ export async function destinationWithMargin(
     frictional: ScrollHelper,
 
     /**滚动到边界,是否滚出去 */
-    scrollToEdge?(velocity: number): boolean | void
+    scrollToEdge?(velocity: number, edge: number): boolean | void
     edgeConfig?(velocity: number): AnimateSignalConfig
     edgeBackConfig?: DeltaXSignalAnimationConfig
     /**吸附 */
@@ -53,10 +53,12 @@ export async function destinationWithMargin(
     onOutProcess?: SetValue<number>
   }) {
   const current = scroll.get()
-  if (minScroll < current && current < maxScroll) {
+  if (minScroll <= current && current <= maxScroll) {
     const idealTarget = current + frictional.distance
     const forceStop = getForceStop(current, idealTarget)
     const destination = targetSnap(forceStop)
+
+
     let elapsedTime = 0
     let edge = 0
 
@@ -75,7 +77,7 @@ export async function destinationWithMargin(
         edge)
       if (step1) {
         //到达边界
-        if (scrollToEdge?.(edgeVelocity)) {
+        if (scrollToEdge?.(edgeVelocity, edge)) {
           return false
         }
         const step2 = await scroll.change(
