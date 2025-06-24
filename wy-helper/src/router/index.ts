@@ -227,59 +227,6 @@ export type PairBranch<BranchLoader, LeafLoader, NotfoundLoader> = {
 export type PairNode<BranchLoader, LeafLoader, NotfoundLoader> = PairBranch<BranchLoader, LeafLoader, NotfoundLoader> | PairLeaf<LeafLoader> | PairNotfound<NotfoundLoader>
 
 /**
- * 格式
- *  /xxx/aa 匹配/xxx/aa
- *  /xxx/[ab]-bc-[dd]/[bc]/... 这种规则其实有点类似于prolog
- *     先要解析出规则,还要依规则去解析具体内容
- *  /xxx/aa/... 匹配/xxx/aa及其之后
- * @param queryPath 
- * @param startWith 
- * @returns 
- */
-export function locationMatch(
-  queryPath: string,
-  typeDefMap: Record<string, (v: string) => any> = emptyObject
-): MatchRule {
-  let queryNodes = queryPath.split('/').filter(quote)
-  let ignoreMore = false
-  if (queryNodes.at(-1) == '...') {
-    queryNodes.pop()
-    ignoreMore = true
-  }
-  const rules = queryNodes.map(node => {
-    return toMatchNode(node, typeDefMap)
-  })
-  return function (_nodes: readonly string[]) {
-    const nodes = _nodes.slice()
-    const restNodes: string[] = []
-    if (ignoreMore) {
-      while (nodes.length > queryNodes.length) {
-        restNodes.unshift(nodes.pop()!)
-      }
-    }
-    if (nodes.length == rules.length) {
-      let queryObj: KVPair<any> | undefined = undefined
-      for (let i = 0; i < nodes.length; i++) {
-        const node = nodes[i]
-        const query = rules[i]
-        try {
-          queryObj = matchMatch(node, query, queryObj)
-        } catch {
-          return
-        }
-      }
-      return {
-        ignoreMore,
-        query: queryObj?.toObject() || emptyObject,
-        restNodes,
-        matchNodes: nodes
-      }
-    }
-  }
-}
-
-
-/**
  * 将路径按/拆分成节点
  * @param pathname 
  * @returns 

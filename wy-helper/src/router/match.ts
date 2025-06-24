@@ -83,7 +83,7 @@ export function matchMatch(query: string, match: MatchNode, args?: KVPair<any>) 
   let idx = 0
   while (match) {
     if (typeof match == 'string') {
-      if (query.endsWith(match)) {
+      if (query == match) {
         return args
       } else {
         throw new Error(`${query}不是以${match}结束`)
