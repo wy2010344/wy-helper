@@ -12,7 +12,6 @@ if (!m[DepKey]) {
     batchListeners: new Set(),
     effects: new Map(),
     recycleBatches: [],
-    newDeps: [],
     state: {
       uid,
       version: uid,
@@ -30,6 +29,7 @@ type CurrentBatch = {
   signals: Set<Signal<any>>
   listeners: Set<EmptyFun>
   effects: Map<number, EmptyFun[]>
+  deps: EmptyFun[]
 }
 interface Version {
   uid: number
@@ -40,7 +40,7 @@ const signalCache = m[DepKey] as {
   currentBatch?: CurrentBatch
   //在更新期间,放置effects
   currentEffects?: Map<number, EmptyFun[]>
-  newDeps: EmptyFun[]
+  currentDeps?: EmptyFun[]
   recycleBatches: CurrentBatch[]
   currentRelay?: MapGetDep
   //在执行effect期间
@@ -201,7 +201,8 @@ function beginCurrentBatch() {
     signalCache.currentBatch = signalCache.recycleBatches.shift() || {
       listeners: new Set(),
       effects: new Map(),
-      signals: new Set()
+      signals: new Set(),
+      deps: []
     }
     messageChannelCallback(batchSignalEnd)
   }
@@ -242,12 +243,16 @@ export function batchSignalEnd() {
     listeners.forEach(run)
     listeners.clear()
 
-    const deps = signalCache.newDeps
+    const deps = currentBatch.deps
+
+    signalCache.currentDeps = deps
     while (deps.length) {
       //因为可能在执行中动态增加,所以使用这个shift的方式
       const fun = deps.shift()!
       fun()
     }
+    signalCache.currentDeps = undefined
+
     signalCache.currentEffects = undefined
 
     ///执行effect事件
@@ -324,11 +329,14 @@ export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
     }
   }
   addFun.abc = get.abc
-  if (!signalCache.currentEffects && !signalCache.newDeps.length) {
-    //非构造中
+  const deps = signalCache.currentDeps
+  if (deps) {
+    deps.push(addFun)
+  } else {
+    //没有执行中
     beginCurrentBatch()
+    signalCache.currentBatch!.deps.push(addFun)
   }
-  signalCache.newDeps.push(addFun)
   //销毁
   return function () {
     disabled = true
