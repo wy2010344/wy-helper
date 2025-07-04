@@ -1,4 +1,5 @@
-import { ReadArray } from "./util"
+import { SetValue } from "./setStateHelper"
+import { numberBetween, ReadArray } from "./util"
 
 
 /**
@@ -153,4 +154,27 @@ export function arrayFunRun<T extends (...vs: any[]) => void>(list: (T | undefin
   list.forEach(row => {
     row?.(...vs)
   })
+}
+
+
+export function splitList<T>(ids: T[], limit: number, callback: SetValue<T[]>) {
+  const nLimit = numberBetween(1, Math.round(limit), Infinity)
+  if (nLimit != limit) {
+    console.log(`分割数${limit}不对,已经恢复成${nLimit}`)
+  }
+  if (ids.length <= nLimit) {
+    callback(ids)
+    return
+  }
+  let list: T[] = []
+  ids.forEach(function (id) {
+    list.push(id)
+    if (list.length == nLimit) {
+      callback(list)
+      list = []
+    }
+  })
+  if (list.length) {
+    callback(list)
+  }
 }

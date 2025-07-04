@@ -1,3 +1,6 @@
+import { splitList } from "./ArrayHelper"
+import { getOutResolvePromise, SetValue } from "./setStateHelper"
+import { emptyArray, EmptyFun, emptyObject, messageChannelCallback } from "./util"
 
 
 
@@ -107,5 +110,96 @@ export async function mapPromiseAll<K extends string, V>(map: {
   }
   return out as {
     [key in K]: V
+  }
+}
+
+
+export function createBuilkSet<K extends string | number, T>(
+  save: (map: Map<K, T>) => void,
+  {
+    nextTime = messageChannelCallback,
+  }: {
+    nextTime?: SetValue<EmptyFun>
+  } = emptyObject
+) {
+  let map = new Map<K, T>()
+  return function (key: K, value: T) {
+    if (!map.size) {
+      nextTime(function () {
+        const workMap = map
+        map = new Map()
+        save(workMap)
+      })
+    }
+    map.set(key, value)
+  }
+}
+
+export async function bulkGet<K extends string | number, T>(
+  ids: K[],
+  doGet: (keys: K[]) => Promise<T[]>,
+  limit = Infinity
+) {
+  if (!ids.length) {
+    return emptyArray
+  }
+  const list: Promise<T[]>[] = []
+  splitList(ids, limit, function (keys) {
+    list.push(doGet(keys))
+  })
+  const values_1 = await Promise.all(list)
+  return values_1.flat()
+}
+
+export function createBuilkGet<K extends string | number, T>(
+  doGet: (keys: K[]) => Promise<T[]>,
+  getId: (v: T) => K,
+  {
+    limit = Infinity,
+    nextTime = messageChannelCallback,
+  }: {
+    limit?: number
+    nextTime?: SetValue<EmptyFun>
+  } = emptyObject
+) {
+  let map = new Map<K, {
+    resolve: SetValue<T>
+    reject: SetValue<any>
+    promise: Promise<T>
+  }>()
+  return function (key: K) {
+    if (!map.size) {
+      nextTime(function () {
+        const workMap = map
+        map = new Map()
+        const ids = [...workMap.keys()]
+        splitList(ids, limit, function (ids) {
+          doGet(ids).then(value => {
+            value.forEach(row => {
+              const id = getId(row)
+              workMap.get(id)?.resolve(row)
+            })
+            workMap.forEach(item => {
+              item.reject('no data found')
+            })
+          }).catch(err => {
+            workMap.forEach(item => {
+              item.reject(err)
+            })
+          })
+        })
+      })
+    }
+    const old = map.get(key)
+    if (old) {
+      return old.promise
+    }
+    const [promise, resolve, reject] = getOutResolvePromise<T>()
+    map.set(key, {
+      promise,
+      reject,
+      resolve
+    })
+    return promise
   }
 }

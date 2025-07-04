@@ -129,6 +129,8 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
     const ret = this.foundInner(nodes, index, branch, currentQuery)
     if (branch.layout) {
       return {
+        nodes,
+        index,
         type: "branch",
         loader: (branch.layout!),
         currentQuery,
@@ -149,7 +151,9 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
         //叶子节点
         if (tempBranch.index) {
           return {
+            nodes,
             type: "leaf",
+            index,
             loader: (tempBranch.index!),
             currentQuery,
             query: currentQuery?.toObject() || emptyObject
@@ -186,10 +190,12 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
       if (tempBranch.default) {
         //leaf
         return {
+          nodes,
           type: "notfound",
           loader: (tempBranch.default!),
           currentQuery,
-          restNodes: nodes.slice(index),
+          index,
+          // restNodes: nodes.slice(index),
           query: currentQuery?.toObject() || emptyObject
         }
       } else {
@@ -200,28 +206,34 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
 }
 
 export type PairLeaf<LeafLoader> = {
+  nodes: string[]
   type: "leaf"
+  index: number
   loader(): Promise<LeafLoader>
   next?: never
   query: Readonly<Record<string, any>>
   currentQuery?: KVPair<any>
-  restNodes?: never
+  // restNodes?: never
 }
 export type PairNotfound<NotfoundLoader> = {
+  nodes: string[]
+  index: number
   type: "notfound"
   loader(): Promise<NotfoundLoader>
   next?: never
   query: Readonly<Record<string, any>>
   currentQuery?: KVPair<any>
-  restNodes: string[]
+  // restNodes: string[]
 }
 export type PairBranch<BranchLoader, LeafLoader, NotfoundLoader> = {
+  nodes: string[]
   type: "branch"
+  index: number
   loader(): Promise<BranchLoader>
   next: PairNode<BranchLoader, LeafLoader, NotfoundLoader>
   query: Readonly<Record<string, any>>
   currentQuery?: KVPair<any>
-  restNodes?: never
+  // restNodes?: never
 }
 
 export type PairNode<BranchLoader, LeafLoader, NotfoundLoader> = PairBranch<BranchLoader, LeafLoader, NotfoundLoader> | PairLeaf<LeafLoader> | PairNotfound<NotfoundLoader>

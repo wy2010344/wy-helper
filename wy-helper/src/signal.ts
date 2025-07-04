@@ -60,21 +60,6 @@ function updateGlobalVersion(v: Version) {
   v.version = v.uid
 }
 
-/**
- * 在memo里执行
- * 方便构造时新建立观察
- * @param fun 
- */
-export function memoKeep(fun: EmptyFun) {
-  // const oldCurrent = signalCache.currentFun //在memo时存在
-  // const oldCurrentRelay = signalCache.currentRelay //在memo时存在
-  // signalCache.currentFun = undefined
-  // signalCache.currentRelay = undefined
-  fun()
-  // signalCache.currentFun = oldCurrent
-  // signalCache.currentRelay = oldCurrentRelay
-}
-
 export function addEffect(effect: EmptyFun, level = 0) {
   let effects: Map<number, EmptyFun[]>
   if (signalCache.currentEffects) {
