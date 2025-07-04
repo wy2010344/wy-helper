@@ -1,3 +1,4 @@
+import { sign } from "crypto"
 import { GetValue, ReduceState, SetValue } from "../setStateHelper"
 import { StoreRef } from "../storeRef"
 import { EmptyFun, FalseType, Flatten, emptyFun, messageChannelCallback, objectFreeze, run, supportMicrotask } from "../util"
@@ -35,6 +36,22 @@ const w = globalThis as {
   __abort_signal__?: AbortSignal
 }
 
+export type ErrorCallback<T extends any[]> = (...vs: T) => void
+
+export function hookAbortCalback<T extends any[]>(
+  signal: AbortSignal,
+  fun: (callback: ErrorCallback<T>) => void,
+  callback: ErrorCallback<T>
+) {
+  w.__abort_signal__ = signal
+  fun(function () {
+    if (signal.aborted) {
+      return
+    }
+    callback.apply(null, arguments as any)
+  })
+  w.__abort_signal__ = undefined
+}
 export function hookAbortSignalPromise<T>(
   signal: AbortSignal,
   fun: GetValue<Promise<T>>,
@@ -159,6 +176,14 @@ export function serialAbortRequest<T>(
   return function (getPromise: GetPromiseRequest<T>) {
     const signal = abortController()
     hookAbortSignalPromise(signal, getPromise, callback)
+  }
+}
+
+export function serialAbortCallback<T extends any[]>(callback: ErrorCallback<T>) {
+  const abortController = createAndFlushAbortController()
+  return function (get: SetValue<ErrorCallback<T>>) {
+    const signal = abortController()
+    hookAbortCalback(signal, get, callback)
   }
 }
 

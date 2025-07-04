@@ -151,6 +151,37 @@ export function defaultToGetTrue(value: any) {
   return undefined
 }
 
+
+type VWithDestroy<V> = {
+  value: V,
+  destroy?(): void
+}
+export function getCacheCreateMapWithDestroy<K, V>(createV: (key: K) => VWithDestroy<V>) {
+  const map = new Map<K, VWithDestroy<V>>()
+
+  return {
+    get(key: K): V {
+      let value = map.get(key)
+      if (value) {
+        return value.value
+      }
+      value = createV(key)
+      map.set(key, value)
+      return value.value
+    },
+    has: map.has.bind(map),
+    remove(key: K) {
+      const old = map.get(key)
+      if (old) {
+        map.delete(key)
+        old.destroy?.()
+        return true
+      }
+      return false
+    }
+  }
+}
+
 export function getCacheCreateMap<K, V>(createV: (key: K) => V) {
   const map = new Map<K, V>()
   return function (key: K) {
@@ -161,7 +192,7 @@ export function getCacheCreateMap<K, V>(createV: (key: K) => V) {
     value = createV(key)
     map.set(key, value)
     return value
-  }
+  } as any
 }
 
 

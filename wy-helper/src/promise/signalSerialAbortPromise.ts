@@ -2,7 +2,7 @@ import { Compare } from "../equal";
 import { GetValue } from "../setStateHelper";
 import { createSignal, memo, trackSignal } from "../signal";
 import { FalseType, Quote } from "../util";
-import { AbortPromiseResult, hookAbortSignalPromise, serialAbortRequest } from "./buildSerialRequestSingle";
+import { AbortPromiseResult, hookAbortSignalPromise, PromiseResult, serialAbortCallback, serialAbortRequest } from "./buildSerialRequestSingle";
 import { AutoLoadMoreCore } from "./stopCall";
 
 export function signalSerialAbortPromise<T>(
@@ -56,6 +56,93 @@ export function signalSerialAbortPromise<T>(
   }
 }
 
+
+export type MultiAbortPromiseResult<T> = AbortPromiseResult<T> & {
+  finish?: boolean
+}
+
+type OnUpdate<T> = {
+  (
+    type: "success",
+    get: GetValue<Promise<T>>,
+    p: Promise<T>,
+    data: T,
+    finish?: boolean): void
+  (
+    type: "error",
+    get: GetValue<Promise<T>>,
+    p: Promise<T>,
+    v: any
+  ): void
+}
+function fetchWithCacheFallback<T>(
+  list: GetValue<Promise<T>>[],
+  onUpdate: OnUpdate<T>
+): void {
+  let resolve = -1
+  const lastIdx = list.length - 1
+  list.forEach((row, i) => {
+    const p = row()
+    p.then(data => {
+      if (i == lastIdx) {
+        onUpdate('success', row, p, data, true)
+      } else if (resolve < i) {
+        onUpdate('success', row, p, data)
+      }
+      resolve = i
+    }).catch(err => {
+      if (i == lastIdx) {
+        onUpdate('error', row, p, err)
+      }
+    })
+  })
+}
+export function signalMultiAbortCallback<T>(
+  generatePromise: GetValue<GetValue<Promise<T>>[] | FalseType>
+) {
+  const signal = createSignal<MultiAbortPromiseResult<T> | undefined>(undefined)
+  const abortRequest = serialAbortCallback((type, request, promise, value, finish?: boolean) => {
+    const o = {
+      type,
+      promise,
+      request,
+      value,
+      finish
+    }
+    signal.set(o)
+  })
+  const memoGeneratePromise = memo(generatePromise)
+  const destroy = trackSignal(memoGeneratePromise, function (getPromise) {
+    if (getPromise) {
+      abortRequest((callback) => {
+        fetchWithCacheFallback(getPromise, callback)
+      })
+    }
+  })
+  //状态值
+  function get() {
+    if (memoGeneratePromise()) {
+      return signal.get()
+    }
+    return undefined
+  }
+  //如果是成功状态,更新值
+  function reduceSet(callback: Quote<T>) {
+    const value = get()
+    if (value?.type == 'success') {
+      signal.set({
+        ...value,
+        value: callback(value.value)
+      })
+    }
+  }
+
+  return {
+    get,
+    reduceSet,
+    destroy
+  }
+}
 
 
 export function signalSerialAbortPromiseLoadMore<T, K, M = {}>(
