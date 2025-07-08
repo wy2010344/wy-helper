@@ -223,21 +223,22 @@ export function batchSignalEnd() {
 
     signalCache.currentBatch = undefined
     signalCache.currentEffects = currentBatch.effects
+    const deps = currentBatch.deps
+    signalCache.currentDeps = deps
+
+
 
     const listeners = currentBatch.listeners
     listeners.forEach(run)
     listeners.clear()
 
-    const deps = currentBatch.deps
-
-    signalCache.currentDeps = deps
     while (deps.length) {
       //因为可能在执行中动态增加,所以使用这个shift的方式
       const fun = deps.shift()!
       fun()
     }
-    signalCache.currentDeps = undefined
 
+    signalCache.currentDeps = undefined
     signalCache.currentEffects = undefined
 
     ///执行effect事件
@@ -297,10 +298,8 @@ export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
       return
     }
     signalCache.currentFun = addFun
-    // signalCache.inReject = true
     updateGlobalVersion(signalCache.listener)
     const value = get(lastValue, inited)
-    // signalCache.inReject = false
     signalCache.currentFun = undefined
     if (inited) {
       if (value != lastValue) {
