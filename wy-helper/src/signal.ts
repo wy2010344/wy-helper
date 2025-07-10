@@ -133,6 +133,7 @@ class Signal<T> {
         this.value = v
       }
     }
+    return v
   }
 
   acceptChange(v: T) {

@@ -1,5 +1,8 @@
-import { GetValue } from "./setStateHelper";
-import { createSignal } from "./signal";
+import { removeEqual } from "./equal";
+import { GetValue, SetValue } from "./setStateHelper";
+import { createSignal, memo } from "./signal";
+import { StoreRef } from "./storeRef";
+import { emptyArray, Quote } from "./util";
 
 
 
@@ -40,6 +43,51 @@ export function optimistic<T>(get: GetValue<T>) {
     },
     reset() {
       cache.set(undefined)
+    }
+  }
+}
+
+
+export type BatchOptimistic<T> = ReturnType<typeof batchOptimistic<T>>
+
+type Op<T> = {
+  id: number,
+  callback: Quote<T>
+}
+function callbackOb<T>(init: T, row: Op<T>) {
+  return row.callback(init)
+}
+export function batchOptimistic<T>(model: StoreRef<T>) {
+  const ops = createSignal<Op<T>[]>(emptyArray)
+  let uid = Number.MIN_SAFE_INTEGER
+  return {
+    original: model,
+    get: memo(function () {
+      const vs = ops.get()
+      return vs.reduce(callbackOb, model.get())
+    }),
+    set(callback: Quote<T>) {
+      const id = uid++
+      ops.set(ops.get().concat({
+        id,
+        callback
+      }))
+      function reset() {
+        ops.set(ops.get().filter(x => x.id != id))
+      }
+      return {
+        loading() {
+          return ops.get().find(x => x.id == id)
+        },
+        reset,
+        commit() {
+          model.set(callback(model.get()))
+          reset()
+        }
+      }
+    },
+    opCountInWait() {
+      return ops.get().length
     }
   }
 }
