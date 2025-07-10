@@ -2,6 +2,17 @@ import { Axis, EdgeScrollConfig, PointKey, edgeScrollChange } from "wy-helper"
 import { subscribeRequestAnimationFrame } from "./animation"
 
 
+export type MoveEdgeScrollProps = {
+  point: number,
+  direction: PointKey,
+  config?: EdgeScrollConfig,
+  scrollDiff?(d: number): void
+  multi?: number
+}
+const defConfig: EdgeScrollConfig = {
+  padding: 10,
+  config: true
+}
 /**
  * 鼠标移动到滚动区域外,滚动到此外
  * 如果是mouseMove事件触发,只在触发时生效
@@ -9,17 +20,13 @@ import { subscribeRequestAnimationFrame } from "./animation"
  * @param point 光标位置,pageX或pageY
  * @param v 
  */
-export function moveEdgeScroll(point: number, v: {
-  direction: PointKey,
-  container: HTMLElement,
-  config: EdgeScrollConfig,
-  arg?: {
-    disabled?: boolean
-    scrollDiffLeft?(d: number): void
-    scrollDiffTop?(d: number): void
-  }
-}) {
-  const { direction, config, container, arg } = v
+export function moveEdgeScroll(container: HTMLElement, {
+  point,
+  direction,
+  config = defConfig,
+  scrollDiff,
+  multi = 1
+}: MoveEdgeScrollProps) {
   const rect = container.getBoundingClientRect()
   let axis: Axis
   if (direction == 'x') {
@@ -35,11 +42,11 @@ export function moveEdgeScroll(point: number, v: {
   }
   const update = edgeScrollChange(axis, config, function (diff) {
     if (direction == 'x') {
-      container.scrollLeft += diff
-      arg?.scrollDiffLeft?.(diff)
+      container.scrollLeft += diff * multi
+      scrollDiff?.(diff)
     } else {
-      container.scrollTop += diff
-      arg?.scrollDiffTop?.(diff)
+      container.scrollTop += diff * multi
+      scrollDiff?.(diff)
     }
   })
   update(point)
