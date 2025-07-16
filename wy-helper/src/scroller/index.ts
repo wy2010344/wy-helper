@@ -363,7 +363,8 @@ export function dragSnapWithList(list: DragSnapParam[]) {
           return acc + cell.beforeDiff
         }
       }
-      nextAcc = acc
+      acc = nextAcc
+      // nextAcc = acc
     }
     return n
   }

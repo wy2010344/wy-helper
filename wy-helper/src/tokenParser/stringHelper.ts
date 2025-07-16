@@ -152,7 +152,7 @@ export function ruleStrBetweenPartGet(
         ),
         quote
       ),
-      manyRuleGet(
+      manyRuleGet<Que, string>(
         orRuleGet(
           [
             ruleGet(matchAnyString('\\\\'), v => '\\'),
