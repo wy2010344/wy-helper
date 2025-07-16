@@ -40,7 +40,7 @@ function getInterpolateT<T>(
           return overclip(x, true, array[0], array[1])
         } else {
           const last = array[i - 1]
-          return mapInterpolateRange(x, last, row, mixValue)
+          return mapInterpolateExtend(x, last, row, mixValue)
         }
       }
     }
@@ -49,7 +49,7 @@ function getInterpolateT<T>(
 }
 
 
-export function mapInterpolateRange<T>(
+export function mapInterpolateExtend<T>(
   x: number,
   last: InterpolateRangeT<T>,
   row: InterpolateRangeT<T>,
@@ -65,10 +65,14 @@ export const extrapolationClamp: OverClip<any> = (x, low, last, row) => {
     return row[1]
   }
 }
-
+/**
+ * https://docs.swmansion.com/react-native-reanimated/docs/utilities/interpolate
+ * @param mixValue 
+ * @returns 
+ */
 export function getExtrapolationExtend<T>(mixValue: MixValue<T>): OverClip<T> {
   return (x, low, last, row) => {
-    return mapInterpolateRange(x, last, row, mixValue)
+    return mapInterpolateExtend(x, last, row, mixValue)
   }
 }
 
@@ -77,6 +81,19 @@ export const extrapolationIdentity: OverClip<number> = (x, low, last, row) => {
 }
 
 export const extrapolationExtend = getExtrapolationExtend(mixNumber)
+
+export function extrapolationCombine(
+  whenLow: OverClip<number>,
+  whenTop: OverClip<number>
+): OverClip<number> {
+  return function (x, low, last, row) {
+    if (low) {
+      return whenLow(x, true, last, row)
+    } else {
+      return whenTop(x, low, last, row)
+    }
+  }
+}
 
 export function getInterpolate(
   map: Record<number, number>,

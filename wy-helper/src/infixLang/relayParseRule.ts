@@ -4,8 +4,7 @@ import {
   isNumber, isUpperEnglish, manyMatch,
   matchAnyString, orMatch,
   parseGet, parseSkip, ruleStrBetween, ruleStrBetweenGet1,
-  whiteSpaceMatch,
-  whiteSpaceRule
+  whiteSpaceMatch
 } from "../tokenParser";
 
 export const matchCommonExt = manyMatch(

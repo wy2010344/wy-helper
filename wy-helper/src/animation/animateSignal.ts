@@ -163,6 +163,7 @@ export class AnimateSignal {
       this.lastResolve(false)
     }
     this.value.set(n)
+    return n
   }
   onAnimation = this._onAnimation.get
   silentDiff(n: number) {
