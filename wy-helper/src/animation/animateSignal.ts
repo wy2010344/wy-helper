@@ -1,5 +1,5 @@
 
-import { GetValue, SetValue } from "../setStateHelper";
+import { getOutResolvePromise, GetValue, SetValue } from "../setStateHelper";
 import { createSignal } from "../signal";
 import { StoreRef } from "../storeRef";
 import { emptyFun } from "../util";
@@ -105,6 +105,7 @@ export interface AnimateSignalConfig {
 
 interface AnimateSignalResult {
   cancel(): void
+  resolve(e: boolean): void
   out: SilentDiff
 }
 
@@ -121,9 +122,9 @@ export class AnimateSignal {
   get: GetValue<number>
 
   getTarget() {
-    const out = this.lastCancel?.out
+    const out = this.lastCancel
     if (out) {
-      const target = out.target
+      const target = out.out.target
       if (typeof target == 'number') {
         return target
       }
@@ -131,19 +132,18 @@ export class AnimateSignal {
     return this.get()
   }
   private value: StoreRef<number>
-  lastCancel: AnimateSignalResult | void = undefined
-  lastResolve: SetValue<boolean> = emptyFun
-  private onFinish() {
-    this.lastCancel = undefined
-    this._onAnimation.set(false)
-  }
+
+  private _onAnimation = createSignal<boolean>(false)
+  private lastCancel: AnimateSignalResult | undefined = undefined
   private didFinish = (bool: boolean) => {
-    if (bool) {
-      this.onFinish()
-      this.lastResolve(true)
+    const o = this.lastCancel
+    if (o) {
+      this.lastCancel = undefined
+      o.cancel()
+      o.resolve(bool)
+      this._onAnimation.set(false)
     }
   }
-  private _onAnimation = createSignal(false)
   private lock = false
   private reSubscribe(callback: SetValue<number>) {
     return this.subscribeRequestAnimateFrame((time) => {
@@ -157,26 +157,24 @@ export class AnimateSignal {
     if (this.lock) {
       throw '禁止在此时修改'
     }
-    if (this.lastCancel) {
-      this.lastCancel.cancel()
-      this.onFinish()
-      this.lastResolve(false)
-    }
+    this.didFinish(false)
     this.value.set(n)
     return n
   }
   onAnimation = this._onAnimation.get
   silentDiff(n: number) {
-    if (this.lastCancel) {
-      this.lastCancel.out.silentDiff(n)
+    const o = this.lastCancel
+    if (o) {
+      o.out.silentDiff(n)
     } else {
       this.value.set(this.value.get() + n)
     }
   }
 
   silentChangeTo(n: number) {
-    if (this.lastCancel) {
-      this.lastCancel.out.silentChangeTo(n)
+    const o = this.lastCancel
+    if (o) {
+      o.out.silentChangeTo(n)
     } else {
       this.value.set(n)
     }
@@ -195,10 +193,7 @@ export class AnimateSignal {
       throw '禁止在此时修改'
     }
     //需要锁一下,禁止修改
-    if (this.lastCancel) {
-      this.lastCancel.cancel()
-      this.lastResolve(false)
-    }
+    this.didFinish(false)
     //config构造期间禁止修改
     this.lock = true
 
@@ -206,16 +201,15 @@ export class AnimateSignal {
     const callback = config(out)
     this.lock = false
     if (callback) {
+      const [promise, resolve] = getOutResolvePromise<boolean>()
+      this._onAnimation.set(true)
       this.lastCancel = {
         cancel: this.reSubscribe(callback),
+        resolve,
         out: out
       }
-      this._onAnimation.set(true)
-      return new Promise<boolean>((resolve) => {
-        this.lastResolve = resolve
-      })
+      return promise
     } else {
-      this._onAnimation.set(false)
       return promiseImmediately
     }
   }
@@ -237,11 +231,23 @@ export class AnimateSignal {
     n: number,
     config: DeltaXSignalAnimationConfig = defaultSpringAnimationConfig,
     onProcess?: SetValue<number>) {
+    this.didFinish(false)
     const diff = n - this.get()
     if (diff) {
       return this.change(config(diff), onProcess, n)
     }
     return promiseImmediately
+  }
+
+  async animateThrow(
+    n: number,
+    config: DeltaXSignalAnimationConfig = defaultSpringAnimationConfig,
+    onProcess?: SetValue<number>) {
+    const out = await this.animateTo(n, config, onProcess)
+    if (!out) {
+      throw new Error('user cancel')
+    }
+    return out
   }
 }
 

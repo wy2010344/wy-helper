@@ -117,7 +117,6 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
   }
   matchNodes(nodes: string[]) {
     let ret = this.buildBranch(nodes, 0, this.rootBranch, undefined)
-    // ret = this.buildBranch(ret, this.rootBranch)
     return ret
   }
   private buildBranch(
@@ -135,7 +134,10 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
         loader: (branch.layout!),
         currentQuery,
         next: ret,
-        query: ret.query
+        query: ret.query,
+        load: (nodes) => {
+          return this.foundInner(nodes, index, branch, currentQuery)
+        }
       }
     }
     return ret
@@ -214,6 +216,7 @@ export type PairLeaf<LeafLoader> = {
   query: Readonly<Record<string, any>>
   currentQuery?: KVPair<any>
   // restNodes?: never
+  load?: never
 }
 export type PairNotfound<NotfoundLoader> = {
   nodes: string[]
@@ -224,6 +227,7 @@ export type PairNotfound<NotfoundLoader> = {
   query: Readonly<Record<string, any>>
   currentQuery?: KVPair<any>
   // restNodes: string[]
+  load?: never
 }
 export type PairBranch<BranchLoader, LeafLoader, NotfoundLoader> = {
   nodes: string[]
@@ -234,6 +238,7 @@ export type PairBranch<BranchLoader, LeafLoader, NotfoundLoader> = {
   query: Readonly<Record<string, any>>
   currentQuery?: KVPair<any>
   // restNodes?: never
+  load(ns: string[]): PairNode<BranchLoader, LeafLoader, NotfoundLoader>
 }
 
 export type PairNode<BranchLoader, LeafLoader, NotfoundLoader> = PairBranch<BranchLoader, LeafLoader, NotfoundLoader> | PairLeaf<LeafLoader> | PairNotfound<NotfoundLoader>

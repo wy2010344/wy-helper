@@ -1,4 +1,4 @@
-import { EmptyFun, emptyObject, PointKey, run } from "wy-helper";
+import { EmptyFun, emptyObject, getValueOrGet, PointKey, run, ValueOrGet } from "wy-helper";
 import { subscribeEventListener } from "./util";
 
 
@@ -162,7 +162,16 @@ export type MoveEnd<T> = {
   cancel?: boolean
 }
 
-export type PointerBeginDirMove = (initE: PointerEvent, direction: PointKey | '=') => MoveEnd<PointerEvent> | void
+export type PointerBeginDirMove = {
+  (
+    initE: PointerEvent,
+    direction: PointKey | '=',
+    value: {
+      x: number
+      y: number
+    }
+  ): MoveEnd<PointerEvent> | void
+}
 export function pointerMove(
   out: MoveEnd<PointerEvent>,
   element: HTMLElement | Document | SVGSVGElement = document
@@ -182,48 +191,50 @@ export function pointerMove(
   }
 }
 export function pointerMoveDir(
-  getBeginMove: () => {
+  e: PointerEvent,
+  beginMove: {
     onMove: PointerBeginDirMove,
     onCancel?(e: PointerEvent): void
-  },
-  {
-    element = document
-  }: {
     element?: HTMLElement | Document | SVGSVGElement
-  } = emptyObject as any
-) {
-  return function (e: PointerEvent) {
-    const initE = e;
-    const beginMove = getBeginMove()
-    const destroyJudgeMove = subscribeEventListener(element, 'pointermove', e => {
-      //第一次移动
-      destroyJudgeMove();
-      destroyUp()
-      const absY = Math.abs(e.pageY - initE.pageY)
-      const absX = Math.abs(e.pageX - initE.pageX)
-      let out: MoveEnd<PointerEvent> | void = undefined
-      if (absX == absY) {
-        out = beginMove.onMove(initE, '=')
-      } else {
-        if (absX > absY) {
-          //左右移动
-          out = beginMove.onMove(initE, 'x')
-        } else {
-          //上下移动
-          out = beginMove.onMove(initE, 'y')
-        }
-      }
-      if (out) {
-        out.onMove(e)
-        pointerMove(out, element)
-      }
-    })
-    //避免点击后没有移动.
-    const destroyUp = subscribeEventListener(element, 'pointerup', e => {
-      //第一次直接cancel了
-      destroyJudgeMove()
-      destroyUp()
-      beginMove.onCancel?.(e)
-    })
   }
+) {
+  const element = beginMove.element || document
+  const initE = e;
+  const destroyJudgeMove = subscribeEventListener(element, 'pointermove', e => {
+    //第一次移动
+    destroyJudgeMove();
+    destroyUp()
+    const diffY = e.pageY - initE.pageY
+    const diffX = e.pageX - initE.pageX
+    const absY = Math.abs(diffY)
+    const absX = Math.abs(diffX)
+    let out: MoveEnd<PointerEvent> | void = undefined
+    const d = {
+      x: diffX,
+      y: diffY
+    }
+    if (absX == absY) {
+      out = beginMove.onMove(initE, '=', d)
+    } else {
+      if (absX > absY) {
+        //左右移动
+        out = beginMove.onMove(initE, 'x', d)
+      } else {
+        //上下移动
+        out = beginMove.onMove(initE, 'y', d)
+      }
+    }
+    if (out) {
+      //不返回,就是放弃滚动
+      out.onMove(e)
+      pointerMove(out, element)
+    }
+  })
+  //避免点击后没有移动.
+  const destroyUp = subscribeEventListener(element, 'pointerup', e => {
+    //第一次直接cancel了
+    destroyJudgeMove()
+    destroyUp()
+    beginMove.onCancel?.(e)
+  })
 }
