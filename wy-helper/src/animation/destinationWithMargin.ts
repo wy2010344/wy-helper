@@ -23,9 +23,6 @@ export async function destinationWithMargin(
     maxScroll,
     scroll,
     frictional,
-    // velocity,
-    // containerSize,
-    // contentSize,
     scrollToEdge,
     edgeConfig = ClampingScrollFactory.edgeClampingConfig,
     edgeBackConfig = defaultSpringAnimationConfig,
@@ -113,7 +110,6 @@ export async function destinationWithMargin(
       onProcess)
   }
 }
-
 
 function defaultGetForceStop(current: number, idealTarget: number) {
   return idealTarget

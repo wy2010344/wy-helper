@@ -136,10 +136,10 @@ export function iterableToList<T>(entity: IterableIterator<T>) {
 }
 
 
-export function alawaysTrue() {
+export function alawaysTrue(): true {
   return true
 }
-export function alawaysFalse() {
+export function alawaysFalse(): false {
   return false
 }
 export function defaultToGetTrue(value: any) {

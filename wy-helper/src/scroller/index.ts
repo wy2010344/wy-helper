@@ -1,5 +1,6 @@
 import { AnimateSignal } from "../animation"
 import { SetValue } from "../setStateHelper"
+import { emptyFun } from "../util"
 import { getMaxScroll } from "./util"
 export * from './bscroll'
 export { getMaxScroll } from './util'
@@ -109,34 +110,33 @@ export type WithTimeStampEvent = {
   timeStamp: number
 }
 
-type ScrollDelta = (delta: number, velocity: number) => void
+export type ScrollDelta = (delta: number, velocity: number, inMove?: boolean) => void
 
+
+export interface ScrollFromPageI<T> {
+  opposite?: boolean
+  getPage(n: T): number,
+  scrollDelta: ScrollDelta
+}
 /**
  * 将拖动的page定位转化成scroll
  * @param page 
  */
 export class ScrollFromPage<T extends WithTimeStampEvent> {
   private lastPage: number
+  private superLastEvent: T | undefined = undefined
+  private superLastPage: number = 0
   constructor(
     private lastEvent: T,
-    private getPage: (n: T) => number,
-    private scrollDelta: ScrollDelta,
-    private onFinish: SetValue<number>,
+    private arg: ScrollFromPageI<T>,
     private opposite: 1 | -1
   ) {
-    this.lastPage = getPage(lastEvent)
+    this.lastPage = this.arg.getPage(lastEvent)
   }
-  static from<T extends WithTimeStampEvent>(e: T, arg: {
-    opposite?: boolean
-    getPage(n: T): number,
-    scrollDelta: ScrollDelta,
-    onFinish: SetValue<number>
-  }) {
+  static from<T extends WithTimeStampEvent>(e: T, arg: ScrollFromPageI<T>) {
     return new ScrollFromPage(
       e,
-      arg.getPage,
-      arg.scrollDelta,
-      arg.onFinish,
+      arg,
       arg.opposite ? -1 : 1
     )
   }
@@ -147,22 +147,38 @@ export class ScrollFromPage<T extends WithTimeStampEvent> {
   }
   onEnd(e: T) {
     this.inMove(e)
-    this.onFinish(this.velocity * this.opposite)
     return this.velocity
   }
-  private inMove(e: T, cVelocity?: boolean) {
-    const page = this.getPage(e)
+  /**
+   * 如果有up,则位移不变,但时间改变
+   * @param e 
+   * @param inMove 
+   */
+  private inMove(e: T, inMove?: boolean) {
+    const page = this.arg.getPage(e)
     //拖拽与之相反
-    const delta = this.lastPage - page
-    const diffTime = e.timeStamp - this.lastEvent.timeStamp
-    if (cVelocity && diffTime > 0) {
+    let diffTime: number
+    let delta: number
+    if (inMove) {
+      diffTime = e.timeStamp - this.lastEvent.timeStamp
+      delta = this.lastPage - page
+      this.superLastEvent = this.lastEvent
+      this.superLastPage = this.lastPage
+      this.lastEvent = e
+      this.lastPage = page
+    } else {
+      if (this.superLastEvent) {
+        diffTime = e.timeStamp - this.superLastEvent.timeStamp
+        delta = this.superLastPage - page
+      } else {
+        diffTime = e.timeStamp - this.lastEvent.timeStamp
+        delta = this.lastPage - page
+      }
+    }
+    if (diffTime > 0) {
       this.velocity = delta / diffTime
     }
-    this.lastEvent = e
-    if (delta) {
-      this.scrollDelta(delta * this.opposite, this.velocity * this.opposite)
-      this.lastPage = page
-    }
+    this.arg.scrollDelta(delta * this.opposite, this.velocity * this.opposite, inMove)
   }
 }
 
