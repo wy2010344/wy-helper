@@ -22,7 +22,7 @@ export function simpleNotEqual<T>(a: T, b: T) {
   return a != b
 }
 
-export function arrayEqual<T>(a1: ReadArray<T>, a2: ReadArray<T>, equal: (x: T, y: T) => boolean) {
+export function arrayEqual<T>(a1: ReadArray<T>, a2: ReadArray<T>, equal: (x: T, y: T) => boolean = simpleEqual) {
   if (a1 == a2) {
     return true
   }
@@ -36,6 +36,46 @@ export function arrayEqual<T>(a1: ReadArray<T>, a2: ReadArray<T>, equal: (x: T, 
     return true
   }
   return false
+}
+
+
+/**
+ * a1 以 a2 开始
+ * @param a1 
+ * @param a2 
+ * @param equal 
+ */
+export function arrayStartsWith<T>(a1: ReadArray<T>, a2: ReadArray<T>, equal: (x: T, y: T) => boolean = simpleEqual) {
+  if (a1.length < a2.length) {
+    return false
+  }
+  const len = a2.length
+  for (let i = 0; i < len; i++) {
+    if (!equal(a1[i], a2[i])) {
+      return false
+    }
+  }
+  return true
+}
+
+/**
+ * a1 以 a2 结尾
+ * @param a1 
+ * @param a2 
+ * @param equal 
+ */
+export function arrayEndsWith<T>(a1: ReadArray<T>, a2: ReadArray<T>, equal: (x: T, y: T) => boolean = simpleEqual) {
+  const d = a1.length - a2.length
+  if (d < 0) {
+    return false
+  }
+  const len = a2.length
+  for (let i = 0; i < len; i++) {
+    if (!equal(a1[i + d], a2[i])) {
+      return false
+    }
+  }
+  return true
 }
 
 /**

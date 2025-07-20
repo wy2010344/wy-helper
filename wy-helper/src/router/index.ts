@@ -1,5 +1,6 @@
 import { KVPair } from "../KVPair"
-import { emptyArray, emptyObject, Quote, quote } from "../util"
+import { joinPath } from "../path"
+import { emptyObject, quote } from "../util"
 import { matchMatch, MatchNode, toMatchNode } from "./match"
 
 
@@ -87,6 +88,7 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
             match = sp.join('.')
           }
         }
+        const pathNodes = nodes.slice(0, i)
         subBranch = {
           key: node,
           match: toMatchNode(match, this.typeDefMap),
@@ -116,97 +118,88 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
     return rootChildren
   }
   matchNodes(nodes: string[]) {
-    let ret = this.buildBranch(nodes, 0, this.rootBranch, undefined)
+    let ret = buildBranch(nodes, 0, this.rootBranch, undefined)
     return ret
   }
-  private buildBranch(
-    nodes: string[],
-    index: number,
-    branch: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader>,
-    currentQuery?: KVPair<any>
-  ): PairNode<BranchLoader, LeafLoader, NotfoundLoader> {
-    const ret = this.foundInner(nodes, index, branch, currentQuery)
-    if (branch.layout) {
-      return {
-        nodes,
-        index,
-        type: "branch",
-        loader: (branch.layout!),
-        currentQuery,
-        next: ret,
-        query: ret.query,
-        load: (nodes) => {
-          return this.foundInner(nodes, index, branch, currentQuery)
-        }
-      }
-    }
-    return ret
+
+}
+
+function buildBranch<BranchLoader, LeafLoader, NotfoundLoader>(
+  nodes: string[],
+  index: number,
+  branch: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader>,
+  currentQuery?: KVPair<any>
+): PairNode<BranchLoader, LeafLoader, NotfoundLoader> {
+  const ret = foundInner(nodes, index, branch, currentQuery)
+  if (branch.layout) {
+    return new PairBranchI(
+      branch, nodes, index, ret, currentQuery
+    )
   }
-  private foundInner(
-    nodes: string[],
-    index: number,
-    tempBranch: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader>,
-    currentQuery: KVPair<any> | undefined
-  ): PairNode<BranchLoader, LeafLoader, NotfoundLoader> {
-    try {
-      if (index == nodes.length) {
-        //叶子节点
-        if (tempBranch.index) {
-          return {
-            nodes,
-            type: "leaf",
-            index,
-            loader: (tempBranch.index!),
-            currentQuery,
-            query: currentQuery?.toObject() || emptyObject
-          }
-        } else {
-          throw new Error('not found')
-        }
-      } else if (tempBranch.children) {
-        //枝节点
-        const node = nodes[index]
-        let foundMath: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader> | undefined = undefined
-        for (let i = 0; i < tempBranch.children.length && !foundMath; i++) {
-          const cacheTempBranch = tempBranch.children[i]
-          const match = cacheTempBranch.match
-          try {
-            currentQuery = matchMatch(node, match, currentQuery)
-            foundMath = cacheTempBranch
-          } catch (err) { }
-        }
-        if (foundMath) {
-          return this.buildBranch(
-            nodes,
-            index + 1,
-            foundMath,
-            currentQuery
-          )
-        } else {
-          throw new Error('not found')
+  return ret
+}
+function foundInner<BranchLoader, LeafLoader, NotfoundLoader>(
+  nodes: string[],
+  index: number,
+  tempBranch: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader>,
+  currentQuery: KVPair<any> | undefined
+): PairNode<BranchLoader, LeafLoader, NotfoundLoader> {
+  try {
+    if (index == nodes.length) {
+      //叶子节点
+      if (tempBranch.index) {
+        return {
+          nodes,
+          type: "leaf",
+          index,
+          loader: (tempBranch.index!),
+          currentQuery,
+          query: currentQuery?.toObject() || emptyObject
         }
       } else {
         throw new Error('not found')
       }
-    } catch (err) {
-      if (tempBranch.default) {
-        //leaf
-        return {
-          nodes,
-          type: "notfound",
-          loader: (tempBranch.default!),
-          currentQuery,
-          index,
-          // restNodes: nodes.slice(index),
-          query: currentQuery?.toObject() || emptyObject
-        }
-      } else {
-        throw err
+    } else if (tempBranch.children) {
+      //枝节点
+      const node = nodes[index]
+      let foundMath: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader> | undefined = undefined
+      for (let i = 0; i < tempBranch.children.length && !foundMath; i++) {
+        const cacheTempBranch = tempBranch.children[i]
+        const match = cacheTempBranch.match
+        try {
+          currentQuery = matchMatch(node, match, currentQuery)
+          foundMath = cacheTempBranch
+        } catch (err) { }
       }
+      if (foundMath) {
+        return buildBranch(
+          nodes,
+          index + 1,
+          foundMath,
+          currentQuery
+        )
+      } else {
+        throw new Error('not found')
+      }
+    } else {
+      throw new Error('not found')
+    }
+  } catch (err) {
+    if (tempBranch.default) {
+      //leaf
+      return {
+        nodes,
+        type: "notfound",
+        loader: (tempBranch.default!),
+        currentQuery,
+        index,
+        query: currentQuery?.toObject() || emptyObject
+      }
+    } else {
+      throw err
     }
   }
 }
-
 export type PairLeaf<LeafLoader> = {
   nodes: string[]
   type: "leaf"
@@ -215,8 +208,8 @@ export type PairLeaf<LeafLoader> = {
   next?: never
   query: Readonly<Record<string, any>>
   currentQuery?: KVPair<any>
-  // restNodes?: never
   load?: never
+  getAbsolutePath?: never
 }
 export type PairNotfound<NotfoundLoader> = {
   nodes: string[]
@@ -226,8 +219,8 @@ export type PairNotfound<NotfoundLoader> = {
   next?: never
   query: Readonly<Record<string, any>>
   currentQuery?: KVPair<any>
-  // restNodes: string[]
   load?: never
+  getAbsolutePath?: never
 }
 export type PairBranch<BranchLoader, LeafLoader, NotfoundLoader> = {
   nodes: string[]
@@ -237,8 +230,37 @@ export type PairBranch<BranchLoader, LeafLoader, NotfoundLoader> = {
   next: PairNode<BranchLoader, LeafLoader, NotfoundLoader>
   query: Readonly<Record<string, any>>
   currentQuery?: KVPair<any>
-  // restNodes?: never
-  load(ns: string[]): PairNode<BranchLoader, LeafLoader, NotfoundLoader>
+  load(path: string, absolute?: boolean): PairNode<BranchLoader, LeafLoader, NotfoundLoader>
+  getAbsolutePath(path: string): string
+}
+
+
+class PairBranchI<BranchLoader, LeafLoader, NotfoundLoader> implements PairBranch<BranchLoader, LeafLoader, NotfoundLoader> {
+  readonly type = 'branch'
+  constructor(
+    private branch: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader>,
+    readonly nodes: string[],
+    readonly index: number,
+    readonly next: PairNode<BranchLoader, LeafLoader, NotfoundLoader>,
+    readonly currentQuery?: KVPair<any> | undefined,
+  ) {
+    this.query = next.query
+    this.loader = branch.layout!
+  }
+  readonly loader: () => Promise<BranchLoader>
+  readonly query: Readonly<Record<string, any>>
+  /**
+  * 全路径节点
+  */
+  load(path: string, absolute?: boolean): PairNode<BranchLoader, LeafLoader, NotfoundLoader> {
+    if (!absolute) {
+      path = this.getAbsolutePath(path)
+    }
+    return foundInner(path.split('/').filter(quote), this.index, this.branch, this.currentQuery)
+  }
+  getAbsolutePath(url: string) {
+    return joinPath('/' + this.nodes.slice(0, this.index).join('/'), url)
+  }
 }
 
 export type PairNode<BranchLoader, LeafLoader, NotfoundLoader> = PairBranch<BranchLoader, LeafLoader, NotfoundLoader> | PairLeaf<LeafLoader> | PairNotfound<NotfoundLoader>
