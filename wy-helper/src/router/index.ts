@@ -88,7 +88,6 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
             match = sp.join('.')
           }
         }
-        const pathNodes = nodes.slice(0, i)
         subBranch = {
           key: node,
           match: toMatchNode(match, this.typeDefMap),
@@ -148,14 +147,9 @@ function foundInner<BranchLoader, LeafLoader, NotfoundLoader>(
     if (index == nodes.length) {
       //叶子节点
       if (tempBranch.index) {
-        return {
-          nodes,
-          type: "leaf",
-          index,
-          loader: (tempBranch.index!),
-          currentQuery,
-          query: currentQuery?.toObject() || emptyObject
-        }
+        return new PairLeafI(
+          nodes, index, tempBranch.index!, currentQuery
+        )
       } else {
         throw new Error('not found')
       }
@@ -187,63 +181,61 @@ function foundInner<BranchLoader, LeafLoader, NotfoundLoader>(
   } catch (err) {
     if (tempBranch.default) {
       //leaf
-      return {
-        nodes,
-        type: "notfound",
-        loader: (tempBranch.default!),
-        currentQuery,
-        index,
-        query: currentQuery?.toObject() || emptyObject
-      }
+      return new PairNotfoundI(
+        nodes, index, tempBranch.default!, currentQuery
+      )
     } else {
       throw err
     }
   }
 }
-export type PairLeaf<LeafLoader> = {
+
+type PairCommon = {
   nodes: string[]
-  type: "leaf"
   index: number
-  loader(): Promise<LeafLoader>
-  next?: never
   query: Readonly<Record<string, any>>
   currentQuery?: KVPair<any>
-  load?: never
-  getAbsolutePath?: never
+  getAbsolutePath(path: string): string
 }
-export type PairNotfound<NotfoundLoader> = {
-  nodes: string[]
-  index: number
+export type PairLeaf<LeafLoader> = PairCommon & {
+  type: "leaf"
+  loader(): Promise<LeafLoader>
+  next?: never
+  load?: never
+}
+export type PairNotfound<NotfoundLoader> = PairCommon & {
   type: "notfound"
   loader(): Promise<NotfoundLoader>
   next?: never
-  query: Readonly<Record<string, any>>
-  currentQuery?: KVPair<any>
   load?: never
-  getAbsolutePath?: never
 }
-export type PairBranch<BranchLoader, LeafLoader, NotfoundLoader> = {
-  nodes: string[]
+export type PairBranch<BranchLoader, LeafLoader, NotfoundLoader> = PairCommon & {
   type: "branch"
-  index: number
   loader(): Promise<BranchLoader>
   next: PairNode<BranchLoader, LeafLoader, NotfoundLoader>
-  query: Readonly<Record<string, any>>
-  currentQuery?: KVPair<any>
   load(path: string, absolute?: boolean): PairNode<BranchLoader, LeafLoader, NotfoundLoader>
-  getAbsolutePath(path: string): string
 }
 
 
-class PairBranchI<BranchLoader, LeafLoader, NotfoundLoader> implements PairBranch<BranchLoader, LeafLoader, NotfoundLoader> {
+class AbsPair {
+  constructor(
+    readonly nodes: string[],
+    readonly index: number
+  ) { }
+  getAbsolutePath(url: string) {
+    return joinPath('/' + this.nodes.slice(0, this.index).join('/'), url)
+  }
+}
+class PairBranchI<BranchLoader, LeafLoader, NotfoundLoader> extends AbsPair implements PairBranch<BranchLoader, LeafLoader, NotfoundLoader> {
   readonly type = 'branch'
   constructor(
     private branch: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader>,
-    readonly nodes: string[],
-    readonly index: number,
+    nodes: string[],
+    index: number,
     readonly next: PairNode<BranchLoader, LeafLoader, NotfoundLoader>,
     readonly currentQuery?: KVPair<any> | undefined,
   ) {
+    super(nodes, index)
     this.query = next.query
     this.loader = branch.layout!
   }
@@ -258,11 +250,35 @@ class PairBranchI<BranchLoader, LeafLoader, NotfoundLoader> implements PairBranc
     }
     return foundInner(path.split('/').filter(quote), this.index, this.branch, this.currentQuery)
   }
-  getAbsolutePath(url: string) {
-    return joinPath('/' + this.nodes.slice(0, this.index).join('/'), url)
-  }
 }
 
+class PairLeafI<LeafLoader> extends AbsPair implements PairLeaf<LeafLoader> {
+  readonly type = "leaf"
+  constructor(
+    nodes: string[],
+    index: number,
+    readonly loader: () => Promise<LeafLoader>,
+    readonly currentQuery?: KVPair<any> | undefined
+  ) {
+    super(nodes, index)
+    this.query = currentQuery?.toObject() || emptyObject
+  }
+  readonly query: Readonly<Record<string, any>>
+}
+
+class PairNotfoundI<NotfoundLoader> extends AbsPair implements PairNotfound<NotfoundLoader> {
+  readonly type = 'notfound'
+  constructor(
+    nodes: string[],
+    index: number,
+    readonly loader: () => Promise<NotfoundLoader>,
+    readonly currentQuery?: KVPair<any> | undefined
+  ) {
+    super(nodes, index)
+    this.query = currentQuery?.toObject() || emptyObject
+  }
+  readonly query: Readonly<Record<string, any>>
+}
 export type PairNode<BranchLoader, LeafLoader, NotfoundLoader> = PairBranch<BranchLoader, LeafLoader, NotfoundLoader> | PairLeaf<LeafLoader> | PairNotfound<NotfoundLoader>
 
 /**
