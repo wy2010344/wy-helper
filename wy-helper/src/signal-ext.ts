@@ -6,7 +6,7 @@ import { emptyArray, Quote } from "./util";
 
 
 
-export function createVersion(step = Number.MIN_VALUE) {
+export function createVersion(step = 1) {
   const v = createSignal(Number.MIN_SAFE_INTEGER)
 
   return {
