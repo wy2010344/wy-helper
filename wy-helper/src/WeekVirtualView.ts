@@ -87,7 +87,9 @@ export class WeekVirtualView {
     }
     return this._keys
   }
-
+  toNumber() {
+    return this.cells[0].toNumber()
+  }
   _beforeWeek!: WeekVirtualView
   beforeWeek() {
     if (!this._beforeWeek) {

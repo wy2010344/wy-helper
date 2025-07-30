@@ -172,11 +172,20 @@ export type PointerBeginDirMove = {
     }
   ): MoveEnd<PointerEvent> | void
 }
+
+export function preventDefault(e: Event) {
+  e.preventDefault()
+}
 export function pointerMove(
   out: MoveEnd<PointerEvent>,
-  element: HTMLElement | Document | SVGSVGElement = document
+  {
+    destroyList = [],
+    element = document
+  }: {
+    destroyList?: EmptyFun[]
+    element?: HTMLElement | Document | SVGSVGElement
+  } = emptyObject
 ) {
-  const destroyList: EmptyFun[] = []
   destroyList.push(subscribeEventListener(element, 'pointermove', e => out.onMove(e)))
   function endFun(e: PointerEvent) {
     out.onEnd(e)
@@ -193,11 +202,13 @@ export function pointerMove(
 export function pointerMoveDir(
   e: PointerEvent,
   beginMove: {
+    onDragChange?(v: boolean): void
     onMove: PointerBeginDirMove,
     onCancel?(e: PointerEvent): void
     element?: HTMLElement | Document | SVGSVGElement
   }
 ) {
+  const div = e.currentTarget as HTMLDivElement
   const element = beginMove.element || document
   const initE = e;
   const destroyJudgeMove = subscribeEventListener(element, 'pointermove', e => {
@@ -226,8 +237,16 @@ export function pointerMoveDir(
     }
     if (out) {
       //不返回,就是放弃滚动
+      beginMove.onDragChange?.(true)
       out.onMove(e)
-      pointerMove(out, element)
+      pointerMove(out, {
+        element,
+        destroyList: [
+          () => {
+            beginMove.onDragChange?.(false)
+          }
+        ]
+      })
     }
   })
   //避免点击后没有移动.
