@@ -1,4 +1,4 @@
-import { GetValue } from "./setStateHelper";
+import { GetValue, SetValue } from "./setStateHelper";
 
 
 export type ReadSet<V> = Omit<Set<V>, 'add' | 'clear' | 'forEach'> & {
@@ -486,4 +486,16 @@ export function numberBetween(min: number, value: number, max: number) {
     throw new Error("min must less than max");
   }
   return Math.min(Math.max(min, value), max);
+}
+
+
+export function mergeSet<T>(...sets: (SetValue<T> | FalseType)[]) {
+  return function (v: T) {
+    for (let i = 0; i < sets.length; i++) {
+      const set = sets[i]
+      if (typeof set == 'function') {
+        set(v)
+      }
+    }
+  }
 }
