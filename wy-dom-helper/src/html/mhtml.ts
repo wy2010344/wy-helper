@@ -9,7 +9,7 @@
 import { emptyFun, emptyObject, objectDiffDeleteKey, SetValue } from "wy-helper"
 import { addEvent, isEvent, setHtml, setText, updateAttr, updateCssVariable, updateDataSet, updateDom, UpdateProp, updateStyle, updateSvg } from "./fx"
 import { Props } from "./updateDom"
-import { FAriaAttribute, FCssVaribute, FDataAttr, MergeValue } from "./fhtml"
+import { FAriaAttribute, FCssVaribute, FDataAttr, MergeValue, renderFGetChildAttr } from "./fhtml"
 import { BDomAttribute, DomElementType } from "./html"
 import { PureCSSProperties } from "../util"
 
@@ -176,14 +176,7 @@ function createRenderMAttr(
         }
       }
     }
-
-    if (arg.childrenType == 'text') {
-      mergeValue(node, arg.children, setText)
-    } else if (arg.childrenType == 'html') {
-      mergeValue(node, arg.children, setHtml)
-    } else if (arg.children) {
-      renderPortal(node, arg.children)
-    }
+    renderFGetChildAttr(node, arg, mergeValue, renderPortal)
   }
 }
 

@@ -61,7 +61,29 @@ export type FGetChildAttr<T> = {
   children: ValueOrGet<number | string>
 } | {
   childrenType?: never
-  children?: SetValue<T>
+  children?: SetValue<T> | number | string
+}
+
+
+export function renderFGetChildAttr<T>(
+  node: Node,
+  arg: FGetChildAttr<T>,
+  mergeValue: MergeValue,
+  renderPortal: (n: Node, children: SetValue<Node>) => void,
+) {
+
+  if (arg.childrenType == 'text') {
+    mergeValue(node, arg.children, setText)
+  } else if (arg.childrenType == 'html') {
+    mergeValue(node, arg.children, setHtml)
+  } else {
+    const tp = typeof arg.children
+    if (tp == 'function') {
+      renderPortal(node, arg.children as any)
+    } else if (tp == 'number' || tp == 'string') {
+      mergeValue(node, arg.children, setText)
+    }
+  }
 }
 
 export interface MergeValue {
@@ -119,14 +141,7 @@ function createRenderFAttr(
         mergeValue(node, arg[key], updateMAttr, key)
       }
     }
-
-    if (arg.childrenType == 'text') {
-      mergeValue(node, arg.children, setText)
-    } else if (arg.childrenType == 'html') {
-      mergeValue(node, arg.children, setHtml)
-    } else if (arg.children) {
-      renderPortal(node, arg.children)
-    }
+    renderFGetChildAttr(node, arg, mergeValue, renderPortal)
   }
 }
 
