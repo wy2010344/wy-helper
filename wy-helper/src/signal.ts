@@ -1,196 +1,154 @@
 import { Compare, simpleNotEqual } from "./equal";
 import { GetValue, SetValue } from "./setStateHelper";
 import { StoreRef } from "./storeRef";
-import { asLazy, emptyFun, EmptyFun, emptyObject, iterableToList, messageChannelCallback, numberSortAsc, run } from "./util";
+import {
+  asLazy,
+  emptyFun,
+  EmptyFun,
+  emptyObject,
+  iterableToList,
+  messageChannelCallback,
+  numberSortAsc,
+  run,
+} from "./util";
 
+const m = globalThis as any;
+const DepKey = "wy-helper-signal-cache";
 
-const m = globalThis as any
-const DepKey = 'wy-helper-signal-cache'
+function createBatch(): CurrentBatch {
+  return {
+    listeners: new Set(),
+    effects: new Map(),
+    deps: [],
+  };
+}
 if (!m[DepKey]) {
-  let uid = Number.MIN_SAFE_INTEGER
+  let uid = Number.MIN_SAFE_INTEGER;
   const o = {
     batchListeners: new Set(),
     effects: new Map(),
-    recycleBatches: [],
+    currentBatch: createBatch(),
+    nextBatch: createBatch(),
     state: {
       uid,
       version: uid,
     },
-    listener: {
-      uid,
-      version: uid
-    },
-  }
-  m[DepKey] = o
+  };
+  m[DepKey] = o;
 }
-
 
 type CurrentBatch = {
-  signals: Set<Signal<any>>
-  listeners: Set<EmptyFun>
-  effects: Map<number, EmptyFun[]>
-  deps: EmptyFun[]
-}
+  listeners: Set<EmptyFun>;
+  effects: Map<number, EmptyFun[]>;
+  deps: EmptyFun[];
+};
 interface Version {
-  uid: number
-  version: any
+  uid: number;
+  version: any;
 }
 const signalCache = m[DepKey] as {
-  currentFun?: EmptyFun
-  currentBatch?: CurrentBatch
-  //在更新期间,放置effects
-  currentEffects?: Map<number, EmptyFun[]>
-  currentDeps?: EmptyFun[]
-  recycleBatches: CurrentBatch[]
-  currentRelay?: MapGetDep
-  //在执行effect期间
-  onEffectRun?: boolean,
+  currentFun?: EmptyFun;
+  //开始了异步任务
+  beginBatch?: boolean;
+  currentBatch: CurrentBatch;
+  nextBatch: CurrentBatch;
 
+  //在更新期间,放置effects
+  onWorkBatch?: CurrentBatch;
+
+  currentRelay?: MapGetDep;
+  //在执行effect期间
+  onEffectRun?: boolean;
   //是否在注入期间
-  // inReject?: boolean
-  state: Version
-  listener: Version
-}
+  state: Version;
+  callGet?: boolean;
+};
 function updateGlobalVersion(v: Version) {
   if (v.uid == Number.MAX_SAFE_INTEGER) {
-    v.version = Symbol()
-    return
+    v.version = Symbol();
+    return;
   }
-  v.uid = v.uid + 1
-  v.version = v.uid
+  v.uid = v.uid + 1;
+  v.version = v.uid;
 }
 
 export function addEffect(effect: EmptyFun, level = 0) {
-  let effects: Map<number, EmptyFun[]>
-  if (signalCache.currentEffects) {
-    effects = signalCache.currentEffects
+  let effects: Map<number, EmptyFun[]>;
+  if (signalCache.onWorkBatch) {
+    effects = signalCache.onWorkBatch.effects;
   } else {
-    beginCurrentBatch()
-    effects = signalCache.currentBatch!.effects
+    beginCurrentBatch();
+    effects = signalCache.currentBatch!.effects;
   }
-  let olds = effects.get(level)
+  let olds = effects.get(level);
   if (!olds) {
-    olds = []
-    effects.set(level, olds)
+    olds = [];
+    effects.set(level, olds);
   }
-  olds.push(effect)
+  olds.push(effect);
 }
 
 function addRelay(get: GetValue<any>, value: any) {
-  const relay = signalCache.currentRelay
+  const relay = signalCache.currentRelay;
   if (relay) {
-    relay.set(get, value)
+    relay.set(get, value);
   }
 }
-function addListener(listener: EmptyFun) {
-  signalCache.currentBatch!.listeners.add(listener)
-}
-
 
 class Signal<T> {
-  constructor(
-    private value: T,
-    public shouldChange: Compare<T>
-  ) {
-    this.dirtyValue = value
-  }
-  getValue() {
-    if (this.dirty) {
-      return this.dirtyValue
-    }
-    return this.value
-  }
-  private dirty = false
-  private dirtyValue: T
+  constructor(private value: T, public shouldChange: Compare<T>) {}
   set = (v: T) => {
-    if (signalCache.currentFun) {
-      throw '计算期间不允许修改值'
+    if (signalCache.onWorkBatch) {
+      throw "计算期间不允许修改值";
     }
-    if (signalCache.currentEffects) {
-      throw '计算期间不允许修改值1'
-    }
-
-    if (this.shouldChange(v, this.getValue())) {
-      updateGlobalVersion(signalCache.state)
-    }
-    /**
-     * 是否可以在批量结束时,才检查哪些需要改变?
-     * 但是要区分缓存值与生效值
-     * 场景应该很少
-    */
-    if (this.dirty) {
-      this.dirtyValue = v
-    } else {
-      if (this.listeners[0].size) {
-        if (this.shouldChange(this.value, v)) {
-          this.dirty = true
-          this.dirtyValue = v
-          beginCurrentBatch()
-          signalCache.currentBatch!.signals.add(this)
-        }
-      } else {
-        //没有监听者,可以安全更新
-        this.value = v
+    if (this.shouldChange(v, this.value)) {
+      if (signalCache.callGet) {
+        updateGlobalVersion(signalCache.state);
+        signalCache.callGet = false;
+      }
+      this.value = v;
+      if (signalCache.currentBatch.listeners.size) {
+        //有listener才通知更新
+        beginCurrentBatch();
       }
     }
-    return v
-  }
+    return v;
+  };
 
-  acceptChange(v: T) {
-    if (this.dirty) {
-      return true
-    }
-    return this.shouldChange(this.value, v)
-  }
-
-  private listeners = [new Set<EmptyFun>(), new Set<EmptyFun>()]  //可以回收使用吧
-  commit() {
-    this.dirty = false
-    if (this.shouldChange(this.dirtyValue, this.value)) {
-      this.value = this.dirtyValue
-      //组装到batch里面
-      const oldListener = this.listeners.shift()!
-      oldListener.forEach(addListener)
-      oldListener.clear()
-      this.listeners.push(oldListener)
-    }
-  }
   get = () => {
-    const value = this.getValue()
-    addRelay(this.get, value)
+    const value = this.value;
+    addRelay(this.get, value);
     if (signalCache.currentFun) {
-      this.listeners[0].add(signalCache.currentFun)
+      signalCache.currentBatch.listeners.add(signalCache.currentFun);
     }
-    return value
-  }
+    return value;
+  };
 }
 
 /**
  * 信号
- * @param value 
- * @param shouldChange 
- * @returns 
+ * @param value
+ * @param shouldChange
+ * @returns
  */
-export function createSignal<T>(value: T, shouldChange: Compare<T> = simpleNotEqual): StoreRef<T> {
-  const signal = new Signal(value, shouldChange)
+export function createSignal<T>(
+  value: T,
+  shouldChange: Compare<T> = simpleNotEqual
+): StoreRef<T> {
+  const signal = new Signal(value, shouldChange);
   return {
     get: signal.get,
-    set: signal.set
-  }
+    set: signal.set,
+  };
 }
 
 export function signalOnUpdate() {
-  return Boolean(signalCache.currentEffects)
+  return Boolean(signalCache.onWorkBatch);
 }
 function beginCurrentBatch() {
-  if (!signalCache.currentBatch) {
-    signalCache.currentBatch = signalCache.recycleBatches.shift() || {
-      listeners: new Set(),
-      effects: new Map(),
-      signals: new Set(),
-      deps: []
-    }
-    messageChannelCallback(batchSignalEnd)
+  if (!signalCache.beginBatch) {
+    signalCache.beginBatch = true;
+    messageChannelCallback(batchSignalEnd);
   }
 }
 export interface SyncFun<T> {
@@ -200,62 +158,50 @@ export interface SyncFun<T> {
   <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): EmptyFun;
 }
 
-
-function commitSignal(signal: Signal<any>) {
-  signal.commit()
-}
-
 export function batchSignalEnd() {
   if (signalCache.onEffectRun) {
-    console.log("执行effect中不能batchSignalEnd")
-    return
+    console.log("执行effect中不能batchSignalEnd");
+    return;
   }
-  if (signalCache.currentEffects) {
-    console.log("执行listener中不能batchSignalEnd")
-    return
+  if (signalCache.onWorkBatch) {
+    console.log("执行listener中不能batchSignalEnd");
+    return;
   }
 
-  let c = 0
-  let currentBatch: CurrentBatch | undefined = undefined
-  while (currentBatch = signalCache.currentBatch) {
+  let c = 0;
+  while (signalCache.beginBatch) {
     //执行观察事件,即trackSignal的两个函数参数,与上游的memo参数
-    currentBatch.signals.forEach(commitSignal)
-    currentBatch.signals.clear()
+    signalCache.beginBatch = false;
+    const currentBatch = signalCache.currentBatch;
+    signalCache.currentBatch = signalCache.nextBatch;
+    signalCache.nextBatch = currentBatch;
+    //交换后
 
-    signalCache.currentBatch = undefined
-    signalCache.currentEffects = currentBatch.effects
-    const deps = currentBatch.deps
-    signalCache.currentDeps = deps
+    const deps = currentBatch.deps;
+    const effects = currentBatch.effects;
+    signalCache.onWorkBatch = currentBatch;
 
-
-
-    const listeners = currentBatch.listeners
-    listeners.forEach(run)
-    listeners.clear()
+    const listeners = currentBatch.listeners;
+    listeners.forEach(run);
+    listeners.clear();
 
     while (deps.length) {
       //因为可能在执行中动态增加,所以使用这个shift的方式
-      const fun = deps.shift()!
-      fun()
+      const fun = deps.shift()!;
+      fun();
     }
-
-    signalCache.currentDeps = undefined
-    signalCache.currentEffects = undefined
+    signalCache.onWorkBatch = undefined;
 
     ///执行effect事件
-    signalCache.onEffectRun = true
-    const effects = currentBatch.effects
-    const keys = iterableToList(effects.keys()).sort(numberSortAsc)
+    signalCache.onEffectRun = true;
+
+    const keys = iterableToList(effects.keys()).sort(numberSortAsc);
     for (const key of keys) {
-      effects.get(key)?.forEach(run)
+      effects.get(key)?.forEach(run);
     }
-    effects.clear()
-    signalCache.recycleBatches.push(currentBatch)
-    signalCache.onEffectRun = undefined
-    if (signalCache.recycleBatches.length > 2) {
-      console.log("出现多个recycleBatches", signalCache.recycleBatches.length)
-    }
-    c++
+    effects.clear();
+    signalCache.onEffectRun = undefined;
+    c++;
   }
   // if (c) {
   //   console.log("render", c)
@@ -266,228 +212,246 @@ export function memoFun<T extends Function>(
   get: MemoGet<T> | MemoFun<T>,
   after: SetValue<T> = emptyFun
 ): T {
-  const value = memo(get, after) as any
+  const value = memo(get, after) as any;
   if (!value.memoFun) {
     value.memoFun = function () {
-      return value().apply(null, arguments)
-    } as any
+      return value().apply(null, arguments);
+    } as any;
   }
-  return value.memoFun as any
+  return value.memoFun as any;
 }
 /**
  * 跟踪信号
  * 这里get函数是常执行的,set函数会在必要时执行,跟memo的结果一样
  * 是否可以合并只有一个函数,则始终是memo的.毕竟现在set里,也不能设置状态了
  * 而且由于是终节点,get在批量时,每次只执行一次
- * @param get 通过信号计算出来的值 
+ * @param get 通过信号计算出来的值
  * @returns 同步事件
  */
-export function trackSignal<T>(get: MemoGet<T>, set?: SetValue<T>): EmptyFun
-export function trackSignal<T, A>(get: MemoGet<T>, set: (v: T, a: A) => void, a: A): EmptyFun
-export function trackSignal<T, A, B>(get: MemoGet<T>, set: (v: T, a: A, b: B) => void, a: A, b: B): EmptyFun
-export function trackSignal<T, A, B, C>(get: MemoGet<T>, set: (v: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): EmptyFun
+export function trackSignal<T>(get: MemoGet<T>, set?: SetValue<T>): EmptyFun;
+export function trackSignal<T, A>(
+  get: MemoGet<T>,
+  set: (v: T, a: A) => void,
+  a: A
+): EmptyFun;
+export function trackSignal<T, A, B>(
+  get: MemoGet<T>,
+  set: (v: T, a: A, b: B) => void,
+  a: A,
+  b: B
+): EmptyFun;
+export function trackSignal<T, A, B, C>(
+  get: MemoGet<T>,
+  set: (v: T, a: A, b: B, c: C) => void,
+  a: A,
+  b: B,
+  c: C
+): EmptyFun;
 export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
-  let disabled = false
-  const a = arguments[2]
-  const b = arguments[3]
-  const c = arguments[4]
+  let disabled = false;
+  const a = arguments[2];
+  const b = arguments[3];
+  const c = arguments[4];
 
-  let inited = false
-  let lastValue: any = undefined
+  let inited = false;
+  let lastValue: any = undefined;
   function addFun() {
     if (disabled) {
-      return
+      return;
     }
-    signalCache.currentFun = addFun
-    updateGlobalVersion(signalCache.listener)
-    const value = get(lastValue, inited)
-    signalCache.currentFun = undefined
+    signalCache.currentFun = addFun;
+    const value = get(lastValue, inited);
+    signalCache.currentFun = undefined;
     if (inited) {
       if (value != lastValue) {
-        lastValue = value
-        set(value, a, b, c)
+        lastValue = value;
+        set(value, a, b, c);
       }
     } else {
-      inited = true
-      lastValue = value
-      set(value, a, b, c)
+      inited = true;
+      lastValue = value;
+      set(value, a, b, c);
     }
   }
-  addFun.abc = get.abc
-  const deps = signalCache.currentDeps
+  addFun.abc = get.abc;
+  const deps = signalCache.onWorkBatch?.deps;
   if (deps) {
-    deps.push(addFun)
+    deps.push(addFun);
   } else {
-    //没有执行中
-    beginCurrentBatch()
-    signalCache.currentBatch!.deps.push(addFun)
+    //没在执行中
+    beginCurrentBatch();
+    signalCache.currentBatch.deps.push(addFun);
   }
   //销毁
   return function () {
-    disabled = true
-  }
+    disabled = true;
+  };
 }
 
-type MapGetDep = Map<GetValue<any>, any>
+type MapGetDep = Map<GetValue<any>, any>;
 function relayChange(relays: MapGetDep) {
   for (const [get, old] of relays) {
     //这里负责着注入
-    const v = get()
+    const v = get();
     if (v != old) {
-      return true
+      return true;
     }
   }
-  return false
+  return false;
 }
-function memoGet<T>(relays: MapGetDep, get: GetValue<T>, lastValue: T, init: boolean) {
-  relays.clear()
-  signalCache.currentRelay = relays
-  const v = get(lastValue, init)
-  return v
+function memoGet<T>(
+  relays: MapGetDep,
+  get: GetValue<T>,
+  lastValue: T,
+  init: boolean
+) {
+  relays.clear();
+  signalCache.currentRelay = relays;
+  const v = get(lastValue, init);
+  return v;
 }
 
 export interface MemoGet<T> {
-  (old: undefined, inited: false): T,
-  (old: T, inited: true): T
+  (old: undefined, inited: false): T;
+  (old: T, inited: true): T;
 }
 
 export interface MemoFun<T> {
-  (): T
-  memorized: true
-  after: SetValue<T>
+  (): T;
+  memorized: true;
+  after: SetValue<T>;
 }
 function mapInject(value: any, key: GetValue<any>) {
-  key()
+  key();
 }
 export function memo<T>(
   get: MemoGet<T> | MemoFun<T>,
   after: SetValue<T> = emptyFun
 ) {
-  const target = get as any
+  const target = get as any;
   if (target.memorized && (after == target.after || after == emptyFun)) {
     //减少不必要的声明
-    return get as MemoFun<T>
+    return get as MemoFun<T>;
   }
-  const relays = new Map<GetValue<any>, any>() as MapGetDep
-  let lastValue!: T
-  let inited = false
-  let stateVersion: any = relays
-  let listenerVersion: any = relays
+  const relays = new Map<GetValue<any>, any>() as MapGetDep;
+  let lastValue!: T;
+  let inited = false;
+  let stateVersion: any = relays;
+  let listenerVersion: any = undefined;
   const myGet = function () {
+    signalCache.callGet = true;
     //每一次都不能跳过,主要是trackSignal需要流入依赖
     if (stateVersion == signalCache.state.version) {
-      if (signalCache.currentEffects && listenerVersion != signalCache.listener.version) {
+      if (
+        signalCache.onWorkBatch &&
+        listenerVersion != signalCache.currentFun
+      ) {
         //在依赖注入期间
-        listenerVersion = signalCache.listener.version
-        relays.forEach(mapInject)
+        listenerVersion = signalCache.currentFun;
+        relays.forEach(mapInject);
       }
-      addRelay(myGet, lastValue)
-      return lastValue
+      addRelay(myGet, lastValue);
+      return lastValue;
     }
-    stateVersion = signalCache.state.version
+    stateVersion = signalCache.state.version;
 
     let shouldAfter = false;
-    const oldRelay = signalCache.currentRelay
-    signalCache.currentRelay = undefined
+    const oldRelay = signalCache.currentRelay;
+    signalCache.currentRelay = undefined;
     if (inited) {
       //这个relayChange,会检查上游的更新
       if (relayChange(relays)) {
-        const value = memoGet(relays, get, lastValue, inited)
+        const value = memoGet(relays, get, lastValue, inited);
         if (value != lastValue) {
-          lastValue = value
-          shouldAfter = true
+          lastValue = value;
+          shouldAfter = true;
         }
       }
     } else {
-      lastValue = memoGet(relays, get, lastValue, inited)
-      inited = true
-      shouldAfter = true
+      lastValue = memoGet(relays, get, lastValue, inited);
+      inited = true;
+      shouldAfter = true;
     }
-    signalCache.currentRelay = oldRelay
+    signalCache.currentRelay = oldRelay;
 
-
-
-    addRelay(myGet, lastValue)
+    addRelay(myGet, lastValue);
     if (shouldAfter) {
       //是需要控制每次函数执行后执行,还是每次结果不同才执行?
-      after(lastValue)
+      after(lastValue);
     }
-    return lastValue
-  } as MemoFun<T>
-  myGet.memorized = true
-  myGet.after = after
-  return myGet
+    return lastValue;
+  } as MemoFun<T>;
+  myGet.memorized = true;
+  myGet.after = after;
+  return myGet;
 }
 
-
-
-export type ValueOrGet<T> = T | GetValue<T>
+export type ValueOrGet<T> = T | GetValue<T>;
 export function getValueOrGet<T>(o: ValueOrGet<T>) {
-  if (typeof o == 'function') {
-    return (o as GetValue<T>)()
+  if (typeof o == "function") {
+    return (o as GetValue<T>)();
   } else {
-    return o
+    return o;
   }
 }
 /**
  * 转化成信号
- * @param o 
- * @param toMemo 
- * @param shouldChange 
- * @returns 
+ * @param o
+ * @param toMemo
+ * @param shouldChange
+ * @returns
  */
 export function valueOrGetToGet<T>(o: ValueOrGet<T>): GetValue<T> {
-  if (typeof o == 'function') {
-    return o as any
+  if (typeof o == "function") {
+    return o as any;
   } else {
-    return asLazy(o)
+    return asLazy(o);
   }
 }
 
-
-
-
-
-export function toProxySignal<T extends {}>(init: T, {
-  signalObject = {} as any,
-  getToCreate,
-  setToCreate
-}: {
-  signalObject?: {
-    [key in keyof T]: StoreRef<T[key]>
-  }
-  getToCreate?: boolean
-  setToCreate?: boolean
-} = emptyObject) {
+export function toProxySignal<T extends {}>(
+  init: T,
+  {
+    signalObject = {} as any,
+    getToCreate,
+    setToCreate,
+  }: {
+    signalObject?: {
+      [key in keyof T]: StoreRef<T[key]>;
+    };
+    getToCreate?: boolean;
+    setToCreate?: boolean;
+  } = emptyObject
+) {
   for (const key in init) {
-    signalObject[key] = createSignal(init[key])
+    signalObject[key] = createSignal(init[key]);
   }
-  type Target = Record<string | symbol, StoreRef<any>>
+  type Target = Record<string | symbol, StoreRef<any>>;
   return new Proxy(signalObject, {
     get(target: Target, p, receiver) {
-      let tp = target[p]
+      let tp = target[p];
       if (!tp) {
         if (getToCreate) {
-          tp = createSignal(undefined)
-          target[p] = tp
+          tp = createSignal(undefined);
+          target[p] = tp;
         } else {
-          return undefined
+          return undefined;
         }
       }
-      return tp.get()
+      return tp.get();
     },
     set(target, p, newValue, receiver) {
-      let tp = target[p]
+      let tp = target[p];
       if (!tp) {
         if (setToCreate) {
-          tp = createSignal(newValue)
-          target[p] = tp
+          tp = createSignal(newValue);
+          target[p] = tp;
         } else {
-          return false
+          return false;
         }
       }
-      tp.set(newValue)
-      return true
+      tp.set(newValue);
+      return true;
     },
-  }) as T
+  }) as T;
 }
