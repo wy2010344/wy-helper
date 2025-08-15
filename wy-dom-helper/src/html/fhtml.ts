@@ -1,6 +1,6 @@
 
 
-import { emptyFun, objectDiffDeleteKey, SetValue, SyncFun, ValueOrGet } from "wy-helper";
+import { emptyFun, genTemplateStringS1, genTemplateStringS2, GetValue, objectDiffDeleteKey, SetValue, SyncFun, ValueOrGet, VType, vTypeisGetValue } from "wy-helper";
 import { PureCSSProperties } from "../util";
 import { BDomAttribute, BSvgAttribute, DomElementType, React, SvgElementType } from "./html";
 import { addEvent, isEvent, mergeEvent, setHtml, setText, updateAttr, updateCssVariable, updateDataSet, updateDom, UpdateProp, updateStyle, updateSvg } from "./fx";
@@ -61,9 +61,43 @@ export type FGetChildAttr<T> = {
   children: ValueOrGet<number | string>
 } | {
   childrenType?: never
-  children?: SetValue<T> | number | string
+  children?: CommonChildrenType<T>
 }
 
+
+export type CommonChildrenType<T> = SetValue<T> | GetChild | number | string
+export interface GetChild {
+  type: 'text' | 'html'
+  (): string | number
+}
+
+export function toGetText(fun: GetValue<string | number>) {
+  const abc = fun as GetChild
+  abc.type = 'text'
+  return abc
+}
+
+export function toText(ts: TemplateStringsArray, ...vs: VType[]) {
+  if (vs.some(vTypeisGetValue)) {
+    return toGetText(() => {
+      return genTemplateStringS2(ts, vs)
+    })
+  } else {
+    return genTemplateStringS1(ts, vs as any)
+  }
+}
+
+export function toGetHtml(fun: GetValue<string | number>) {
+  const abc = fun as GetChild
+  abc.type = 'html'
+  return abc
+}
+
+export function toHtml(ts: TemplateStringsArray, ...vs: VType[]) {
+  return toGetHtml(() => {
+    return genTemplateStringS2(ts, vs)
+  })
+}
 
 export function renderFGetChildAttr<T>(
   node: Node,
@@ -71,17 +105,23 @@ export function renderFGetChildAttr<T>(
   mergeValue: MergeValue,
   renderPortal: (n: Node, children: SetValue<Node>) => void,
 ) {
-
   if (arg.childrenType == 'text') {
     mergeValue(node, arg.children, setText)
   } else if (arg.childrenType == 'html') {
     mergeValue(node, arg.children, setHtml)
   } else {
-    const tp = typeof arg.children
+    const children = arg.children
+    const tp = typeof children
     if (tp == 'function') {
-      renderPortal(node, arg.children as any)
+      if ((children as any).type == 'text') {
+        mergeValue(node, arg.children, setText)
+      } else if ((children as any).type == 'html') {
+        mergeValue(node, arg.children, setHtml)
+      } else {
+        renderPortal(node, children as any)
+      }
     } else if (tp == 'number' || tp == 'string') {
-      mergeValue(node, arg.children, setText)
+      mergeValue(node, children, setText)
     }
   }
 }

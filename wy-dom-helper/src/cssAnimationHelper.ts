@@ -1,4 +1,4 @@
-import { EmptyFun, StoreRef } from "wy-helper"
+import { addEffect, EmptyFun, ReadSet, SetValue, StoreRef } from "wy-helper"
 import { CSSProperties, getCommonParentNode, requestBatchAnimationFrame, splitClassNames } from "./util"
 
 function forceFlow(div: Element | null | undefined) {
@@ -58,7 +58,7 @@ export function forceFlowStyle<
   M extends CNSWithStyle
 >(div: T, style: M) {
   clearStyle(div, style)
-  requesetBatchAnimationForceFlow(div, function () {
+  requesetBatchAnimationForceFlow(new Set([div]), function () {
     mergeStyle(div, style)
   })
   return style
@@ -90,39 +90,48 @@ export function forceFlowInitStyle<
     clearStyle(div, from)
     mergeStyle(div, iFrom)
   }
-  requesetBatchAnimationForceFlow(div, function () {
+  requesetBatchAnimationForceFlow(new Set([div]), function () {
     clearStyle(div, iFrom)
     mergeStyle(div, show)
   })
   return show
 }
 
-const tempList: {
-  div: Element
-  after: EmptyFun
-}[] = []
-function createTempList() {
-  let superNode: Element | null = null
-  for (let temp of tempList) {
-    superNode = getCommonParentNode(superNode, temp.div)
+export function createBatchForceFlow(finish: SetValue<EmptyFun>) {
+  const tempList: {
+    div: Set<Element>
+    after: EmptyFun
+  }[] = []
+  function createTempList() {
+    let superNode: Element | null = null
+    for (let temp of tempList) {
+      temp.div.forEach(div => {
+        superNode = getCommonParentNode(superNode, div)
+      })
+    }
+    if (superNode) {
+      forceFlow(superNode as Element)
+    }
+    for (let temp of tempList) {
+      temp.after()
+    }
+    tempList.length = 0
   }
-  if (superNode) {
-    forceFlow(superNode as Element)
+  return function (div: Set<Element>, after: EmptyFun) {
+    tempList.push({
+      div,
+      after
+    })
+    if (tempList.length == 1) {
+      finish(createTempList)
+    }
   }
-  for (let temp of tempList) {
-    temp.after()
-  }
-  tempList.length = 0
 }
-export function requesetBatchAnimationForceFlow(div: Element, after: EmptyFun) {
-  tempList.push({
-    div,
-    after
-  })
-  if (tempList.length == 1) {
-    requestBatchAnimationFrame(createTempList)
-  }
-}
+export const requesetBatchAnimationForceFlow = createBatchForceFlow(requestBatchAnimationFrame)
+export const signalEffectForceFlow = createBatchForceFlow(function (fun) {
+  addEffect(fun, Infinity)
+})
+
 
 export type CNSInfer<M extends ClsWithStyle> = Omit<M, 'className'> & {
   className?: Set<string>

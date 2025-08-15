@@ -1,21 +1,18 @@
-import { Quote } from "./util";
+import { StoreRef } from "./storeRef";
+import { Quote, ReadArray } from "./util";
 
-export type SetStateAction<T> = T | ((v: T) => T)
+export type SetStateAction<T> = T | ((v: T) => T);
 export type SetValue<F> = (v: F, ...vs: any[]) => void;
 export type GetValue<F> = (...vs: any[]) => F;
-export type ReduceState<T> = SetValue<SetStateAction<T>>
+export type ReduceState<T> = SetValue<SetStateAction<T>>;
 
-export type ParentSet<T> = SetValue<Quote<T>>
+export type ParentSet<T> = SetValue<Quote<T>>;
 
-
-export function applySetStateAction<T>(
-  v: SetStateAction<T>,
-  old: T
-): T {
-  if (typeof v == 'function') {
-    return (v as any)(old)
+export function applySetStateAction<T>(v: SetStateAction<T>, old: T): T {
+  if (typeof v == "function") {
+    return (v as any)(old);
   }
-  return v
+  return v;
 }
 
 export function buildSubSet<PARENT, CHILD>(
@@ -24,13 +21,26 @@ export function buildSubSet<PARENT, CHILD>(
   buildParent: (s: PARENT, t: CHILD) => PARENT
 ) {
   return function (setChild: SetStateAction<CHILD>) {
-    parentSet(x => buildParent(x,
-      applySetStateAction(
-        setChild,
-        getChild(x)
-      )
-    ))
-  }
+    parentSet((x) =>
+      buildParent(x, applySetStateAction(setChild, getChild(x)))
+    );
+  };
+}
+
+export function createSubSetStore<PARENT, CHILD>(
+  model: StoreRef<PARENT>,
+  getChild: (s: PARENT) => CHILD,
+  buildParent: (s: PARENT, t: CHILD) => PARENT
+) {
+  return {
+    get() {
+      return getChild(model.get());
+    },
+    set(v: CHILD) {
+      model.set(buildParent(model.get(), v));
+      return v;
+    },
+  };
 }
 
 export function buildSubSetObject<PARENT, K extends keyof PARENT>(
@@ -40,55 +50,102 @@ export function buildSubSetObject<PARENT, K extends keyof PARENT>(
 ) {
   return buildSubSet(
     parentSet,
-    v => v[key],
+    (v) => v[key],
     (parent, sub) => {
       return {
         ...parent,
-        [key]: callback ? callback(sub, parent) : sub
-      }
+        [key]: callback ? callback(sub, parent) : sub,
+      };
     }
-  )
+  );
 }
 
+export function createSubSetObject<PARENT, K extends keyof PARENT>(
+  model: StoreRef<PARENT>,
+  key: K,
+  callback?: (v: PARENT[K], parent: PARENT) => PARENT[K]
+) {
+  return createSubSetStore<PARENT, PARENT[K]>(
+    model,
+    (v) => v[key],
+    (parent, sub) => {
+      return {
+        ...parent,
+        [key]: callback ? callback(sub, parent) : sub,
+      };
+    }
+  );
+}
 
-
-export type ReduceRowState<T> = (() => void) & ((v: SetStateAction<T>) => void)
+export type ReduceRowState<T> = (() => void) & ((v: SetStateAction<T>) => void);
 export function buildSubSetArray<T>(
-  parentSet: ParentSet<T[]>,
-  equal: ((v: T) => boolean)
+  parentSet: ParentSet<readonly T[]>,
+  equal: (v: T) => boolean
 ): ReduceRowState<T> {
   return function () {
-    const isRemove = arguments.length == 0
-    const v = arguments[0]
-    parentSet(ts => {
-      const idx = ts.findIndex(equal)
+    const isRemove = arguments.length == 0;
+    const v = arguments[0];
+    parentSet((ts) => {
+      const idx = ts.findIndex(equal);
       if (idx < 0) {
-        return ts
+        return ts;
       }
-      ts = ts.slice()
+      const vs = ts.slice();
       if (isRemove) {
-        ts.splice(idx, 1)
+        vs.splice(idx, 1);
       } else {
-        ts.splice(
-          idx,
-          1,
-          applySetStateAction(v, ts[idx])
-        )
+        vs.splice(idx, 1, applySetStateAction(v, ts[idx]));
       }
-      return ts
-    })
-  }
+      return vs;
+    });
+  };
 }
 
+export function createSubSetArray<T>(
+  model: StoreRef<readonly T[]>,
+  equal: (v: T) => boolean
+) {
+  return {
+    get() {
+      return model.get().find(equal);
+    },
+    set(v?: T) {
+      const isRemove = arguments.length == 0;
+      const ts = model.get();
+      const idx = ts.findIndex(equal);
+      if (idx < 0) {
+        return ts;
+      }
+      const vs = ts.slice();
+      if (isRemove) {
+        vs.splice(idx, 1);
+      } else {
+        vs.splice(idx, 1, v!);
+      }
+      model.set(vs);
+      return v;
+    },
+  };
+}
 
 export function buildSubSetArrayKey<T, K>(
-  parentSet: ParentSet<T[]>,
+  parentSet: ParentSet<readonly T[]>,
   getKey: (v: T) => K,
   row: T
 ) {
-  return buildSubSetArray(parentSet, value => {
-    return getKey(value) == getKey(row)
-  })
+  return buildSubSetArray(parentSet, (value) => {
+    return getKey(value) == getKey(row);
+  });
+}
+
+export function createSubSetArrayKey<T, K>(
+  parentSet: StoreRef<readonly T[]>,
+  getKey: (v: T) => K,
+  row: T
+) {
+  return createSubSetArray(parentSet, (value) => {
+    return getKey(value) == getKey(row);
+  });
 }
 
 export function serialEvent<T extends (...args: any[]) => any>(
@@ -113,7 +170,7 @@ export function objectDeepEqual(a: any, b: any, deps = Infinity) {
     return true;
   }
   if (deps == 0) {
-    return
+    return;
   }
   if (Array.isArray(a)) {
     if (Array.isArray(b)) {
@@ -190,12 +247,11 @@ export function findIndexFrom<T>(
   return -1;
 }
 
-
 /**
  * 构建砖石布局的算法.考虑到长度的随机,
- * @param list 
- * @param count 
- * @returns 
+ * @param list
+ * @param count
+ * @returns
  */
 export function masonryList<T>(list: T[], count: number) {
   const columns: {
@@ -220,50 +276,48 @@ export function masonryList<T>(list: T[], count: number) {
 }
 
 export function groupToMap<T, F>(list: readonly T[], getKey: (v: T) => F) {
-  const map = new Map<F, T[]>()
+  const map = new Map<F, T[]>();
   for (const row of list) {
-    const key = getKey(row)
-    const oldDef = map.get(key)
+    const key = getKey(row);
+    const oldDef = map.get(key);
     if (oldDef) {
-      oldDef.push(row)
+      oldDef.push(row);
     } else {
-      map.set(key, [row])
+      map.set(key, [row]);
     }
   }
-  return map
+  return map;
 }
-
 
 export function iteratorToList<V>(iterable: IterableIterator<V>) {
-  const list: V[] = []
+  const list: V[] = [];
   while (true) {
-    const value = iterable.next()
+    const value = iterable.next();
     if (value.done) {
-      break
+      break;
     }
-    list.push(value.value)
+    list.push(value.value);
   }
-  return list
+  return list;
 }
 
-export function objectMap<K extends string, M, F>(a: Record<K, M>, fun: (v: M, key: K) => F) {
-  const out = {} as any
+export function objectMap<K extends string, M, F>(
+  a: Record<K, M>,
+  fun: (v: M, key: K) => F
+) {
+  const out = {} as any;
   for (const key in a) {
-    out[key] = fun(a[key], key)
+    out[key] = fun(a[key], key);
   }
-  return out as Record<K, F>
+  return out as Record<K, F>;
 }
 
 export function getOutResolvePromise<T>() {
-  let resolve: (v: T) => void
-  let reject: (v?: any) => void
+  let resolve: (v: T) => void;
+  let reject: (v?: any) => void;
   const promise = new Promise<T>(function (_resolve, _reject) {
-    resolve = _resolve
-    reject = _reject
-  })
-  return [
-    promise,
-    resolve!,
-    reject!
-  ] as const
+    resolve = _resolve;
+    reject = _reject;
+  });
+  return [promise, resolve!, reject!] as const;
 }
