@@ -1,4 +1,4 @@
-import { getAttributeAlias } from "../getAttributeAlias"
+import { getAttributeAlias } from '../getAttributeAlias'
 
 // export type FDomAttributeC<T extends DomElementType> = Omit<BDomAttribute<T>, 'className'>
 // export type FSvgAttributeC<T extends SvgElementType> = Omit<BSvgAttribute<T>, 'className'>
@@ -16,23 +16,27 @@ export function setHtml(value: string, node: any) {
 }
 /**
  * 无className等,其它attr属性的更新
- * @param value 
- * @param node 
- * @param key 
+ * @param value
+ * @param node
+ * @param key
  */
-export function updateDom(value: any, node: any, key: string,) {
-  if (key == 'href' || key == 'className') {
-    node[key] = value || ''
-  } else {
-    node[key] = value
+export function updateDom(value: any, node: any, key: string) {
+  if (!value) {
+    if (key == 'href') {
+      return node.removeAttribute(key)
+    }
+    if (key == 'className') {
+      value = ''
+    }
   }
+  node[key] = value
 }
 
 /**
  * 无className等,其它attr属性的更新
- * @param value 
- * @param node 
- * @param key 
+ * @param value
+ * @param node
+ * @param key
  */
 export function updateSvg(value: any, node: any, key: string) {
   if (key == 'className') {
@@ -73,16 +77,14 @@ export function updateCssVariable(value: any = '', node: any, key: string) {
 export function isEvent(key: string) {
   return key.startsWith(ON_PREFIX)
 }
-const ON_PREFIX = "on"
-const CAPTURE_SUFFIX = "Capture"
+const ON_PREFIX = 'on'
+const CAPTURE_SUFFIX = 'Capture'
 export function mergeEvent(
   node: any,
   key: string,
   oldValue: any,
   newValue?: any
 ) {
-
-
   let eventType = key.slice(ON_PREFIX.length)
   let capture = false
   if (eventType.endsWith(CAPTURE_SUFFIX)) {
@@ -99,10 +101,8 @@ export function mergeEvent(
   }
 }
 
-
 export function addEvent(node: any, key: string, value: any) {
   mergeEvent(node, key, undefined, value)
 }
-
 
 export type UpdateProp = (value: any, node: any, key: string) => void
