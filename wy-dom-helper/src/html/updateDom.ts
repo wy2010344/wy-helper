@@ -1,8 +1,24 @@
-import { emptyFun, emptyObject, GetValue, objectDiffDeleteKey, run, SetValue, SyncFun } from "wy-helper"
-import { BDomAttribute, BDomEvent, BSvgAttribute, BSvgEvent, DomElementType, React, SvgElementType } from "./html"
-import { CSSProperties } from "../util"
-import { isEvent, mergeEvent, UpdateProp } from "./fx"
-import { getAttributeAlias } from "../getAttributeAlias"
+import {
+  emptyFun,
+  emptyObject,
+  GetValue,
+  objectDiffDeleteKey,
+  run,
+  SetValue,
+  SyncFun,
+} from 'wy-helper'
+import {
+  BDomAttribute,
+  BDomEvent,
+  BSvgAttribute,
+  BSvgEvent,
+  DomElementType,
+  React,
+  SvgElementType,
+} from './html'
+import { CSSProperties } from '../util'
+import { isEvent, mergeEvent, updateDom, UpdateProp, updateSvg } from './fx'
+import { getAttributeAlias } from '../getAttributeAlias'
 export type Props = { [key: string]: any }
 
 function runAndDelete(map: any, key: string) {
@@ -19,21 +35,17 @@ function runAndDelete(map: any, key: string) {
 //   <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): void;
 // }
 export type WithCenterMap<T extends {}> = {
-  [key in keyof T]: (T[key] | SyncFun<T[key]>)
+  [key in keyof T]: T[key] | SyncFun<T[key]>
 }
-
 
 export type DataAttr = {
   [key in `data-${string}`]?: string | number | boolean
 }
 
-
-
-
-
-export type DomAttribute<T extends DomElementType> = WithCenterMap<BDomAttribute<T>
-  & React.AriaAttributes
-  & DataAttr> & BDomEvent<T>
+export type DomAttribute<T extends DomElementType> = WithCenterMap<
+  BDomAttribute<T> & React.AriaAttributes & DataAttr
+> &
+  BDomEvent<T>
 
 export type DomAttributeS<T extends DomElementType> = DomAttribute<T> & {
   style: WithCenterMap<CSSProperties>
@@ -43,13 +55,10 @@ export type DomAttributeSO<T extends DomElementType> = DomAttribute<T> & {
   style?: string | SyncFun<string | undefined> | WithCenterMap<CSSProperties>
 }
 
-
-
-
-
-export type SvgAttribute<T extends SvgElementType> = WithCenterMap<BSvgAttribute<T>
-  & React.AriaAttributes
-  & DataAttr> & BSvgEvent<T>
+export type SvgAttribute<T extends SvgElementType> = WithCenterMap<
+  BSvgAttribute<T> & React.AriaAttributes & DataAttr
+> &
+  BSvgEvent<T>
 
 export type SvgAttributeS<T extends SvgElementType> = SvgAttribute<T> & {
   style: WithCenterMap<CSSProperties>
@@ -58,12 +67,6 @@ export type SvgAttributeS<T extends SvgElementType> = SvgAttribute<T> & {
 export type SvgAttributeSO<T extends SvgElementType> = SvgAttribute<T> & {
   style?: string | SyncFun<string | undefined> | WithCenterMap<CSSProperties>
 }
-
-
-
-
-
-
 
 export function updateStyle(
   node: Node & {
@@ -124,45 +127,28 @@ function setStyleS(v: string | undefined, node: any) {
   node.style = v
 }
 
-
-const emptyKeys = ['href', 'className']
 export function updateDomProps(value: any, node: any, key: string) {
   if (key.includes('-')) {
     node.setAttribute(key, value)
   } else {
-    if (emptyKeys.includes(key) && !value) {
-      node[key] = ''
-    } else {
-      node[key] = value
-    }
+    updateDom(value, node, key)
   }
 }
 export function updateSvgProps(value: any, node: any, key: string) {
   if (key == 'innerHTML' || key == 'textContent') {
     updateDomProps(node, key, value)
   } else {
-    if (key == 'className') {
-      node.setAttribute('class', value || '')
-    } else {
-      key = getAttributeAlias(key)
-      if (value) {
-        node.setAttribute(key, value)
-      } else {
-        node.removeAttribute(key)
-      }
-    }
+    updateSvg(value, node, key)
   }
 }
 
 /**
  * react模式,更新节点
- * @param dom 
- * @param oldProps 
- * @param props 
+ * @param dom
+ * @param oldProps
+ * @param props
  */
-function createMergeAttr(
-  updateProp: UpdateProp,
-) {
+function createMergeAttr(updateProp: UpdateProp) {
   return function (
     node: Node,
     props: Props,
@@ -205,7 +191,12 @@ function createMergeAttr(
           }
           if (value && typeof value == 'object') {
             //新为object
-            keepMap.style = updateStyle(n, value, oldStyleProps || emptyObject, styleProps || {})
+            keepMap.style = updateStyle(
+              n,
+              value,
+              oldStyleProps || emptyObject,
+              styleProps || {}
+            )
           } else {
             //先销毁
             if (oldValue && typeof oldValue == 'object') {
@@ -245,13 +236,14 @@ function setProp(v: string, node: any, key: string, updateProp: any) {
   updateProp(node, key, v)
 }
 
-export function isSyncFun(n: any): n is SyncFun<any> {//是
+export function isSyncFun(n: any): n is SyncFun<any> {
+  //是
   return typeof n == 'function'
 }
 /**
  * 是否是属性，非child且非事件
- * @param key 
- * @returns 
+ * @param key
+ * @returns
  */
 export function isProperty(key: string) {
   if (key == 'children' || key == 'ref' || key == 'key') {
@@ -265,182 +257,182 @@ export function isSVG(name: string) {
   return svgTagNames.includes(name as any)
 }
 export const svgTagNames: SvgElementType[] = [
-  "svg",
-  "animate",
-  "animateMotion",
-  "animateTransform",
-  "circle",
-  "clipPath",
-  "defs",
-  "desc",
-  "ellipse",
-  "feBlend",
-  "feColorMatrix",
-  "feComponentTransfer",
-  "feComposite",
-  "feConvolveMatrix",
-  "feDiffuseLighting",
-  "feDisplacementMap",
-  "feDistantLight",
-  "feDropShadow",
-  "feFlood",
-  "feFuncA",
-  "feFuncB",
-  "feFuncG",
-  "feFuncR",
-  "feGaussianBlur",
-  "feImage",
-  "feMerge",
-  "feMergeNode",
-  "feMorphology",
-  "feOffset",
-  "fePointLight",
-  "feSpecularLighting",
-  "feSpotLight",
-  "feTile",
-  "feTurbulence",
-  "filter",
-  "foreignObject",
-  "g",
-  "image",
-  "line",
-  "linearGradient",
-  "marker",
-  "mask",
-  "metadata",
-  "mpath",
-  "path",
-  "pattern",
-  "polygon",
-  "polyline",
-  "radialGradient",
-  "rect",
-  "stop",
-  "switch",
-  "symbol",
-  "text",
-  "textPath",
-  "tspan",
-  "use",
-  "view",
-  "title"
+  'svg',
+  'animate',
+  'animateMotion',
+  'animateTransform',
+  'circle',
+  'clipPath',
+  'defs',
+  'desc',
+  'ellipse',
+  'feBlend',
+  'feColorMatrix',
+  'feComponentTransfer',
+  'feComposite',
+  'feConvolveMatrix',
+  'feDiffuseLighting',
+  'feDisplacementMap',
+  'feDistantLight',
+  'feDropShadow',
+  'feFlood',
+  'feFuncA',
+  'feFuncB',
+  'feFuncG',
+  'feFuncR',
+  'feGaussianBlur',
+  'feImage',
+  'feMerge',
+  'feMergeNode',
+  'feMorphology',
+  'feOffset',
+  'fePointLight',
+  'feSpecularLighting',
+  'feSpotLight',
+  'feTile',
+  'feTurbulence',
+  'filter',
+  'foreignObject',
+  'g',
+  'image',
+  'line',
+  'linearGradient',
+  'marker',
+  'mask',
+  'metadata',
+  'mpath',
+  'path',
+  'pattern',
+  'polygon',
+  'polyline',
+  'radialGradient',
+  'rect',
+  'stop',
+  'switch',
+  'symbol',
+  'text',
+  'textPath',
+  'tspan',
+  'use',
+  'view',
+  'title',
 ]
 
 export const domTagNames: DomElementType[] = [
-  "a",
-  "abbr",
-  "address",
-  "area",
-  "article",
-  "aside",
-  "audio",
-  "b",
-  "base",
-  "bdi",
-  "bdo",
-  "big",
-  "blockquote",
-  "body",
-  "br",
-  "button",
-  "canvas",
-  "caption",
-  "cite",
-  "code",
-  "col",
-  "colgroup",
-  "data",
-  "datalist",
-  "dd",
-  "del",
-  "details",
-  "dfn",
-  "dialog",
-  "div",
-  "dl",
-  "dt",
-  "em",
-  "embed",
-  "fieldset",
-  "figcaption",
-  "figure",
-  "footer",
-  "form",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "head",
-  "header",
-  "hgroup",
-  "hr",
-  "html",
-  "i",
-  "iframe",
-  "img",
-  "input",
-  "ins",
-  "kbd",
-  "keygen",
-  "label",
-  "legend",
-  "li",
-  "link",
-  "main",
-  "map",
-  "mark",
-  "menu",
-  "menuitem",
-  "meta",
-  "meter",
-  "nav",
-  "noindex",
-  "noscript",
-  "object",
-  "ol",
-  "optgroup",
-  "option",
-  "output",
-  "p",
-  "param",
-  "picture",
-  "pre",
-  "progress",
-  "q",
-  "rp",
-  "rt",
-  "ruby",
-  "s",
-  "samp",
-  "slot",
-  "script",
-  "section",
-  "select",
-  "small",
-  "source",
-  "span",
-  "strong",
-  "style",
-  "sub",
-  "summary",
-  "sup",
-  "table",
-  "template",
-  "tbody",
-  "td",
-  "textarea",
-  "tfoot",
-  "th",
-  "thead",
-  "time",
-  "tr",
-  "track",
-  "u",
-  "ul",
-  "var",
-  "video",
-  "wbr",
-  "webview"
+  'a',
+  'abbr',
+  'address',
+  'area',
+  'article',
+  'aside',
+  'audio',
+  'b',
+  'base',
+  'bdi',
+  'bdo',
+  'big',
+  'blockquote',
+  'body',
+  'br',
+  'button',
+  'canvas',
+  'caption',
+  'cite',
+  'code',
+  'col',
+  'colgroup',
+  'data',
+  'datalist',
+  'dd',
+  'del',
+  'details',
+  'dfn',
+  'dialog',
+  'div',
+  'dl',
+  'dt',
+  'em',
+  'embed',
+  'fieldset',
+  'figcaption',
+  'figure',
+  'footer',
+  'form',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'head',
+  'header',
+  'hgroup',
+  'hr',
+  'html',
+  'i',
+  'iframe',
+  'img',
+  'input',
+  'ins',
+  'kbd',
+  'keygen',
+  'label',
+  'legend',
+  'li',
+  'link',
+  'main',
+  'map',
+  'mark',
+  'menu',
+  'menuitem',
+  'meta',
+  'meter',
+  'nav',
+  'noindex',
+  'noscript',
+  'object',
+  'ol',
+  'optgroup',
+  'option',
+  'output',
+  'p',
+  'param',
+  'picture',
+  'pre',
+  'progress',
+  'q',
+  'rp',
+  'rt',
+  'ruby',
+  's',
+  'samp',
+  'slot',
+  'script',
+  'section',
+  'select',
+  'small',
+  'source',
+  'span',
+  'strong',
+  'style',
+  'sub',
+  'summary',
+  'sup',
+  'table',
+  'template',
+  'tbody',
+  'td',
+  'textarea',
+  'tfoot',
+  'th',
+  'thead',
+  'time',
+  'tr',
+  'track',
+  'u',
+  'ul',
+  'var',
+  'video',
+  'wbr',
+  'webview',
 ]
