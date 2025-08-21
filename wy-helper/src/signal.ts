@@ -354,6 +354,8 @@ export function memo<T>(get: MemoGet<T> | MemoFun<T>, after?: SetValue<T>) {
       addRelay(myGet, lastValue)
       return lastValue
     }
+    //这里一定要重置
+    listenerVersion = undefined
     stateVersion = signalCache.state.version
 
     let shouldAfter = false
