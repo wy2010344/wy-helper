@@ -1,9 +1,10 @@
+import { emptyObject, quote, Quote, valueOrGetToGet } from 'wy-helper'
+import { CanvasStyle } from './canvasStyle'
+import LineBreaker from 'linebreak'
 
-import { emptyObject, quote, Quote, valueOrGetToGet } from "wy-helper"
-import { CanvasStyle } from "./canvasStyle";
-import LineBreaker from 'linebreak';
-
-export type OCanvasTextDrawingStyles = Partial<Omit<CanvasTextDrawingStyles, 'font'>> & {
+export type OCanvasTextDrawingStyles = Partial<
+  Omit<CanvasTextDrawingStyles, 'font'>
+> & {
   //italic
   fontStyle?: string
   //small-caps
@@ -58,13 +59,14 @@ export type MeasuredTextout = {
 export function measureText(
   ctx: MCtx,
   text: string,
-  config?: OCanvasTextDrawingStyles) {
+  config?: OCanvasTextDrawingStyles
+) {
   setDrawingStyle(ctx, config)
   return ctx.measureText(text)
 }
 
 export type DrawTextExt = {
-  style?: string | CanvasGradient | CanvasPattern,
+  style?: string | CanvasGradient | CanvasPattern
   x?: number
   y?: number
   maxWidth?: number
@@ -101,15 +103,25 @@ export type MeasuredTextWrapOut = TextWrapTextConfig & {
   }[]
 }
 
-
 type MCtx = CanvasTextDrawingStyles & {
   measureText(text: string): TextMetrics
 }
-export type TextWrapTextConfig = Omit<OCanvasTextDrawingStyles, 'direction' | 'textAlign' | 'textBaseline'>
+export type TextWrapTextConfig = Omit<
+  OCanvasTextDrawingStyles,
+  'direction' | 'textAlign' | 'textBaseline'
+>
+/**
+ * 参考 https://github.com/Flipboard/react-canvas/blob/master/lib/measureText.js
+ * @param ctx
+ * @param text
+ * @param config
+ * @returns
+ */
 export function measureTextWrap(
   ctx: MCtx,
   text: string,
   config: {
+    overflowDisplay?: string
     lineHeight?: number | Quote<number>
     width: number
     maxLines?: number
@@ -130,7 +142,6 @@ export function measureTextWrap(
   }
   const lineDiffStart = (lineHeight - fontHeight) / 2
 
-
   if (m.width <= config.width) {
     return {
       ...config,
@@ -141,13 +152,13 @@ export function measureTextWrap(
       lines: [
         {
           width: m.width,
-          text: text
-        }
-      ]
+          text: text,
+        },
+      ],
     }
   } else {
-    const breaker = new LineBreaker(text);
-    let bk, lastBreak, tryLine, currentLine = '', lastMeasuredWidth
+    const breaker = new LineBreaker(text)
+
     const measuredSize = {
       ...config,
       height: 0,
@@ -156,40 +167,65 @@ export function measureTextWrap(
       lines: [] as {
         width: number
         text: string
-      }[]
+        originalText: string
+      }[],
     }
-    while (bk = breaker.nextBreak()) {
-      var word = text.slice(lastBreak ? lastBreak.position : 0, bk.position);
-      tryLine = currentLine + word;
-      const textMetrics = ctx.measureText(tryLine);
-      if (textMetrics.width > config.width || (lastBreak && lastBreak.required)) {
+    let currentLine = ''
+    //上一次测量宽度
+    let lastMeasuredWidth = 0
+    let bk, lastBreak
+    while ((bk = breaker.nextBreak())) {
+      const word = text.slice(lastBreak ? lastBreak.position : 0, bk.position)
+      const tryLine = currentLine + word
+      const textMetrics = ctx.measureText(tryLine)
+      if (
+        textMetrics.width > config.width ||
+        (lastBreak && lastBreak.required)
+      ) {
+        //宽度溢出,或必须要新行
         const line = {
           width: lastMeasuredWidth!,
-          text: currentLine!.trim()
+          text: currentLine,
+          originalText: currentLine,
         }
-        measuredSize.lines.push(line);
+        measuredSize.lines.push(line)
         if (measuredSize.lines.length == maxLines) {
-          const rest = text.slice(bk.position).trim()
+          const rest = text.slice(bk.position)
           if (rest) {
-            line.text = line.text.replace(/\,?\s?\w+$/, '…');
-            line.width = ctx.measureText(line.text).width
+            line.originalText = line.originalText + rest
+            //达到最大行,且最后有剩余
+            let drawText = line.text
+            const of = config.overflowDisplay || '…'
+            while (true) {
+              const thisText = drawText + of
+              const m = ctx.measureText(thisText)
+              if (m.width < config.width) {
+                line.text = thisText
+                line.width = m.width
+                break
+              }
+              drawText = drawText.slice(0, drawText.length - 1)
+            }
           }
           measuredSize.height = measuredSize.lines.length * lineHeight
           return measuredSize
         }
 
-        currentLine = word;
-        lastMeasuredWidth = ctx.measureText(currentLine.trim()).width;
+        currentLine = word
+        lastMeasuredWidth = ctx.measureText(currentLine).width
       } else {
-        currentLine = tryLine;
-        lastMeasuredWidth = textMetrics.width;
+        currentLine = tryLine
+        lastMeasuredWidth = textMetrics.width
       }
-      lastBreak = bk;
+      lastBreak = bk
     }
-    currentLine = currentLine!.trim();
     if (currentLine.length > 0) {
-      const textMetrics = ctx.measureText(currentLine);
-      measuredSize.lines.push({ width: textMetrics.width, text: currentLine });
+      const textMetrics = ctx.measureText(currentLine)
+      measuredSize.lines.push({
+        width: textMetrics.width,
+        text: currentLine,
+        originalText: currentLine,
+      })
     }
     measuredSize.height = measuredSize.lines.length * lineHeight
     return measuredSize
@@ -198,18 +234,17 @@ export function measureTextWrap(
 
 type TextCtx = CanvasTextDrawingStyles & {
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/CanvasRenderingContext2D/fillStyle) */
-  fillStyle: CanvasStyle;
+  fillStyle: CanvasStyle
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/CanvasRenderingContext2D/strokeStyle) */
-  strokeStyle: CanvasStyle;
+  strokeStyle: CanvasStyle
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/CanvasRenderingContext2D/fillText) */
-  fillText(text: string, x: number, y: number, maxWidth?: number): void;
+  fillText(text: string, x: number, y: number, maxWidth?: number): void
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/CanvasRenderingContext2D/strokeText) */
-  strokeText(text: string, x: number, y: number, maxWidth?: number): void;
+  strokeText(text: string, x: number, y: number, maxWidth?: number): void
 }
 
-
 export type DrawTextWrapExt = {
-  style?: CanvasStyle,
+  style?: CanvasStyle
   x?: number
   y?: number
   stroke?: boolean
@@ -229,7 +264,6 @@ export function drawTextWrap(
   ctx.textBaseline = 'top'
   const direction = arg?.direction || 'ltr'
   ctx.direction = direction
-
 
   let fun: 'strokeText' | 'fillText'
   if (arg?.stroke) {
