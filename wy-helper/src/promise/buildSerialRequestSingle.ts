@@ -1,17 +1,25 @@
-import { sign } from "crypto"
-import { GetValue, ReduceState, SetValue } from "../setStateHelper"
-import { StoreRef } from "../storeRef"
-import { EmptyFun, FalseType, Flatten, emptyFun, messageChannelCallback, objectFreeze, run, supportMicrotask } from "../util"
+import { GetValue, ReduceState, SetValue } from '../setStateHelper'
+import {
+  EmptyFun,
+  FalseType,
+  Flatten,
+  emptyFun,
+  messageChannelCallback,
+  run,
+  supportMicrotask,
+} from '../util'
 
-export type PromiseResult<T> = {
-  type: "success",
-  promise: Promise<T>
-  value: T
-} | {
-  type: "error",
-  promise: Promise<T>
-  value: any
-}
+export type PromiseResult<T> =
+  | {
+      type: 'success'
+      promise: Promise<T>
+      value: T
+    }
+  | {
+      type: 'error'
+      promise: Promise<T>
+      value: any
+    }
 
 export type AbortPromiseResult<T> = PromiseResult<T> & {
   request: GetValue<Promise<T>>
@@ -20,15 +28,18 @@ export type AbortPromiseResult<T> = PromiseResult<T> & {
 export type RequestAbortPromiseFinally<T> = SetValue<AbortPromiseResult<T>>
 
 export type PromiseResultSuccessValue<T> = T extends {
-  type: "success"
+  type: 'success'
   value: infer V
-} ? V : never
-export type GetPromiseRequest<T> = () => Promise<T>;
+}
+  ? V
+  : never
+export type GetPromiseRequest<T> = () => Promise<T>
 
-
-export type VersionPromiseResult<T> = Flatten<AbortPromiseResult<T> & {
-  version: number
-}>
+export type VersionPromiseResult<T> = Flatten<
+  AbortPromiseResult<T> & {
+    version: number
+  }
+>
 
 export type RequestVersionPromiseFinally<T> = SetValue<VersionPromiseResult<T>>
 
@@ -60,25 +71,25 @@ export function hookAbortSignalPromise<T>(
   w.__abort_signal__ = signal
   const p = fun()
   w.__abort_signal__ = undefined
-  p.then(v => {
+  p.then((v) => {
     if (signal.aborted) {
       return
     }
     callback({
-      type: "success",
+      type: 'success',
       promise: p,
       request: fun,
-      value: v
+      value: v,
     })
-  }).catch(err => {
+  }).catch((err) => {
     if (signal.aborted) {
       return
     }
     callback({
-      type: "error",
+      type: 'error',
       promise: p,
       request: fun,
-      value: err
+      value: err,
     })
   })
 }
@@ -90,26 +101,14 @@ export type OnVersionPromiseFinally<T> = (
   ...vs: any[]
 ) => void
 
-export function createAndFlushAbortController() {
-  let last: AbortController | undefined = undefined
-  let lastSet: SetValue<boolean> = emptyFun
-  return function (setValue: SetValue<boolean> = emptyFun) {
-    last?.abort()
-    lastSet(false)
-    last = new AbortController()
-    lastSet = setValue
-    return last.signal
-  }
-}
-
-export type OutPromiseOrFalse<T> = (GetPromiseRequest<T>) | FalseType;
+export type OutPromiseOrFalse<T> = GetPromiseRequest<T> | FalseType
 /**
  * 串行请求,跳过中间的请求
  * @param callback 执行体
  * @param effect 执行完成后回调
  * @param cacheList 缓存请求参数
  * @param delay 如何延迟下一场请求
- * @returns 
+ * @returns
  */
 export function buildSerialRequestSingle<Req extends any[], Res>(
   callback: (...vs: Req) => Promise<Res>,
@@ -132,23 +131,31 @@ export function buildSerialRequestSingle<Req extends any[], Res>(
     }
     const req = cacheList[0]
     const promise = callback(...req)
-    promise.then(res => {
-      if (checkRun()) {
-        effect({
-          type: "success",
-          promise,
-          value: res
-        }, req)
-      }
-    }).catch(err => {
-      if (checkRun()) {
-        effect({
-          type: "error",
-          promise,
-          value: err
-        }, req)
-      }
-    })
+    promise
+      .then((res) => {
+        if (checkRun()) {
+          effect(
+            {
+              type: 'success',
+              promise,
+              value: res,
+            },
+            req
+          )
+        }
+      })
+      .catch((err) => {
+        if (checkRun()) {
+          effect(
+            {
+              type: 'error',
+              promise,
+              value: err,
+            },
+            req
+          )
+        }
+      })
   }
   function circleRun() {
     delay(didCircleRun)
@@ -164,31 +171,10 @@ export function buildSerialRequestSingle<Req extends any[], Res>(
   }
 }
 
-/**
- * 串行请求,使用abortController来控制
- * @param callback 
- * @returns 
- */
-export function serialAbortRequest<T>(
-  callback: SetValue<AbortPromiseResult<T>>
+export function buildThrottle<T>(
+  didRun: (fun: () => void) => void,
+  callback: SetValue<T>
 ) {
-  const abortController = createAndFlushAbortController()
-  return function (getPromise: GetPromiseRequest<T>) {
-    const signal = abortController()
-    hookAbortSignalPromise(signal, getPromise, callback)
-  }
-}
-
-export function serialAbortCallback<T extends any[]>(callback: ErrorCallback<T>) {
-  const abortController = createAndFlushAbortController()
-  return function (get: SetValue<ErrorCallback<T>>) {
-    const signal = abortController()
-    hookAbortCalback(signal, get, callback)
-  }
-}
-
-
-export function buildThrottle<T>(didRun: (fun: () => void) => void, callback: SetValue<T>) {
   let lastValue: T | undefined
   let requestedWork = false
   return function (value: T) {
@@ -204,7 +190,10 @@ export function buildThrottle<T>(didRun: (fun: () => void) => void, callback: Se
   }
 }
 export function timeOutThrottle(callback: EmptyFun, time?: number): EmptyFun
-export function timeOutThrottle<T>(callback: SetValue<T>, time?: number): SetValue<T>
+export function timeOutThrottle<T>(
+  callback: SetValue<T>,
+  time?: number
+): SetValue<T>
 export function timeOutThrottle(callback: EmptyFun, time: number = 0) {
   return buildThrottle(function (fun) {
     setTimeout(fun, time)
@@ -231,13 +220,13 @@ export function buildPromiseResultSetData<F extends PromiseResult<any>>(
 ): ReduceState<PromiseResultSuccessValue<F>> {
   return function setData(fun) {
     updateData((old) => {
-      if (old?.type == "success") {
+      if (old?.type == 'success') {
         return {
           ...old,
-          value: typeof fun == "function" ? (fun as any)(old.value) : fun,
-        };
+          value: typeof fun == 'function' ? (fun as any)(old.value) : fun,
+        }
       }
-      return old;
-    });
-  };
+      return old
+    })
+  }
 }

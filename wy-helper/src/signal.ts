@@ -38,16 +38,18 @@ if (!m[DepKey]) {
 }
 
 type CurrentBatch = {
-  listeners: Set<EmptyFun>
+  listeners: Set<TrackSignal<any>>
   effects: Map<number, EmptyFun[]>
-  deps: EmptyFun[]
+  deps: TrackSignal<any>[]
 }
 interface Version {
   uid: number
   version: any
 }
 const signalCache = m[DepKey] as {
-  currentFun?: EmptyFun
+  currentFun?: TrackSignal<any>
+  //为react而处理
+  currentTrack?: TrackSignal<any>
   //开始了异步任务
   beginBatch?: boolean
   currentBatch: CurrentBatch
@@ -117,7 +119,7 @@ class Signal<T> {
     return v
   }
 
-  private listeners: EmptyFun[] = []
+  private listeners: TrackSignal<any>[] = []
   get = () => {
     const value = this.value
     addRelay(this.get, value)
@@ -125,11 +127,17 @@ class Signal<T> {
       //只收集自己的依赖
       this.listeners.push(signalCache.currentFun)
     }
+    if (signalCache.currentTrack) {
+      //因为react的render可能很多,所以禁止重入
+      if (!this.listeners.includes(signalCache.currentTrack)) {
+        this.listeners.push(signalCache.currentTrack)
+      }
+    }
     return value
   }
 }
 
-function addListener(listener: EmptyFun) {
+function addListener(listener: TrackSignal<any>) {
   signalCache.currentBatch.listeners.add(listener)
 }
 
@@ -159,12 +167,6 @@ function beginCurrentBatch() {
     messageChannelCallback(batchSignalEnd)
   }
 }
-export interface SyncFun<T> {
-  (set: SetValue<T>): EmptyFun
-  <A>(set: (t: T, a: A) => void, a: A): EmptyFun
-  <A, B>(set: (t: T, a: A, b: B) => void, a: A, b: B): EmptyFun
-  <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): EmptyFun
-}
 
 export function batchSignalEnd() {
   if (signalCache.onEffectRun) {
@@ -186,13 +188,13 @@ export function batchSignalEnd() {
     //交换后
     const { deps, effects, listeners } = currentBatch
     signalCache.onWorkBatch = currentBatch
-    listeners.forEach(run)
+    listeners.forEach(runListener)
     listeners.clear()
 
     while (deps.length) {
       //因为可能在执行中动态增加,所以使用这个shift的方式
       const fun = deps.shift()!
-      fun()
+      fun.addFun()
     }
     signalCache.onWorkBatch = undefined
 
@@ -212,6 +214,10 @@ export function batchSignalEnd() {
   // }
 }
 
+function runListener(o: TrackSignal<any>) {
+  o.addFun()
+}
+
 export function memoFun<T extends Function>(
   get: MemoGet<T> | MemoFun<T>,
   after: SetValue<T> = emptyFun
@@ -224,6 +230,56 @@ export function memoFun<T extends Function>(
   }
   return value.memoFun as any
 }
+
+export interface TrackSignalSet<T> {
+  (v: T, oldV: undefined, inited: false): void | EmptyFun
+  (v: T, oldV: T, inited: true): void | EmptyFun
+}
+
+class TrackSignal<T> {
+  private disabled = false
+
+  private inited = false
+  private lastValue: any = undefined
+
+  private destroy = emptyFun
+  constructor(private get: MemoGet<T>, private set: TrackSignalSet<T>) {
+    const deps = signalCache.onWorkBatch?.deps
+    if (deps) {
+      deps.push(this)
+    } else {
+      //没在执行中
+      beginCurrentBatch()
+      signalCache.currentBatch.deps.push(this)
+    }
+  }
+  addFun() {
+    if (this.disabled) {
+      return
+    }
+
+    signalCache.currentFun = this
+    const value = this.get(this.lastValue, this.inited as true)
+    signalCache.currentFun = undefined
+
+    if (this.inited) {
+      if (value != this.lastValue) {
+        this.destroy()
+        this.destroy = this.set(value, this.lastValue, this.inited) || emptyFun
+        this.lastValue = value
+      }
+    } else {
+      this.destroy = this.set(value, this.lastValue, this.inited) || emptyFun
+      this.lastValue = value
+      this.inited = true
+    }
+  }
+  dispose() {
+    //销毁
+    this.destroy()
+    this.disabled = true
+  }
+}
 /**
  * 跟踪信号
  * 这里get函数是常执行的,set函数会在必要时执行,跟memo的结果一样
@@ -232,63 +288,35 @@ export function memoFun<T extends Function>(
  * @param get 通过信号计算出来的值
  * @returns 同步事件
  */
-export function trackSignal<T>(get: MemoGet<T>, set?: SetValue<T>): EmptyFun
-export function trackSignal<T, A>(
+export function trackSignal<T>(
   get: MemoGet<T>,
-  set: (v: T, a: A) => void,
-  a: A
-): EmptyFun
-export function trackSignal<T, A, B>(
-  get: MemoGet<T>,
-  set: (v: T, a: A, b: B) => void,
-  a: A,
-  b: B
-): EmptyFun
-export function trackSignal<T, A, B, C>(
-  get: MemoGet<T>,
-  set: (v: T, a: A, b: B, c: C) => void,
-  a: A,
-  b: B,
-  c: C
-): EmptyFun
-export function trackSignal(get: any, set: any = emptyFun): EmptyFun {
-  let disabled = false
-  const a = arguments[2]
-  const b = arguments[3]
-  const c = arguments[4]
+  set: TrackSignalSet<T> = emptyFun
+): EmptyFun {
+  const t = new TrackSignal(get, set)
+  return t.dispose.bind(t)
+}
 
-  let inited = false
-  let lastValue: any = undefined
-  function addFun() {
-    if (disabled) {
-      return
-    }
-    signalCache.currentFun = addFun
-    const value = get(lastValue, inited)
-    signalCache.currentFun = undefined
-    if (inited) {
-      if (value != lastValue) {
-        lastValue = value
-        set(value, a, b, c)
-      }
-    } else {
-      inited = true
-      lastValue = value
-      set(value, a, b, c)
-    }
-  }
-  addFun.abc = get.abc
-  const deps = signalCache.onWorkBatch?.deps
-  if (deps) {
-    deps.push(addFun)
-  } else {
-    //没在执行中
-    beginCurrentBatch()
-    signalCache.currentBatch.deps.push(addFun)
-  }
-  //销毁
-  return function () {
-    disabled = true
+/**
+ * 希望支持如mobx
+ * @param callback 信号变化,通知更新
+ * @returns
+ */
+export function collectSignal(callback: EmptyFun) {
+  const t = new TrackSignal(callback, emptyFun)
+  return {
+    destroy: t.dispose.bind(t),
+    /**
+     * 如收集react的render
+     * 这里其实就会涉及反复render,注入链表很长
+     * @param fun
+     * @returns
+     */
+    collect<T>(fun: GetValue<T>) {
+      signalCache.currentTrack = t
+      const value = fun()
+      signalCache.currentTrack = undefined
+      return value
+    },
   }
 }
 
