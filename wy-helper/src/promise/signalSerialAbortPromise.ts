@@ -1,22 +1,26 @@
-import { Compare } from "../equal";
-import { GetValue } from "../setStateHelper";
-import { createSignal, memo, trackSignal } from "../signal";
-import { FalseType, Quote } from "../util";
-import { AbortPromiseResult, hookAbortSignalPromise, PromiseResult, serialAbortCallback, serialAbortRequest } from "./buildSerialRequestSingle";
-import { AutoLoadMoreCore } from "./stopCall";
+import { Compare } from '../equal'
+import { GetValue } from '../setStateHelper'
+import { createSignal, memo, trackSignal } from '../signal'
+import { FalseType, Quote } from '../util'
+import {
+  AbortPromiseResult,
+  hookAbortCalback,
+  hookAbortSignalPromise,
+} from './buildSerialRequestSingle'
+import { AutoLoadMoreCore } from './stopCall'
 
 export function signalSerialAbortPromise<T>(
   generatePromise: GetValue<GetValue<Promise<T>> | FalseType>
 ) {
   const signal = createSignal<AbortPromiseResult<T> | undefined>(undefined)
-  const abortRequest = serialAbortRequest<T>(signal.set)
-
-
-
   const memoGeneratePromise = memo(generatePromise)
   const destroy = trackSignal(memoGeneratePromise, function (getPromise) {
     if (getPromise) {
-      abortRequest(getPromise)
+      const abort = new AbortController()
+      hookAbortSignalPromise(abort.signal, getPromise, signal.set)
+      return function () {
+        abort.abort()
+      }
     }
   })
 
@@ -34,7 +38,7 @@ export function signalSerialAbortPromise<T>(
     if (value?.type == 'success') {
       signal.set({
         ...value,
-        value: callback(value.value)
+        value: callback(value.value),
       })
     }
   }
@@ -46,16 +50,15 @@ export function signalSerialAbortPromise<T>(
       //是否正在加载中
       return request != signal.get()?.request
     }
-    return false;
+    return false
   }
   return {
     destroy,
     get,
     reduceSet,
-    loading
+    loading,
   }
 }
-
 
 export type MultiAbortPromiseResult<T> = AbortPromiseResult<T> & {
   finish?: boolean
@@ -63,17 +66,13 @@ export type MultiAbortPromiseResult<T> = AbortPromiseResult<T> & {
 
 type OnUpdate<T> = {
   (
-    type: "success",
+    type: 'success',
     get: GetValue<Promise<T>>,
     p: Promise<T>,
     data: T,
-    finish?: boolean): void
-  (
-    type: "error",
-    get: GetValue<Promise<T>>,
-    p: Promise<T>,
-    v: any
+    finish?: boolean
   ): void
+  (type: 'error', get: GetValue<Promise<T>>, p: Promise<T>, v: any): void
 }
 function fetchWithCacheFallback<T>(
   list: GetValue<Promise<T>>[],
@@ -83,14 +82,14 @@ function fetchWithCacheFallback<T>(
   const lastIdx = list.length - 1
   list.forEach((row, i) => {
     const p = row()
-    p.then(data => {
+    p.then((data) => {
       if (i == lastIdx) {
         onUpdate('success', row, p, data, true)
       } else if (resolve < i) {
         onUpdate('success', row, p, data)
       }
       resolve = i
-    }).catch(err => {
+    }).catch((err) => {
       if (i == lastIdx) {
         onUpdate('error', row, p, err)
       }
@@ -101,22 +100,29 @@ export function signalMultiAbortCallback<T>(
   generatePromise: GetValue<GetValue<Promise<T>>[] | FalseType>
 ) {
   const signal = createSignal<MultiAbortPromiseResult<T> | undefined>(undefined)
-  const abortRequest = serialAbortCallback((type, request, promise, value, finish?: boolean) => {
-    const o = {
-      type,
-      promise,
-      request,
-      value,
-      finish
-    }
-    signal.set(o)
-  })
   const memoGeneratePromise = memo(generatePromise)
   const destroy = trackSignal(memoGeneratePromise, function (getPromise) {
     if (getPromise) {
-      abortRequest((callback) => {
-        fetchWithCacheFallback(getPromise, callback)
-      })
+      const abort = new AbortController()
+      hookAbortCalback(
+        abort.signal,
+        (callback) => {
+          fetchWithCacheFallback(getPromise, callback)
+        },
+        function (type, request, promise, value, finish?: boolean) {
+          const o = {
+            type,
+            promise,
+            request,
+            value,
+            finish,
+          }
+          signal.set(o)
+        }
+      )
+      return function () {
+        abort.abort()
+      }
     }
   })
   //状态值
@@ -132,7 +138,7 @@ export function signalMultiAbortCallback<T>(
     if (value?.type == 'success') {
       signal.set({
         ...value,
-        value: callback(value.value)
+        value: callback(value.value),
       })
     }
   }
@@ -140,16 +146,18 @@ export function signalMultiAbortCallback<T>(
   return {
     get,
     reduceSet,
-    destroy
+    destroy,
   }
 }
 
-
 export function signalSerialAbortPromiseLoadMore<T, K, M = {}>(
-  generateReload: GetValue<{
-    getAfter(k: K): Promise<AutoLoadMoreCore<T, K> & M>,
-    first: K
-  } | FalseType>,
+  generateReload: GetValue<
+    | {
+        getAfter(k: K): Promise<AutoLoadMoreCore<T, K> & M>
+        first: K
+      }
+    | FalseType
+  >,
   equals?: Compare<T>
 ) {
   const memoGenerateReload = memo(generateReload)
@@ -189,34 +197,37 @@ export function signalSerialAbortPromiseLoadMore<T, K, M = {}>(
         return false
       }
       loadingMore.set(true)
-      reload.getAfter(data.value.nextKey).then(value => {
-        d.reduceSet(oldValue => {
-          let newList = oldValue.list
-          if (equals) {
-            newList = [...oldValue.list]
-            value.list.forEach(row => {
-              const idx = newList.findIndex(x => equals(row, x))
-              if (idx < 0) {
-                newList.push(row)
-              } else {
-                newList.splice(idx, 1, row)
-              }
-            })
-          } else {
-            newList = newList.concat(value.list)
-          }
-          return {
-            ...value,
-            list: newList
-          }
+      reload
+        .getAfter(data.value.nextKey)
+        .then((value) => {
+          d.reduceSet((oldValue) => {
+            let newList = oldValue.list
+            if (equals) {
+              newList = [...oldValue.list]
+              value.list.forEach((row) => {
+                const idx = newList.findIndex((x) => equals(row, x))
+                if (idx < 0) {
+                  newList.push(row)
+                } else {
+                  newList.splice(idx, 1, row)
+                }
+              })
+            } else {
+              newList = newList.concat(value.list)
+            }
+            return {
+              ...value,
+              list: newList,
+            }
+          })
+          lastloadMoreError.set(undefined)
+          loadingMore.set(false)
         })
-        lastloadMoreError.set(undefined)
-        loadingMore.set(false)
-      }).catch(error => {
-        lastloadMoreError.set(error)
-        loadingMore.set(false)
-      })
+        .catch((error) => {
+          lastloadMoreError.set(error)
+          loadingMore.set(false)
+        })
       return true
-    }
+    },
   }
 }

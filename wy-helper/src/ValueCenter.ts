@@ -1,7 +1,12 @@
-import { applySetStateAction, SetStateAction, SetValue } from "./setStateHelper"
-import { createSignal, SyncFun } from "./signal"
-import { StoreRef } from "./storeRef"
-import { EmptyFun, alawaysTrue, emptyFun, quote, run } from "./util"
+import { applySetStateAction, SetStateAction, SetValue } from './setStateHelper'
+import { EmptyFun, alawaysTrue, emptyFun, quote, run } from './util'
+
+export interface SyncFun<T> {
+  (set: SetValue<T>): EmptyFun
+  <A>(set: (t: T, a: A) => void, a: A): EmptyFun
+  <A, B>(set: (t: T, a: A, b: B) => void, a: A, b: B): EmptyFun
+  <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): EmptyFun
+}
 /**
  * 还是使用signal吧
  */
@@ -26,11 +31,10 @@ export class EventCenter<T> {
     }
   }
   notify(v: T, oldV: T) {
-    this.pool.forEach(notify => notify(v, oldV))
+    this.pool.forEach((notify) => notify(v, oldV))
   }
-
 }
-export function toReduceState<T>(set: (v: T) => void, get: () => T,) {
+export function toReduceState<T>(set: (v: T) => void, get: () => T) {
   return function (v: SetStateAction<T>) {
     set(applySetStateAction(v, get()))
   }
@@ -43,14 +47,14 @@ export interface ValueCenter<T> extends ReadValueCenter<T> {
   set(v: T): void
 }
 
-const __sync__ = "__SYNC__"
+const __sync__ = '__SYNC__'
 export function getCenterSync<T>(v: ReadValueCenter<T>) {
   const vx = v as any
   if (!vx[__sync__]) {
     vx[__sync__] = function () {
       const [set, a, b, c] = arguments
       set(v.get(), a, b, c)
-      return v.subscribe(n => {
+      return v.subscribe((n) => {
         set(n, a, b, c)
       })
     }
@@ -59,9 +63,7 @@ export function getCenterSync<T>(v: ReadValueCenter<T>) {
 }
 
 export class ReadValueCenterProxyImpl<T> implements ReadValueCenter<T> {
-  constructor(
-    private center: ValueCenter<T>
-  ) { }
+  constructor(private center: ValueCenter<T>) {}
   get(): T {
     return this.center.get()
   }
@@ -70,10 +72,7 @@ export class ReadValueCenterProxyImpl<T> implements ReadValueCenter<T> {
   }
 }
 export class ValueCenterDefaultImpl<T> implements ValueCenter<T> {
-  constructor(
-    private value: T
-  ) {
-  }
+  constructor(private value: T) {}
   private ec = new EventCenter<T>()
   set(v: T): void {
     const oldValue = this.value
@@ -107,17 +106,21 @@ export function syncMergeCenter<T>(c: ReadValueCenter<T>, cb: EventHandler<T>) {
   return c.subscribe(cb)
 }
 
-
 // 定义将元素类型映射成另一种类型的映射函数
-type MapTo<T> = { [K in keyof T]: ValueCenter<T[K]> };
+type MapTo<T> = { [K in keyof T]: ValueCenter<T[K]> }
 
 // type ExtractValues<T> = {
 //   -readonly [K in keyof T]: T[K] extends ReadValueCenter<infer U> ? U : never;
 // }
 export type BuildValueCenters<T> = {
   readonly [K in keyof T]: ReadValueCenter<T[K]>
-};
-function baseCenterArray<VS extends readonly any[]>(vs: any, list: BuildValueCenters<VS>, cb: EventHandler<VS>, delay = run) {
+}
+function baseCenterArray<VS extends readonly any[]>(
+  vs: any,
+  list: BuildValueCenters<VS>,
+  cb: EventHandler<VS>,
+  delay = run
+) {
   function callback() {
     cb(vs)
   }
@@ -132,12 +135,20 @@ function baseCenterArray<VS extends readonly any[]>(vs: any, list: BuildValueCen
     destroys.forEach(run)
   }
 }
-export function subscribeCenterArray<VS extends readonly any[]>(list: BuildValueCenters<VS>, cb: EventHandler<VS>, delay = run) {
+export function subscribeCenterArray<VS extends readonly any[]>(
+  list: BuildValueCenters<VS>,
+  cb: EventHandler<VS>,
+  delay = run
+) {
   const vs = [] as any
   return baseCenterArray(vs, list, cb, delay)
 }
 
-export function syncMergeCenterArray<VS extends readonly any[]>(list: BuildValueCenters<VS>, cb: EventHandler<VS>, delay = run) {
+export function syncMergeCenterArray<VS extends readonly any[]>(
+  list: BuildValueCenters<VS>,
+  cb: EventHandler<VS>,
+  delay = run
+) {
   const vs = [] as unknown as any
   const destroy = baseCenterArray(vs, list, cb, delay)
   cb(vs)
@@ -145,9 +156,9 @@ export function syncMergeCenterArray<VS extends readonly any[]>(list: BuildValue
 }
 /**
  * 事实上可以用于多种状态机
- * @param reducer 
- * @param init 
- * @returns 
+ * @param reducer
+ * @param init
+ * @returns
  */
 export function createReduceValueCenter<T, A>(
   reducer: ReducerWithDispatch<T, A>,
@@ -173,8 +184,10 @@ export function createReduceValueCenter<T, A>(
   return [center.readonly(), set] as const
 }
 
-
-export function subscribeOnce<T>(v: ReadValueCenter<T>, fun: EventChangeHandler<T>) {
+export function subscribeOnce<T>(
+  v: ReadValueCenter<T>,
+  fun: EventChangeHandler<T>
+) {
   const callback: EventChangeHandler<T> = (v, old) => {
     fun(v, old)
     destroy()
@@ -182,12 +195,13 @@ export function subscribeOnce<T>(v: ReadValueCenter<T>, fun: EventChangeHandler<
   const destroy = v.subscribe(callback)
 }
 
-
 export type Reducer<T, A> = (v: T, a: A) => T
-export type ReducerWithDispatch<T, A> = (v: T, a: A) => ReducerWithDispatchResult<T, A>
+export type ReducerWithDispatch<T, A> = (
+  v: T,
+  a: A
+) => ReducerWithDispatchResult<T, A>
 export type ReducerDispatch<A> = SetValue<SetValue<A>> | undefined
 export type ReducerWithDispatchResult<T, A> = [T, ReducerDispatch<A>] | [T]
-
 
 export function mapReducerDispatch<A, B>(
   act: ReducerDispatch<A>,
@@ -221,7 +235,7 @@ export function mapReducerDispatchList<A, B>(
 export function mapReducerDispatchListA<A, B, D>(
   data: A[],
   getDispatch: (v: A) => ReducerDispatch<D>,
-  map: (d: D, a: A) => B,
+  map: (d: D, a: A) => B
 ): ReducerDispatch<B> {
   if (data.length) {
     return function (dispatch) {
