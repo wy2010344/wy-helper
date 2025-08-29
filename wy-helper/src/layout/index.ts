@@ -1,9 +1,9 @@
-import { PointKey } from "../geometry"
-import { GetValue } from "../setStateHelper"
-import { asLazy } from "../util"
+import { PointKey } from '../geometry'
+import { GetValue } from '../setStateHelper'
+import { asLazy } from '../util'
 export * from './simpleFlex'
 export * from './layoutNode'
-export type SizeKey = "width" | "height"
+export type SizeKey = 'width' | 'height'
 
 export type LayoutKey = SizeKey | PointKey
 
@@ -21,36 +21,39 @@ export const absoluteDisplay: MDisplayOut<any> = {
 
 export type MDisplayOut<K extends string> = {
   /**
-   * 
-   * @param x 
-   * @param def 父节点也没有值,退回自己提供的默认值,以尽量避免抛出错误 
+   *
+   * @param x
+   * @param def 父节点也没有值,退回自己提供的默认值,以尽量避免抛出错误
    */
   getSizeInfo(x: K, def?: boolean): number
   /**
    * 有可能影响子节点的尺寸
-   * @param x 
+   * @param x
    * @param size 是否是尺寸
-   * @param i 
+   * @param i
    */
   getChildInfo(x: K, size: boolean, i: number): number
 }
 
 export type InstanceCallbackOrValue<T> = number | ((n: T) => number)
-export function valueInstOrGetToGet<T, M, N, N1>(
+export function valueInstOrGetToGet<T, M>(
   o: InstanceCallbackOrValue<M> | undefined,
-  getIns: GetValue<M>,
-  create: (getIns: GetValue<M>, x: N, y: N1) => GetValue<T>,
-  x: N,
-  y: N1
-): GetValue<T> {
+  getIns: GetValue<M>
+): GetValue<T> | void {
   const tp = typeof o
   if (tp == 'function') {
-    return () => {
+    return function () {
       return (o as any)(getIns())
     }
   } else if (tp == 'undefined') {
-    return create(getIns, x, y)
+    return
   } else {
     return asLazy(o as T)
   }
+}
+
+type A = (this: string, b: number) => void
+
+let a: A = function () {
+  this.at(9)
 }
