@@ -1,21 +1,21 @@
-import { KVar, list } from "../kanren"
+import { KVar, list } from '../kanren'
 import {
   Que,
   or,
   ruleGetString,
   skipAnyString,
-  skipMatchEnd
-} from "../tokenParser"
-import { EmptyFun } from "../util"
+  skipMatchEnd,
+} from '../tokenParser'
+import { EmptyFun } from '../util'
 import {
-  Infix, InfixConfig, InfixToken, MatchGet, parseInfix,
+  Infix,
+  InfixConfig,
+  InfixToken,
+  MatchGet,
+  parseInfix,
 } from './parseInfix'
 
-function manageInfixLib(
-  array: InfixConfig[],
-  maxX: number,
-  get: MatchGet
-) {
+function manageInfixLib(array: InfixConfig[], maxX: number, get: MatchGet) {
   const betweenExp: string[] = []
   const theMatch = get.match
   for (let x = 0; x < maxX; x++) {
@@ -35,7 +35,7 @@ function manageInfixLib(
   for (const v of cs) {
     if (typeof v == 'string') {
       if (theMatch(new Que(v))) {
-        console.warn("同极包含可覆盖元素", v)
+        console.warn('同极包含可覆盖元素', v)
       }
     }
   }
@@ -52,7 +52,7 @@ function manageInfixLib(
           }
         }
         return after
-      }
+      },
     }
   }
   return get
@@ -74,7 +74,7 @@ function buildInfixLibArray(array: InfixConfig[]) {
     } else {
       return {
         ...row,
-        values: buildOneInfix(row.values, array, x)
+        values: buildOneInfix(row.values, array, x),
       }
     }
   })
@@ -88,24 +88,26 @@ export function buildInfix<T>(
 ) {
   const newList = buildInfixLibArray(array)
   function parseEndNode(): T {
-    const node = or([
-      parseLeafNode,
-      () => {
-        skipAnyString('(')
-        skipWhiteSpace()
-        const value = parseNode()
-        skipWhiteSpace()
-        skipAnyString(')')
-        return value
-      }
-    ], 'end-node')
+    const node = or(
+      [
+        parseLeafNode,
+        () => {
+          skipAnyString('(')
+          skipWhiteSpace()
+          const value = parseNode()
+          skipWhiteSpace()
+          skipAnyString(')')
+          return value
+        },
+      ],
+      'end-node'
+    )
     return node as any
   }
   const neAs = list(...newList)
   function parseNode() {
     return parseInfix(neAs, skipWhiteSpace, parseEndNode, build)
   }
-
 
   function getInfixOrder(n: string): [number, string, boolean] {
     for (let i = newList.length - 1; i > -1; i--) {
@@ -123,7 +125,7 @@ export function buildInfix<T>(
         }
       }
     }
-    throw new Error("unfind the infix order")
+    throw new Error('unfind the infix order')
   }
 
   return {
@@ -147,7 +149,7 @@ export type BaseDisplayT = {
 }
 
 export type InfixNode<T> = {
-  type: "infix"
+  type: 'infix'
   infix: InfixToken
   left: InfixEndNode<T>
   right: InfixEndNode<T>
@@ -155,56 +157,55 @@ export type InfixNode<T> = {
 
 export type InfixEndNode<T> = T | InfixNode<T>
 
-function isInfixNode<T extends { type: string }>(endNode: T | InfixNode<T>): endNode is InfixNode<T> {
+function isInfixNode<T extends { type: string }>(
+  endNode: T | InfixNode<T>
+): endNode is InfixNode<T> {
   return endNode.type == 'infix'
 }
-function endNodeToToken<
-  T extends { type: string },
-  F extends BaseDisplayT
->(
-  endNode: T | InfixNode<T>,
-  list: F[],
-  getOther: (n: T) => F,
-  getInfix: (n: BaseDisplayT) => F
-) {
-  if (isInfixNode(endNode)) {
-    endNodeToToken(endNode.left, list, getOther, getInfix)
-    list.push(getInfix({
-      value: endNode.infix.value,
-      begin: endNode.infix.begin,
-      end: endNode.infix.end
-    }))
-    endNodeToToken(endNode.right, list, getOther, getInfix)
-  } else {
-    list.push(getOther(endNode))
-  }
-}
-
 
 export function endNotFillToToken<
   T extends { type: string },
-  F extends BaseDisplayT>(
-    getOther: (n: T) => F,
-    getInfix: (n: BaseDisplayT) => F,
-    getWhite: (n: BaseDisplayT) => F
-  ) {
-  return function (
-    endNode: T | InfixNode<T>,
-    text: string
-  ) {
-
-    const list: F[] = []
-    endNodeToToken(endNode, list, getOther, getInfix)
+  F extends BaseDisplayT
+>(
+  getOther: (
+    n: T,
+    list: F[],
+    parseSelf: (endNode: T | InfixNode<T>) => void
+  ) => void,
+  getInfix: (n: BaseDisplayT) => F,
+  getWhite: (n: BaseDisplayT) => F
+) {
+  return function (endNode: T | InfixNode<T>, text: string, list: F[] = []) {
+    function endNodeToToken(endNode: T | InfixNode<T>) {
+      if (isInfixNode(endNode)) {
+        endNodeToToken(endNode.left)
+        list.push(
+          getInfix({
+            value: endNode.infix.value,
+            begin: endNode.infix.begin,
+            end: endNode.infix.end,
+          })
+        )
+        endNodeToToken(endNode.right)
+      } else {
+        getOther(endNode, list, endNodeToToken)
+      }
+    }
+    endNodeToToken(endNode)
     let i = 0
     while (i < list.length - 1) {
       const row = list[i]
       const nextRow = list[i + 1]
       if (row.end != nextRow.begin) {
-        list.splice(i + 1, 0, getWhite({
-          value: text.slice(row.end, nextRow.begin),
-          begin: row.end,
-          end: nextRow.begin
-        }))
+        list.splice(
+          i + 1,
+          0,
+          getWhite({
+            value: text.slice(row.end, nextRow.begin),
+            begin: row.end,
+            end: nextRow.begin,
+          })
+        )
         i = i + 2
       } else {
         i = i + 1
@@ -212,42 +213,43 @@ export function endNotFillToToken<
     }
     const first = list[0]
     if (first && first.begin != 0) {
-      list.unshift(getWhite({
-        value: text.slice(0, first.begin),
-        begin: 0,
-        end: first.begin
-      }))
+      list.unshift(
+        getWhite({
+          value: text.slice(0, first.begin),
+          begin: 0,
+          end: first.begin,
+        })
+      )
     }
     const last = list.at(-1)
     if (last && last.end != text.length) {
-      list.push(getWhite({
-        value: text.slice(last.end, text.length),
-        begin: last.end,
-        end: text.length
-      }))
+      list.push(
+        getWhite({
+          value: text.slice(last.end, text.length),
+          begin: last.end,
+          end: text.length,
+        })
+      )
     }
     return list
   }
 }
 
-
 export class VarPool {
-  constructor(
-    private readonly parent?: VarPool
-  ) { }
+  constructor(private readonly parent?: VarPool) {}
   size() {
     return this.pool.size
   }
   private pool: Map<string, KVar> = new Map()
 
   /**
-   * 
-   * @param key 
+   *
+   * @param key
    * @param arg 参数部分的渲染,即本作用域增加新的去覆盖
-   * @returns 
+   * @returns
    */
   get(key: string, arg?: boolean) {
-    if (key == "_") {
+    if (key == '_') {
       return KVar.create()
     }
     let oldVar = this.pool.get(key)

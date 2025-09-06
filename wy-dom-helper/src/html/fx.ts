@@ -55,10 +55,10 @@ export function updateDataSet(value: any = '', node: any, key: any) {
   node.dataset[key] = value
 }
 export function updateAttr(value: any = '', node: any, key: string) {
-  if (value) {
-    node.setAttribute(key, value)
-  } else {
+  if (typeof value == 'undefined') {
     node.removeAttribute(key)
+  } else {
+    node.setAttribute(key, value)
   }
 }
 

@@ -1,4 +1,3 @@
-
 /**
  * 设想
  * 1元操作符,
@@ -11,26 +10,33 @@
  * 或者只用二元
  */
 
-import { MatchGet } from "./parseInfix"
-import { BaseDisplayT, buildInfix, endNotFillToToken, InfixNode } from "./tool"
+import { MatchGet } from './parseInfix'
+import { BaseDisplayT, buildInfix, endNotFillToToken, InfixNode } from './tool'
 import {
-  Que, isParseSuccess, manyMatch,
-  matchCharIn, ruleStrBetween,
+  Que,
+  isParseSuccess,
+  manyMatch,
+  matchCharIn,
+  ruleStrBetween,
   ruleGetString as queToString,
-  ruleStrBetweenGet, stringToCharCode,
+  ruleStrBetweenGet,
+  stringToCharCode,
   or,
   andMatch,
-  orMatchEmpty
-} from "../tokenParser";
+  orMatchEmpty,
+} from '../tokenParser'
 import {
   symbolRule,
-  StringToken, NumberToken,
-  SymbolToken, VarToken,
-  ruleGetNumber, ruleGetString,
-  ruleGetSymbol, ruleGetVar,
-  skipWhiteOrComment
-} from "./relayParseRule";
-
+  StringToken,
+  NumberToken,
+  SymbolToken,
+  VarToken,
+  ruleGetNumber,
+  ruleGetString,
+  ruleGetSymbol,
+  ruleGetVar,
+  skipWhiteOrComment,
+} from './relayParseRule'
 
 /**
  * 
@@ -70,82 +76,69 @@ export const matchBetween: MatchGet = {
   stringify(n) {
     return ` '${n.replace(/`/g, '\\`')}' `
   },
-  display: "anyMatch~"
+  display: 'anyMatch~',
 }
-
 
 /**
  * 向后的可以排除,在前的却只有不参与
  */
-const specialChar = "~`!@#$^&?<>|:{}=+-*/"
-const specialMatchRule = manyMatch(matchCharIn(
-  ...stringToCharCode(specialChar)
-), 1)
-/**
- * 这里,可以为任何连字符
- * 
- */
-export const specialMatch: MatchGet = {
+const specialChar = '~`!@#$^&?<>|:{}=+-*/'
+const specialMatchRule = manyMatch(
+  matchCharIn(...stringToCharCode(specialChar)),
+  1
+)
+
+const specialMatch: MatchGet = {
   match: specialMatchRule,
-  get(begin, end) {
-    return queToString(begin, end)
-  },
+  get: queToString,
   stringify(n) {
     return n
   },
-  display: 'specialMatch'
+  display: 'specialMatch',
 }
 
-export const matchSymbolOrSpecial: MatchGet = {
-  match: andMatch(
-    symbolRule,
-    orMatchEmpty(specialMatchRule)
-  ),
+const matchSymbolOrSpecial: MatchGet = {
+  match: andMatch(symbolRule, orMatchEmpty(specialMatchRule)),
   get(begin, end) {
     return queToString(begin, end)
   },
   stringify(n) {
     return ` ${n} `
   },
-  display: 'symbolMatch'
+  display: 'symbolMatch',
 }
 
 export const infixLibArray = [
-  [';'],//或结束
-  [':-'],//规则定义
-  [','],//and结束
-  ['='],//绑定
+  [';'], //或结束
+  [':-'], //规则定义
+  [','], //and结束
+  ['='], //绑定
   [matchBetween, specialMatch, matchSymbolOrSpecial],
   ['+', '-'],
-  ['*', '/', '%']
+  ['*', '/', '%'],
 ]
 
 export const { parseSentence, getInfixOrder } = buildInfix<EndNode>(
   infixLibArray,
   skipWhiteOrComment,
   () => {
-    return or([
-      ruleGetVar,
-      ruleGetString,
-      ruleGetSymbol,
-      ruleGetNumber,
-    ])
-  }, (infix, left, right) => {
+    return or([ruleGetVar, ruleGetString, ruleGetSymbol, ruleGetNumber])
+  },
+  (infix, left, right) => {
     return {
-      type: "infix",
+      type: 'infix',
       infix,
       left,
-      right
+      right,
     }
-  })
+  }
+)
 
 type NNode = StringToken | SymbolToken | NumberToken | VarToken
 export type EndNode = NNode | InfixNode<NNode>
 
-
-
 export type DisplayT = {
-  type: "white" | "keyword" | "number" | "string" | "variable"
+  type: 'white' | 'keyword' | 'number' | 'string' | 'variable'
 } & BaseDisplayT
 
 function unsafeAdd(k: DisplayT['type']) {
@@ -155,37 +148,40 @@ function unsafeAdd(k: DisplayT['type']) {
     return n
   }
 }
-export const toFillToken = endNotFillToToken<EndNode, DisplayT>(endNode => {
-  if (endNode.type == 'string') {
-    return {
-      type: "string",
-      value: endNode.originalValue,
-      begin: endNode.begin,
-      end: endNode.end
+export const toFillToken = endNotFillToToken<EndNode, DisplayT>(
+  (endNode) => {
+    if (endNode.type == 'string') {
+      return {
+        type: 'string',
+        value: endNode.originalValue,
+        begin: endNode.begin,
+        end: endNode.end,
+      }
+    } else if (endNode.type == 'number') {
+      return {
+        type: 'number',
+        value: endNode.originalValue,
+        begin: endNode.begin,
+        end: endNode.end,
+      }
+    } else if (endNode.type == 'symbol') {
+      return {
+        type: 'string',
+        value: endNode.value,
+        begin: endNode.begin,
+        end: endNode.end,
+      }
+    } else if (endNode.type == 'var') {
+      return {
+        type: 'variable',
+        value: endNode.value,
+        begin: endNode.begin,
+        end: endNode.end,
+      }
+    } else {
+      throw new Error('unknown type')
     }
-  } else if (endNode.type == 'number') {
-    return ({
-      type: "number",
-      value: endNode.originalValue,
-      begin: endNode.begin,
-      end: endNode.end
-    })
-  } else if (endNode.type == 'symbol') {
-    return ({
-      type: "string",
-      value: endNode.value,
-      begin: endNode.begin,
-      end: endNode.end
-    })
-  } else if (endNode.type == 'var') {
-    return ({
-      type: "variable",
-      value: endNode.value,
-      begin: endNode.begin,
-      end: endNode.end
-    })
-  } else {
-    throw new Error("unknown type")
-  }
-}, unsafeAdd("keyword"), unsafeAdd("white"))
-
+  },
+  unsafeAdd('keyword'),
+  unsafeAdd('white')
+)
