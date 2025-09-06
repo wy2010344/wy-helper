@@ -13,7 +13,6 @@ import {
   valueOrGetToGet,
   absoluteDisplay,
   objectMap,
-  alignSelf,
   SetValue,
   HookInfo,
 } from '..'

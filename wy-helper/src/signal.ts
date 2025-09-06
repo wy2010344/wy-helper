@@ -49,7 +49,7 @@ interface Version {
 const signalCache = m[DepKey] as {
   currentFun?: TrackSignal<any>
   //为react而处理
-  currentTrack?: TrackSignal<any>
+  currentFunRemove?: boolean
   //开始了异步任务
   beginBatch?: boolean
   currentBatch: CurrentBatch
@@ -125,12 +125,13 @@ class Signal<T> {
     addRelay(this.get, value)
     if (signalCache.currentFun) {
       //只收集自己的依赖
-      this.listeners.push(signalCache.currentFun)
-    }
-    if (signalCache.currentTrack) {
-      //因为react的render可能很多,所以禁止重入
-      if (!this.listeners.includes(signalCache.currentTrack)) {
-        this.listeners.push(signalCache.currentTrack)
+      if (signalCache.currentFunRemove) {
+        //因为react的render可能很多,所以禁止重入
+        if (!this.listeners.includes(signalCache.currentFun)) {
+          this.listeners.push(signalCache.currentFun)
+        }
+      } else {
+        this.listeners.push(signalCache.currentFun)
       }
     }
     return value
@@ -151,11 +152,7 @@ export function createSignal<T>(
   value: T,
   shouldChange: Compare<T> = simpleNotEqual
 ): StoreRef<T> {
-  const signal = new Signal(value, shouldChange)
-  return {
-    get: signal.get,
-    set: signal.set,
-  }
+  return new Signal(value, shouldChange)
 }
 
 export function signalOnUpdate() {
@@ -311,10 +308,12 @@ export function collectSignal(callback: EmptyFun) {
      * @param fun
      * @returns
      */
-    collect<T>(fun: GetValue<T>) {
-      signalCache.currentTrack = t
+    collect<T>(fun: GetValue<T>, remove?: boolean) {
+      signalCache.currentFun = t
+      signalCache.currentFunRemove = remove
       const value = fun()
-      signalCache.currentTrack = undefined
+      signalCache.currentFun = undefined
+      signalCache.currentFunRemove = false
       return value
     },
   }
@@ -371,12 +370,10 @@ export function memo<T>(get: MemoGet<T> | MemoFun<T>, after?: SetValue<T>) {
     signalCache.callGet = true
     //每一次都不能跳过,主要是trackSignal需要流入依赖
     if (stateVersion == signalCache.state.version) {
-      if (
-        signalCache.onWorkBatch &&
-        listenerVersion != signalCache.currentFun
-      ) {
+      const currentFun = signalCache.currentFun
+      if (currentFun && listenerVersion != currentFun) {
         //在依赖注入期间
-        listenerVersion = signalCache.currentFun
+        listenerVersion = currentFun
         relays.forEach(mapInject)
       }
       addRelay(myGet, lastValue)

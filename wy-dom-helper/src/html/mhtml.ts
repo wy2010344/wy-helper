@@ -3,16 +3,33 @@
  * 属性里常用的属性,在最顶层
  * 主要是dom的属性
  * 为dom使用,不为svg使用
- * 
+ *
  */
 
-import { emptyFun, emptyObject, objectDiffDeleteKey, SetValue } from "wy-helper"
-import { addEvent, isEvent, setHtml, setText, updateAttr, updateCssVariable, updateDataSet, updateDom, UpdateProp, updateStyle, updateSvg } from "./fx"
-import { Props } from "./updateDom"
-import { FAriaAttribute, FCssVaribute, FDataAttr, MergeValue, renderFGetChildAttr } from "./fhtml"
-import { BDomAttribute, DomElementType } from "./html"
-import { PureCSSProperties } from "../util"
-
+import { emptyFun, emptyObject, objectDiffDeleteKey, SetValue } from 'wy-helper'
+import {
+  addEvent,
+  isEvent,
+  setHtml,
+  setText,
+  updateAttr,
+  updateCssVariable,
+  updateDataSet,
+  updateDom,
+  UpdateProp,
+  updateStyle,
+  updateSvg,
+} from './fx'
+import { Props } from './updateDom'
+import {
+  FAriaAttribute,
+  FCssVaribute,
+  FDataAttr,
+  MergeValue,
+  renderFGetChildAttr,
+} from './fhtml'
+import { BDomAttribute, DomElementType } from './html'
+import { PureCSSProperties } from '../util'
 
 const ignoreDomAttrKeys = [
   'className',
@@ -50,17 +67,14 @@ const ignoreDomAttrKeys = [
   'lang',
 
   'colspan',
-  'rowspan'
+  'rowspan',
 ] as const
 
-
-
-
 // const ATTR_PREFIX = "a_"
-const DATA_PREFIX = "data_"
-const ARIA_PREFIX = "aria_"
-const S_PREFIX = "s_"
-const CSS_PREFIX = "css_"
+const DATA_PREFIX = 'data_'
+const ARIA_PREFIX = 'aria_'
+const S_PREFIX = 's_'
+const CSS_PREFIX = 'css_'
 const CHILDREN_PREFIX = 'children'
 function updateMInsideNodeAttr(
   node: Node,
@@ -91,6 +105,7 @@ function updateMInsideNodeAttr(
 }
 
 const A_PREFIX = 'a_'
+//试图将style的属性铺平,而将attr次之
 function updateGInsideNodeAttr(
   node: Node,
   key: string,
@@ -122,13 +137,12 @@ function updateGInsideNodeAttr(
   }
 }
 
-
 /***
  * 所有属性的diff更新,mergeValue只有一个
  */
 function createRenderMAttr(
   updateMAttr: UpdateProp,
-  updateInsideNodeAttr: typeof updateMInsideNodeAttr,
+  updateInsideNodeAttr: typeof updateMInsideNodeAttr
 ) {
   return function (
     node: Node,
@@ -154,25 +168,29 @@ function createRenderMAttr(
         } else {
           //观察模式
           let oldAttrs = emptyObject as any
-          mergeValue(node, function () {
-            const newAttrs = {}
-            initValue(newAttrs)
-            return newAttrs
-          }, function (newAttrs: Props) {
-            objectDiffDeleteKey(oldAttrs, newAttrs, (key) => {
-              //删除
-              updateInsideNodeAttr(node, key, undefined, updateMAttr)
-            })
-            for (const key in newAttrs) {
-              //修改
-              const value = newAttrs[key]
-              const oldValue = oldAttrs[key]
-              if (value != oldValue) {
-                updateInsideNodeAttr(node, key, value, updateMAttr)
+          mergeValue(
+            node,
+            function () {
+              const newAttrs = {}
+              initValue(newAttrs)
+              return newAttrs
+            },
+            function (newAttrs: Props) {
+              objectDiffDeleteKey(oldAttrs, newAttrs, (key) => {
+                //删除
+                updateInsideNodeAttr(node, key, undefined, updateMAttr)
+              })
+              for (const key in newAttrs) {
+                //修改
+                const value = newAttrs[key]
+                const oldValue = oldAttrs[key]
+                if (value != oldValue) {
+                  updateInsideNodeAttr(node, key, value, updateMAttr)
+                }
               }
+              oldAttrs = newAttrs
             }
-            oldAttrs = newAttrs
-          })
+          )
         }
       }
     }
@@ -180,24 +198,35 @@ function createRenderMAttr(
   }
 }
 
+export const renderMDomAttr = createRenderMAttr(
+  updateDom,
+  updateMInsideNodeAttr
+)
+export const renderMSvgAttr = createRenderMAttr(
+  updateSvg,
+  updateMInsideNodeAttr
+)
 
-
-export const renderMDomAttr = createRenderMAttr(updateDom, updateMInsideNodeAttr)
-export const renderMSvgAttr = createRenderMAttr(updateSvg, updateMInsideNodeAttr)
-
-type IgnoreKeys = typeof ignoreDomAttrKeys[number]
-type OmitBDomAttribute<T extends DomElementType> = Omit<BDomAttribute<T>, IgnoreKeys>
+type IgnoreKeys = (typeof ignoreDomAttrKeys)[number]
+type OmitBDomAttribute<T extends DomElementType> = Omit<
+  BDomAttribute<T>,
+  IgnoreKeys
+>
 type MAttrProps<T extends DomElementType> = {
-  [key in keyof OmitBDomAttribute<T> as (key extends string ? `a_${key}` : key)]: OmitBDomAttribute<T>[key]
+  [key in keyof OmitBDomAttribute<T> as key extends string
+    ? `a_${key}`
+    : key]: OmitBDomAttribute<T>[key]
 }
 type SafePick<T, K extends PropertyKey> = {
-  [P in K]?: P extends keyof T ? T[P] : never;
+  [P in K]?: P extends keyof T ? T[P] : never
 }
-export type GDomAttribute<T extends DomElementType> =
-  MAttrProps<T>
-  & SafePick<BDomAttribute<T>, IgnoreKeys>
-  & FDataAttr
-  & FAriaAttribute
-  & PureCSSProperties
-  & FCssVaribute
-export const renderGDomAttr = createRenderMAttr(updateSvg, updateGInsideNodeAttr)
+export type GDomAttribute<T extends DomElementType> = MAttrProps<T> &
+  SafePick<BDomAttribute<T>, IgnoreKeys> &
+  FDataAttr &
+  FAriaAttribute &
+  PureCSSProperties &
+  FCssVaribute
+export const renderGDomAttr = createRenderMAttr(
+  updateDom,
+  updateGInsideNodeAttr
+)
