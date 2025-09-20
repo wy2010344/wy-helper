@@ -1,11 +1,13 @@
+import { getOutResolvePromise, GetValue, SetValue } from '../setStateHelper'
+import { createSignal } from '../signal'
+import { StoreRef } from '../storeRef'
+import { emptyFun } from '../util'
+import {
+  defaultSpringAnimationConfig,
+  DeltaXSignalAnimationConfig,
+} from './AnimationConfig'
 
-import { getOutResolvePromise, GetValue, SetValue } from "../setStateHelper";
-import { createSignal } from "../signal";
-import { StoreRef } from "../storeRef";
-import { emptyFun } from "../util";
-import { defaultSpringAnimationConfig, DeltaXSignalAnimationConfig } from "./AnimationConfig";
-
-import { batchSignalEnd } from "../signal"
+import { batchSignalEnd } from '../signal'
 /**
  * 或者视着实例而非消息,即是可变的,只在事件中不变
  */
@@ -43,18 +45,17 @@ export function createSubscribeRequestAnimationFrame(
   }
 }
 
-export type SubscribeRequestAnimationFrame = ReturnType<typeof createSubscribeRequestAnimationFrame>
-
+export type SubscribeRequestAnimationFrame = ReturnType<
+  typeof createSubscribeRequestAnimationFrame
+>
 
 export interface AnimationTime {
   (n: number): void
 }
 export function createAnimationTime(
-  callback: (diffTime: number, setDisplacement: SetValue<number>) => any,
+  callback: (diffTime: number, setDisplacement: SetValue<number>) => any
 ): AnimateSignalConfig {
-  return function (
-    out: SilentDiff
-  ) {
+  return function (out: SilentDiff) {
     function setDisplacement(n: number) {
       out.setDisplayment(n)
     }
@@ -68,7 +69,7 @@ export class SilentDiff {
   constructor(
     private value: StoreRef<number>,
     private onProcess?: SetValue<number>,
-    readonly target?: number
+    public target?: number
   ) {
     this.initValue = value.get()
     this.getCurrent = value.get
@@ -78,6 +79,9 @@ export class SilentDiff {
   silentDiff(n: number) {
     this.initValue = this.initValue + n
     this.value.set(this.value.get() + n)
+    if (typeof this.target == 'number') {
+      this.target = this.target + n
+    }
   }
   silentChangeTo(n: number) {
     if (typeof this.target == 'number') {
@@ -94,22 +98,15 @@ export class SilentDiff {
   }
 }
 
-
-
 export interface AnimateSignalConfig {
-  (
-    value: SilentDiff
-  ): ((diffTime: number) => any) | void
+  (value: SilentDiff): ((diffTime: number) => any) | void
 }
-
 
 interface AnimateSignalResult {
   cancel(): void
   resolve(e: boolean): void
   out: SilentDiff
 }
-
-
 
 export class AnimateSignal {
   constructor(
@@ -206,7 +203,7 @@ export class AnimateSignal {
       this.lastCancel = {
         cancel: this.reSubscribe(callback),
         resolve,
-        out: out
+        out: out,
       }
       return promise
     } else {
@@ -230,7 +227,8 @@ export class AnimateSignal {
   animateTo(
     n: number,
     config: DeltaXSignalAnimationConfig = defaultSpringAnimationConfig,
-    onProcess?: SetValue<number>) {
+    onProcess?: SetValue<number>
+  ) {
     this.didFinish(false)
     const diff = n - this.get()
     if (diff) {
@@ -242,7 +240,8 @@ export class AnimateSignal {
   async animateThrow(
     n: number,
     config: DeltaXSignalAnimationConfig = defaultSpringAnimationConfig,
-    onProcess?: SetValue<number>) {
+    onProcess?: SetValue<number>
+  ) {
     const out = await this.animateTo(n, config, onProcess)
     if (!out) {
       throw new Error('user cancel')
@@ -250,8 +249,6 @@ export class AnimateSignal {
     return out
   }
 }
-
-
 
 const promiseImmediately = Promise.resolve<'immediately'>('immediately')
 

@@ -1,13 +1,19 @@
-import { arrayEqual, simpleEqual } from "./equal"
-import { EqualsMap } from "./EqualsMap"
-import { ReadArray } from "./util"
+import { arrayEqual, simpleEqual } from './equal'
+import { EqualsMap } from './EqualsMap'
+import { ReadArray } from './util'
 
 export interface RMap<K, V> {
   get(key: K): V | undefined
   set(key: K, value: V): void
   forEach(fun: (value: V, key: K) => void): void
+
+  has(key: K): boolean
+  readonly size: number
 }
 
+export interface RWMap<K, V> extends RMap<K, V> {
+  delete(key: K): boolean
+}
 
 function orArrayEqual(a: any, b: any) {
   if (Array.isArray(a) && Array.isArray(b)) {
@@ -18,7 +24,6 @@ function orArrayEqual(a: any, b: any) {
 export function arrayOrOneMapCreater<K, V>() {
   return new EqualsMap<K, V>(orArrayEqual)
 }
-
 
 export function normalMapCreater<K, V>() {
   return new Map<K, V>()

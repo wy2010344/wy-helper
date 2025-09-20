@@ -21,7 +21,10 @@ export function parseGet<Q extends BaseQue<any>, T>(
   }
 }
 
-export function parseTop<Fun extends (...vs: any[]) => any>(fun: Fun, message = '') {
+export function parseTop<Fun extends (...vs: any[]) => any>(
+  fun: Fun,
+  message = ''
+) {
   return (...vs: Parameters<Fun>): ReturnType<Fun> => {
     try {
       return fun(...vs)
@@ -36,6 +39,7 @@ export function parseTop<Fun extends (...vs: any[]) => any>(fun: Fun, message = 
 
 let currentQue: BaseQue<any> | undefined = undefined
 export function runParse<T>(value: string, fun: () => T, debug?: boolean) {
+  let oldQue = currentQue
   try {
     currentQue = new Que(value, 0)
     if (debug) {
@@ -43,63 +47,49 @@ export function runParse<T>(value: string, fun: () => T, debug?: boolean) {
     }
     return fun()
   } finally {
-    currentQue = undefined
+    currentQue = oldQue
   }
 }
 export function getCurrentQue() {
   return currentQue
 }
 
-export function or<T1, T2>(
-  vs: [
-    () => T1,
-    () => T2
-  ],
-  message?: string
-): T1 | T2
+export function or<T1, T2>(vs: [() => T1, () => T2], message?: string): T1 | T2
 export function or<T1, T2, T3>(
-  vs: [
-    () => T1,
-    () => T2,
-    () => T3
-  ],
+  vs: [() => T1, () => T2, () => T3],
   message?: string
 ): T1 | T2 | T3
 export function or<T1, T2, T3, T4>(
-  vs: [
-    () => T1,
-    () => T2,
-    () => T3,
-    () => T4
-  ],
+  vs: [() => T1, () => T2, () => T3, () => T4],
   message?: string
 ): T1 | T2 | T3 | T4
 export function or<T1, T2, T3, T4, T5>(
-  vs: [
-    () => T1,
-    () => T2,
-    () => T3,
-    () => T4,
-    () => T5
-  ],
+  vs: [() => T1, () => T2, () => T3, () => T4, () => T5],
   message?: string
 ): T1 | T2 | T3 | T4 | T5
 export function or<T1, T2, T3, T4, T5, T6>(
+  vs: [() => T1, () => T2, () => T3, () => T4, () => T5, () => T6],
+  message?: string
+): T1 | T2 | T3 | T4 | T5 | T6
+export function or<T1, T2, T3, T4, T5, T6, T7>(
+  vs: [() => T1, () => T2, () => T3, () => T4, () => T5, () => T6, () => T7],
+  message?: string
+): T1 | T2 | T3 | T4 | T5 | T6 | T7
+export function or<T1, T2, T3, T4, T5, T6, T7, T8>(
   vs: [
     () => T1,
     () => T2,
     () => T3,
     () => T4,
     () => T5,
-    () => T6
+    () => T6,
+    () => T7,
+    () => T8
   ],
   message?: string
-): T1 | T2 | T3 | T4 | T5 | T6
+): T1 | T2 | T3 | T4 | T5 | T6 | T7 | T8
 export function or<T>(vs: (() => T)[], message?: string): T
-export function or(
-  vs: (() => any)[],
-  message = ''
-) {
+export function or(vs: (() => any)[], message = '') {
   const keepQue = currentQue!
   for (const v of vs) {
     try {
@@ -114,10 +104,6 @@ export function or(
   }
   throw error(message)
 }
-
-
-
-
 
 // Generator并不是很好标注类型
 // type ParseGet<Q extends BaseQue<any>, T> = (que: Q) => ParserSuccess<Q, T>

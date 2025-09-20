@@ -17,7 +17,13 @@ export type OCanvasTextDrawingStyles = Partial<
   fontFamily?: string
 }
 
-function setDrawingStyle(
+/**
+ *
+ * @param ctx
+ * @param n
+ * @param ig 是否是测量
+ */
+export function setDrawingStyle(
   ctx: CanvasTextDrawingStyles,
   n: OCanvasTextDrawingStyles = emptyObject as any,
   ig = false
@@ -114,18 +120,21 @@ export type TextWrapTextConfig = Omit<
  * 参考 https://github.com/Flipboard/react-canvas/blob/master/lib/measureText.js
  * @param ctx
  * @param text
+ * @param width 限制宽度
  * @param config
  * @returns
  */
 export function measureTextWrap(
   ctx: MCtx,
   text: string,
-  config: {
-    overflowDisplay?: string
-    lineHeight?: number | Quote<number>
-    width: number
-    maxLines?: number
-  } & TextWrapTextConfig
+  width: number,
+  config: Readonly<
+    {
+      overflowDisplay?: string
+      lineHeight?: number | Quote<number>
+      maxLines?: number
+    } & TextWrapTextConfig
+  > = emptyObject
 ): MeasuredTextWrapOut {
   let maxLines = config.maxLines || Infinity
   if (maxLines < 1) {
@@ -142,7 +151,7 @@ export function measureTextWrap(
   }
   const lineDiffStart = (lineHeight - fontHeight) / 2
 
-  if (m.width <= config.width) {
+  if (m.width <= width) {
     return {
       ...config,
       lineDiffStart,
@@ -161,6 +170,7 @@ export function measureTextWrap(
 
     const measuredSize = {
       ...config,
+      width,
       height: 0,
       lineHeight,
       lineDiffStart,
@@ -178,10 +188,7 @@ export function measureTextWrap(
       const word = text.slice(lastBreak ? lastBreak.position : 0, bk.position)
       const tryLine = currentLine + word
       const textMetrics = ctx.measureText(tryLine)
-      if (
-        textMetrics.width > config.width ||
-        (lastBreak && lastBreak.required)
-      ) {
+      if (textMetrics.width > width || (lastBreak && lastBreak.required)) {
         //宽度溢出,或必须要新行
         const line = {
           width: lastMeasuredWidth!,
@@ -199,7 +206,7 @@ export function measureTextWrap(
             while (true) {
               const thisText = drawText + of
               const m = ctx.measureText(thisText)
-              if (m.width < config.width) {
+              if (m.width < width) {
                 line.text = thisText
                 line.width = m.width
                 break
@@ -232,7 +239,7 @@ export function measureTextWrap(
   }
 }
 
-type TextCtx = CanvasTextDrawingStyles & {
+export type TextCtx = CanvasTextDrawingStyles & {
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/CanvasRenderingContext2D/fillStyle) */
   fillStyle: CanvasStyle
   /** [MDN Reference](https://developer.mozilla.org/docs/Web/API/CanvasRenderingContext2D/strokeStyle) */

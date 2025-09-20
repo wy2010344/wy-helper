@@ -15,6 +15,7 @@ import {
   objectMap,
   SetValue,
   HookInfo,
+  Axis,
 } from '..'
 
 export function layoutNodeGetTarget<M, K extends string>(
@@ -31,26 +32,14 @@ export class LayoutNode<M, K extends string> implements LayoutModel<K> {
   target!: M
   _index: number = 0
   _get: EmptyFun = emptyFun
+  parent: LayoutNode<M, K> | undefined
   index() {
     this._get()
     return this._index
   }
   constructor(
     private readonly getDisplay: GetValue<MDisplayOut<K>>,
-    readonly axis: Record<
-      K,
-      {
-        /**外部尺寸,外部也会使用 */
-        size: GetValue<number>
-        /**外部坐标,主要是供外部使用 */
-        position: GetValue<number>
-        paddingStart: GetValue<number>
-        paddingEnd: GetValue<number>
-        /**内部尺寸,用于自身布局,也在文字绘制时使用 */
-        innerSize: GetValue<number>
-        alignSelf?: AlignSelfFun
-      }
-    >,
+    readonly axis: Record<K, AxisInfo>,
     readonly children: GetValue<readonly LayoutNode<M, K>[]>,
     readonly getNotInLayout: GetValue<boolean>,
     readonly getGrow: GetValue<number | void>
@@ -87,6 +76,7 @@ export interface LayoutNodeConfigure<M, K extends string> {
   axis: Record<
     K,
     {
+      sizeAsInner?: boolean
       position?: InstanceCallbackOrValue<LayoutNode<M, K>>
       size?: InstanceCallbackOrValue<LayoutNode<M, K>>
       paddingStart?: ValueOrGet<number>
@@ -123,6 +113,20 @@ function getFromParent<M, K extends string>(
   return def
 }
 
+interface AxisInfo {
+  /**外部尺寸,外部也会使用 */
+  size: GetValue<number>
+  /**外部坐标,主要是供外部使用 */
+  position: GetValue<number>
+  paddingStart: GetValue<number>
+  paddingEnd: GetValue<number>
+  /**内部尺寸,用于自身布局,也在文字绘制时使用 */
+  innerSize: GetValue<number>
+  alignSelf?: AlignSelfFun
+  positionFromParent: GetValue<number>
+  innerSizeFromParent: GetValue<number>
+  sizeFromParent: GetValue<number>
+}
 export function createLayoutNode<M, K extends string>(
   c: LayoutConfig<M, K>,
   n: LayoutNodeConfigure<M, K>
@@ -139,48 +143,60 @@ export function createLayoutNode<M, K extends string>(
       v.size,
       getIns
     )
+    function positionFromParent(): number {
+      //从父节点的布局获取,或者默认0
+      return getFromParent(node, c, key, false)
+    }
+    function sizeFromParent(): number {
+      try {
+        //优先从子节点的布局获取
+        const ix = node.getOuterSizeFromLayout(key)
+        return ix
+      } catch (err) {
+        try {
+          //从父节点的布局获取
+          return getFromParent(
+            node,
+            c,
+            key,
+            true,
+            err || `can't get size from layout`
+          )
+        } catch (err) {
+          //采用默认值
+          return node.getOuterSizeFromLayout(key, true)
+        }
+      }
+    }
+    function innerSizeFromParent(): number {
+      const pw = getFromParent<M, K>(node, c, key, true, 'notfound')
+      return pw - paddingStart() - paddingEnd()
+    }
     return {
       alignSelf: v.alignSelf,
-      size:
-        defSize ||
-        function (): number {
-          try {
-            //优先从子节点的布局获取
-            const ix = node.getOuterSizeFromLayout(key)
-            return ix
-          } catch (err) {
-            try {
-              //从父节点的布局获取
-              return getFromParent(
-                node,
-                c,
-                key,
-                true,
-                err || `can't get size from layout`
-              )
-            } catch (err) {
-              //采用默认值
-              return node.getOuterSizeFromLayout(key, true)
+      size: defSize
+        ? v.sizeAsInner
+          ? function () {
+              return defSize() + paddingStart() + paddingEnd()
             }
-          }
-        },
+          : defSize
+        : sizeFromParent,
+      sizeFromParent,
       position:
         valueInstOrGetToGet<number, LayoutNode<M, K>>(v.position, getIns) ||
-        function (): number {
-          //从父节点的布局获取,或者默认0
-          return getFromParent(node, c, key, false)
-        },
+        positionFromParent,
+      positionFromParent: positionFromParent,
       paddingStart,
       paddingEnd,
       //内部尺寸,需要优先自身,再父布局,再子撑开
       innerSize: defSize
-        ? function (): number {
-            return defSize() - paddingStart() - paddingEnd()
-          }
-        : function (): number {
-            const pw = getFromParent<M, K>(node, c, key, true, 'notfound')
-            return pw - paddingStart() - paddingEnd()
-          },
+        ? v.sizeAsInner
+          ? defSize
+          : function (): number {
+              return defSize() - paddingStart() - paddingEnd()
+            }
+        : innerSizeFromParent,
+      innerSizeFromParent,
     }
   })
 
