@@ -10,8 +10,14 @@
  * 或者只用二元
  */
 
-import { MatchGet } from './parseInfix'
-import { BaseDisplayT, buildInfix, endNotFillToToken, InfixNode } from './tool'
+import {
+  BaseDisplayT,
+  buildInfix,
+  endNotFillToToken,
+  InfixNode,
+  MatchGet,
+  toInfixConfig,
+} from './tool'
 import {
   Que,
   isParseSuccess,
@@ -24,6 +30,10 @@ import {
   or,
   andMatch,
   orMatchEmpty,
+  ruleStrBetweenGet1,
+  parseGet,
+  matchAnyString,
+  ParseFun,
 } from '../tokenParser'
 import {
   symbolRule,
@@ -61,11 +71,39 @@ import {
 逻辑或 (||)
 三元条件运算符 (?:)
  */
+
 const nc = "'".charCodeAt(0)
-export const matchBetween: MatchGet = {
+
+function parseInfixNode(value: {
+  match: ParseFun<Que>
+  get?(value: string): string
+  stringify?(n: string): string
+  display: string
+}): MatchGet<InfixToken> {
+  return {
+    parse() {
+      return parseGet<Que, InfixToken>(value.match, (begin, end) => {
+        const originalValue = queToString(begin, end)
+        const str = value.get ? value.get(originalValue) : originalValue
+        return {
+          originalValue,
+          value: str,
+          begin: begin.i,
+          end: end.i,
+          errors: [],
+        }
+      })
+    },
+    match(n) {
+      return value.match(new Que(n))
+    },
+    stringify: value.stringify,
+  }
+}
+
+export const matchBetween = parseInfixNode({
   match: ruleStrBetween(nc),
-  get(begin, end) {
-    const value = queToString(begin, end)
+  get(value) {
     const nValue = ruleStrBetweenGet(nc)(new Que(value))
     if (isParseSuccess(nValue) && nValue.end.i == value.length) {
       return nValue.value
@@ -77,7 +115,7 @@ export const matchBetween: MatchGet = {
     return ` '${n.replace(/`/g, '\\`')}' `
   },
   display: 'anyMatch~',
-}
+})
 
 /**
  * 向后的可以排除,在前的却只有不参与
@@ -88,25 +126,18 @@ const specialMatchRule = manyMatch(
   1
 )
 
-const specialMatch: MatchGet = {
+const specialMatch = parseInfixNode({
   match: specialMatchRule,
-  get: queToString,
-  stringify(n) {
-    return n
-  },
   display: 'specialMatch',
-}
+})
 
-const matchSymbolOrSpecial: MatchGet = {
+const matchSymbolOrSpecial = parseInfixNode({
   match: andMatch(symbolRule, orMatchEmpty(specialMatchRule)),
-  get(begin, end) {
-    return queToString(begin, end)
-  },
   stringify(n) {
     return ` ${n} `
   },
   display: 'symbolMatch',
-}
+})
 
 export const infixLibArray = [
   [';'], //或结束
@@ -118,12 +149,20 @@ export const infixLibArray = [
   ['*', '/', '%'],
 ]
 
-export const { parseSentence, getInfixOrder } = buildInfix<EndNode>(
+export const { array, getInfixOrder } = toInfixConfig(
   infixLibArray,
+  (begin, value, end) => {
+    return {
+      value,
+      originalValue: value,
+      begin,
+      end,
+    } as InfixToken
+  }
+)
+export const { parseSentence } = buildInfix(
+  array,
   skipWhiteOrComment,
-  () => {
-    return or([ruleGetVar, ruleGetString, ruleGetSymbol, ruleGetNumber])
-  },
   (infix, left, right) => {
     return {
       type: 'infix',
@@ -135,8 +174,7 @@ export const { parseSentence, getInfixOrder } = buildInfix<EndNode>(
 )
 
 type NNode = StringToken | SymbolToken | NumberToken | VarToken
-export type EndNode = NNode | InfixNode<NNode>
-
+export type EndNode = NNode | InfixNode<NNode, InfixToken>
 export type DisplayT = {
   type: 'white' | 'keyword' | 'number' | 'string' | 'variable'
 } & BaseDisplayT
@@ -148,7 +186,7 @@ function unsafeAdd(k: DisplayT['type']) {
     return n
   }
 }
-export const toFillToken = endNotFillToToken<EndNode, DisplayT>(
+export const toFillToken = endNotFillToToken<EndNode, InfixToken, DisplayT>(
   (endNode) => {
     if (endNode.type == 'string') {
       return {
@@ -182,6 +220,20 @@ export const toFillToken = endNotFillToToken<EndNode, DisplayT>(
       throw new Error('unknown type')
     }
   },
-  unsafeAdd('keyword'),
+  (old) => {
+    return {
+      type: 'keyword',
+      begin: old.begin,
+      end: old.end,
+      value: old.originalValue,
+    }
+  },
   unsafeAdd('white')
 )
+
+export interface InfixToken {
+  begin: number
+  end: number
+  value: string
+  originalValue: string
+}

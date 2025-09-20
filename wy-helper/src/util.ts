@@ -1,33 +1,41 @@
-import { GetValue, SetValue } from "./setStateHelper";
-
+import { GetValue, SetValue } from './setStateHelper'
 
 export type ReadSet<V> = Omit<Set<V>, 'add' | 'clear' | 'forEach'> & {
-  forEach(callbackfn: (value: V, key: V, map: ReadSet<V>) => void, thisArg?: any): void
+  forEach(
+    callbackfn: (value: V, key: V, map: ReadSet<V>) => void,
+    thisArg?: any
+  ): void
 }
-export type ReadMap<K, V> = Omit<Map<K, V>, 'set' | 'delete' | 'clear' | 'forEach'> & {
-  forEach(callbackfn: (value: V, key: K, map: ReadMap<K, V>) => void, thisArg?: any): void
+export type ReadMap<K, V> = Omit<
+  Map<K, V>,
+  'set' | 'delete' | 'clear' | 'forEach'
+> & {
+  forEach(
+    callbackfn: (value: V, key: K, map: ReadMap<K, V>) => void,
+    thisArg?: any
+  ): void
 }
 export type ReadWrite<T> = {
-  -readonly [P in keyof T]: T[P];
-};
-export type NullType = undefined | null | void;
+  -readonly [P in keyof T]: T[P]
+}
+export type NullType = undefined | null | void
 /**6种情况为false,NaN是数字类型*/
-export type FalseType = false | 0 | 0n | "" | NullType
+export type FalseType = false | 0 | 0n | '' | NullType
 export type EmptyFun = (...vs: any[]) => void
 export type Quote<T> = (v: T, ...vs: any[]) => T
-export function quote<T>(v: T, ...vs: any[]) { return v }
-export function run<T extends AnyFunction>(
-  fun: T
-): ReturnType<T> {
+export function quote<T>(v: T, ...vs: any[]) {
+  return v
+}
+export function run<T extends AnyFunction>(fun: T): ReturnType<T> {
   return fun()
 }
 
-class FreezeError extends Error {
-}
+class FreezeError extends Error {}
 
 const FreezeErrorSymbol = Symbol('FreezeErrorSymbol')
-export const objectFreeze = 'freeze' in Object ? Object.freeze.bind(Object) : quote
-export const objectFreezeThrow = run((): <T extends Object>(v: T) => T => {
+export const objectFreeze =
+  'freeze' in Object ? Object.freeze.bind(Object) : quote
+export const objectFreezeThrow = run((): (<T extends Object>(v: T) => T) => {
   if (globalThis.Proxy) {
     return (a: any) => {
       return new Proxy(a, {
@@ -49,7 +57,7 @@ export const objectFreezeThrow = run((): <T extends Object>(v: T) => T => {
 // 检查对象是否是代理对象
 function isProxy(obj: any) {
   return obj && obj[FreezeErrorSymbol]
-};
+}
 export function objectDeepFreezeThrow<T>(n: T, before: any[] = []) {
   if (typeof n == 'object' && n) {
     if (isProxy(n) || Object.isFrozen(n)) {
@@ -83,10 +91,9 @@ export function objectDeepFreezeThrow<T>(n: T, before: any[] = []) {
   return n
 }
 
-
 export const emptySet = objectFreeze(new Set())
 export const emptyMap = objectFreeze(new Map())
-export const emptyArray = objectFreeze([])// objectFreezeThrow([]) as readonly any[]
+export const emptyArray = objectFreeze([]) // objectFreezeThrow([]) as readonly any[]
 export function getTheEmptyArray<T>() {
   return emptyArray as T[]
 }
@@ -101,7 +108,7 @@ export function createEmptyObject<T>() {
 export function getTheEmptyObject<T>() {
   return emptyObject as T
 }
-export function emptyFun(...vs: any[]) { }
+export function emptyFun(...vs: any[]) {}
 
 export function quoteOrLazyGet<T>(v: T | (() => T), ...vs: any[]): T {
   if (typeof v == 'function') {
@@ -111,17 +118,16 @@ export function quoteOrLazyGet<T>(v: T | (() => T), ...vs: any[]): T {
   }
 }
 export type AnyFunction = (...vs: any[]) => any
-export async function quotePromise<T>(v: T, ...vs: any[]) { return v }
-export function expandFunCall<T extends AnyFunction>(
-  fun: T
-) {
+export async function quotePromise<T>(v: T, ...vs: any[]) {
+  return v
+}
+export function expandFunCall<T extends AnyFunction>(fun: T) {
   fun()
 }
 export interface ManageValue<T> {
   add(v: T): void
   remove(v: T): void
 }
-
 
 export function iterableToList<T>(entity: IterableIterator<T>) {
   const list: T[] = []
@@ -134,7 +140,6 @@ export function iterableToList<T>(entity: IterableIterator<T>) {
   }
   return list
 }
-
 
 export function alawaysTrue(): true {
   return true
@@ -152,12 +157,13 @@ export function defaultToGetTrue(value: any) {
   return undefined
 }
 
-
 type VWithDestroy<V> = {
-  value: V,
+  value: V
   destroy?(): void
 }
-export function getCacheCreateMapWithDestroy<K, V>(createV: (key: K) => VWithDestroy<V>) {
+export function getCacheCreateMapWithDestroy<K, V>(
+  createV: (key: K) => VWithDestroy<V>
+) {
   const map = new Map<K, VWithDestroy<V>>()
 
   return {
@@ -179,7 +185,7 @@ export function getCacheCreateMapWithDestroy<K, V>(createV: (key: K) => VWithDes
         return true
       }
       return false
-    }
+    },
   }
 }
 
@@ -196,13 +202,11 @@ export function getCacheCreateMap<K, V>(createV: (key: K) => V) {
   } as any
 }
 
-
 export function delay(n: number) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     setTimeout(resolve, n)
   })
 }
-
 
 export function getTimeoutPromise(time: number, then = emptyFun) {
   return function () {
@@ -213,14 +217,13 @@ export function getTimeoutPromise(time: number, then = emptyFun) {
 export const supportMicrotask = !!globalThis.queueMicrotask
 export const supportMessageChannel = typeof MessageChannel !== 'undefined'
 
-
 export function messageChannelCallback(callback: EmptyFun) {
   if (supportMessageChannel) {
     const { port1, port2 } = new MessageChannel()
     if ('on' in port1) {
-      port1.on("message", callback)
+      port1.on('message', callback)
     } else {
-      (port1 as any).onmessage = callback
+      ;(port1 as any).onmessage = callback
     }
     return port2.postMessage(null)
   } else {
@@ -233,7 +236,6 @@ export function asLazy<T>(v: T) {
     return v
   }
 }
-
 
 export function cacheGet<T>(fun: () => T) {
   let value: { v: T } | undefined = undefined
@@ -263,14 +265,15 @@ export function setToAdd<V>(set: Set<V>, ...vs: V[]) {
   return aSet
 }
 
-
 export type ReadArray<T> = {
-  length: number;
-  [index: number]: T;
-};
+  length: number
+  [index: number]: T
+}
 
-
-export function readArrayMap<T, V>(vs: ReadArray<T>, fun: (v: T, i: number) => V) {
+export function readArrayMap<T, V>(
+  vs: ReadArray<T>,
+  fun: (v: T, i: number) => V
+) {
   const ls: V[] = []
   for (let i = 0; i < vs.length; i++) {
     ls.push(fun(vs[i], i))
@@ -290,13 +293,17 @@ export function readArraySlice<T>(
   return out
 }
 
-export function readArraySliceCircle<T>(list: ReadArray<T>, from: number = 0, end: number = list.length) {
+export function readArraySliceCircle<T>(
+  list: ReadArray<T>,
+  from: number = 0,
+  end: number = list.length
+) {
   if (from > end) {
-    throw new Error("from 必须小于 end")
+    throw new Error('from 必须小于 end')
   }
   const n = list.length
   if (end - from > n) {
-    throw new Error("必须在列表的长度区间!")
+    throw new Error('必须在列表的长度区间!')
   }
   if (from < 0) {
     from = getAbsoulteIndex(n, from)
@@ -329,14 +336,10 @@ export function getAbsoulteIndex(n: number, i: number) {
 }
 
 export class WrapperValue<T> {
-  constructor(public readonly value: T) { }
+  constructor(public readonly value: T) {}
 }
 
-
-export type DelayCall = (
-  notify: EmptyFun
-) => EmptyFun
-
+export type DelayCall = (notify: EmptyFun) => EmptyFun
 
 export function timeoutDelayCall(time: number): DelayCall {
   return function (notify) {
@@ -372,19 +375,19 @@ export function numberIntFillWithN0(n: number, x: number) {
 
 /**
  * 删除小数点后的0
- * @param nx 
- * @returns 
+ * @param nx
+ * @returns
  */
 export function removeLastZero(nx: string) {
   if (nx.includes('.')) {
-    let i = nx.length - 1;
-    while (nx[i] == "0") {
-      i--;
+    let i = nx.length - 1
+    while (nx[i] == '0') {
+      i--
     }
-    if (nx[i] == ".") {
-      i--;
+    if (nx[i] == '.') {
+      i--
     }
-    return nx.slice(0, i + 1);
+    return nx.slice(0, i + 1)
   }
   return nx
 }
@@ -396,12 +399,11 @@ export function removeLastZero(nx: string) {
  */
 export function numberFixRemoveZero(n: number, fix: number) {
   if (fix > 0) {
-    const nx = n.toFixed(fix);
-    return removeLastZero(nx);
+    const nx = n.toFixed(fix)
+    return removeLastZero(nx)
   }
-  return n + "";
+  return n + ''
 }
-
 
 export function mathAdd(a: number, b: number) {
   return a + b
@@ -419,11 +421,9 @@ export function mathDiv(a: number, b: number) {
   return a / b
 }
 
-
 export function trueAndS(a: any, left: string, right = '') {
   return a ? left : right
 }
-
 
 export function numberSortAsc(a: number, b: number) {
   return a - b
@@ -436,14 +436,12 @@ export function numberSortDesc(a: number, b: number) {
  * 转化成
  * { x: "ax"; y: 99 } | { x: "cc"; y: 99 };
  */
-export type Flatten<T> = T extends T ? { [K in keyof T]: T[K] } : never;
+export type Flatten<T> = T extends T ? { [K in keyof T]: T[K] } : never
 
-
-
-
-
-
-export function genTemplateStringS1(ts: TemplateStringsArray, vs: (string | number)[]) {
+export function genTemplateStringS1(
+  ts: TemplateStringsArray,
+  vs: (string | number)[]
+) {
   const xs: any[] = []
   for (let i = 0; i < vs.length; i++) {
     xs.push(ts[i])
@@ -452,8 +450,6 @@ export function genTemplateStringS1(ts: TemplateStringsArray, vs: (string | numb
   xs.push(ts[vs.length])
   return xs.join('')
 }
-
-
 
 export type VType = string | number | GetValue<number | string>
 export function vTypeisGetValue(v: VType): v is GetValue<number | string> {
@@ -467,27 +463,21 @@ function toSingleValue(v: VType) {
   return v
 }
 
-export function genTemplateStringS2(
-  ts: TemplateStringsArray,
-  vs: VType[]
-) {
+export function genTemplateStringS2(ts: TemplateStringsArray, vs: VType[]) {
   return genTemplateStringS1(ts, vs.map(toSingleValue))
 }
-
 
 export function tw(strings: TemplateStringsArray, ...vs: string[]) {
   return genTemplateStringS1(strings, vs)
 }
 
-
 export function numberBetween(min: number, value: number, max: number) {
   if (min > max) {
-    console.log("erroro");
-    throw new Error("min must less than max");
+    console.log('erroro')
+    throw new Error('min must less than max')
   }
-  return Math.min(Math.max(min, value), max);
+  return Math.min(Math.max(min, value), max)
 }
-
 
 export function mergeSet<T>(...sets: (SetValue<T> | FalseType)[]) {
   return function (v: T) {
@@ -498,4 +488,29 @@ export function mergeSet<T>(...sets: (SetValue<T> | FalseType)[]) {
       }
     }
   }
+}
+type MethodKeys<T> = {
+  [K in keyof T]: K extends string
+    ? T[K] extends (...args: any[]) => any
+      ? K
+      : never
+    : never
+}[keyof T]
+
+/**
+ * 缓存性绑定
+ * @param it
+ * @param key
+ * @returns
+ */
+export function methodBind<T, K extends MethodKeys<T>>(it: T, key: K) {
+  const fun = it[key] as any
+  if (fun.binded) {
+    //已经绑定了
+    return fun as T[K]
+  }
+  const out = fun.bind(it)
+  out.binded = it
+  it[key] = out
+  return out as T[K]
 }

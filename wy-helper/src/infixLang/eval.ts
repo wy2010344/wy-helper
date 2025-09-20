@@ -1,19 +1,27 @@
 import {
-  KVar, List, Stream, extendSubsitution, fail,
+  KVar,
+  List,
+  Stream,
+  extendSubsitution,
+  fail,
   streamAppendStream,
-  streamBindGoal, success
-} from "../kanren";
-import { EndNode, getInfixOrder } from "./parse";
-import { VarPool } from "./tool";
-import { IPair, ISubsitution, IType, baseUnify, walk, walkWithSet } from "./rewrite";
-import { infixRightNeedQuote } from "./parseInfix";
+  streamBindGoal,
+  success,
+} from '../kanren'
+import { EndNode, getInfixOrder } from './parse'
+import { VarPool } from './tool'
+import {
+  IPair,
+  ISubsitution,
+  IType,
+  baseUnify,
+  walk,
+  walkWithSet,
+} from './rewrite'
+import { infixRightNeedQuote } from './parseInfix'
 
 export type RuleScope = List<EvalRule>
-export function topEvalExp(
-  sub: ISubsitution,
-  topRules: RuleScope,
-  exp: IType
-) {
+export function topEvalExp(sub: ISubsitution, topRules: RuleScope, exp: IType) {
   const set = new Set<KVar>()
   const newExp = walkWithSet(exp, sub, set)
   //这种方式明显缩小了作用域长度
@@ -21,16 +29,16 @@ export function topEvalExp(
     toEvalRules(topRules, newExp, topRules),
     function (outSub) {
       let newSub = sub
-      set.forEach(value => {
+      set.forEach((value) => {
         const toValue = walk(value, outSub)
         if (!value.equals(toValue)) {
           newSub = extendSubsitution(value, toValue, newSub)
         }
       })
       return success(newSub)
-    })
+    }
+  )
 }
-
 
 function toEvalRules(
   rules: RuleScope,
@@ -52,17 +60,17 @@ export function infixValue<L, R>(left: L, infix: string, right: R) {
 
 export function displayValue(v: IType): any {
   if (v instanceof IPair) {
-    return [
-      displayValue(v.left),
-      v.type,
-      displayValue(v.right)
-    ]
+    return [displayValue(v.left), v.type, displayValue(v.right)]
   } else {
     return v
   }
 }
 
-export function innerStringify(v: IType, pOrder: number = -1, onRight?: boolean): string {
+export function innerStringify(
+  v: IType,
+  pOrder: number = -1,
+  onRight?: boolean
+): string {
   if (v instanceof IPair) {
     const [order, simple, rev] = getInfixOrder(v.type)
     const left = innerStringify(v.left, order, rev)
@@ -96,7 +104,8 @@ function evalEndNodeArg(n: EndNode, pool: VarPool): IType {
     return infixValue(
       evalEndNodeArg(n.left, pool),
       infix,
-      evalEndNodeArg(n.right, pool))
+      evalEndNodeArg(n.right, pool)
+    )
   } else if (n.type == 'var') {
     return pool.get(n.value, true)
   } else {
@@ -105,10 +114,10 @@ function evalEndNodeArg(n: EndNode, pool: VarPool): IType {
 }
 /**
  * 全是字符串,空直接用字符串nil
- * @param n 
- * @param pool 
+ * @param n
+ * @param pool
  * @param arg 是否是对arg的渲染
- * @returns 
+ * @returns
  */
 export function evalEndNode(n: EndNode, pool: VarPool): IType {
   if (n.type == 'infix') {
@@ -118,7 +127,8 @@ export function evalEndNode(n: EndNode, pool: VarPool): IType {
       return infixValue(
         evalEndNodeArg(n.left, newPool),
         infix,
-        evalEndNode(n.right, newPool))
+        evalEndNode(n.right, newPool)
+      )
     }
     // else if (infix == 'join@') {
     //   const right = evalEndNode(n.right, pool)
@@ -134,7 +144,8 @@ export function evalEndNode(n: EndNode, pool: VarPool): IType {
     return infixValue(
       evalEndNode(n.left, pool),
       infix,
-      evalEndNode(n.right, pool))
+      evalEndNode(n.right, pool)
+    )
   } else if (n.type == 'var') {
     return pool.get(n.value)
   } else {
@@ -142,35 +153,31 @@ export function evalEndNode(n: EndNode, pool: VarPool): IType {
   }
 }
 
-function mapJoin(list: IType, infix: string, right: IType, split: string): IType {
+function mapJoin(
+  list: IType,
+  infix: string,
+  right: IType,
+  split: string
+): IType {
   if (list instanceof IPair && list.type == ',') {
     return infixValue(
-      infixValue(
-        mapJoin(list.left, infix, right, split),
-        infix,
-        right
-      ),
+      infixValue(mapJoin(list.left, infix, right, split), infix, right),
       split,
-      infixValue(
-        list.right,
-        infix,
-        right
-      )
+      infixValue(list.right, infix, right)
     )
   }
   return list
 }
 
-export type EvalRule = (
-  exp: IType,
-  topRules: RuleScope
-) => Stream<ISubsitution>
-
-
+export type EvalRule = (exp: IType, topRules: RuleScope) => Stream<ISubsitution>
 
 function cloneIType(exp: IType, pool: VarPool): IType {
   if (exp instanceof IPair) {
-    return infixValue(cloneIType(exp.left, pool), exp.type, cloneIType(exp.right, pool))
+    return infixValue(
+      cloneIType(exp.left, pool),
+      exp.type,
+      cloneIType(exp.right, pool)
+    )
   } else if (exp instanceof KVar) {
     return pool.get(exp.flag)
   } else {

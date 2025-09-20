@@ -1,114 +1,96 @@
 import { KVar, list } from '../kanren'
 import {
+  getCurrentQue,
+  ParseFun,
   Que,
-  or,
   ruleGetString,
+  runParse,
   skipAnyString,
   skipMatchEnd,
 } from '../tokenParser'
 import { EmptyFun } from '../util'
-import {
-  Infix,
-  InfixConfig,
-  InfixToken,
-  MatchGet,
-  parseInfix,
-} from './parseInfix'
+import { InfixConfig, parseInfix } from './parseInfix'
 
-function manageInfixLib(array: InfixConfig[], maxX: number, get: MatchGet) {
-  const betweenExp: string[] = []
-  const theMatch = get.match
-  for (let x = 0; x < maxX; x++) {
-    const vs = array[x]
-    const cs = Array.isArray(vs) ? vs : vs.values
-    for (let y = 0; y < cs.length; y++) {
-      const v = cs[y]
-      if (typeof v == 'string') {
-        if (theMatch(new Que(v))) {
-          betweenExp.push(v)
-        }
-      }
-    }
-  }
-  const row = array[maxX]
-  const cs = Array.isArray(row) ? row : row.values
-  for (const v of cs) {
-    if (typeof v == 'string') {
-      if (theMatch(new Que(v))) {
-        console.warn('同极包含可覆盖元素', v)
-      }
-    }
-  }
+// function manageInfixLib(
+//   array: SimpleInfixArray[],
+//   maxX: number,
+//   get: MatchGet
+// ) {
+//   const betweenExp: string[] = []
+//   const theMatch = get.match
+//   for (let x = 0; x < maxX; x++) {
+//     const vs = array[x]
+//     const cs = Array.isArray(vs) ? vs : vs.values
+//     for (let y = 0; y < cs.length; y++) {
+//       const v = cs[y]
+//       if (typeof v == 'string') {
+//         if (theMatch(new Que(v))) {
+//           betweenExp.push(v)
+//         }
+//       }
+//     }
+//   }
+//   const row = array[maxX]
+//   const cs = Array.isArray(row) ? row : row.values
+//   for (const v of cs) {
+//     if (typeof v == 'string') {
+//       if (theMatch(new Que(v))) {
+//         console.warn('同极包含可覆盖元素', v)
+//       }
+//     }
+//   }
 
-  if (betweenExp.length) {
-    return {
-      ...get,
-      match(que: Que) {
-        const after = theMatch(que)
-        if (after) {
-          const value = ruleGetString(que, after)
-          if (betweenExp.includes(value)) {
-            return
-          }
-        }
-        return after
-      },
-    }
-  }
-  return get
+//   if (betweenExp.length) {
+//     return {
+//       ...get,
+//       match(que: Que) {
+//         const after = theMatch(que)
+//         if (after) {
+//           const value = ruleGetString(que, after)
+//           if (betweenExp.includes(value)) {
+//             return
+//           }
+//         }
+//         return after
+//       },
+//     }
+//   }
+//   return get
+// }
+
+export type MatchGet<T> = {
+  parse(): T
+  // match: ParseFun<Que>
+  // get?(originalValue: string, begin: Que, end: Que): string
+  // display: string
+  stringify?(n: string): string
+  match(n: any): any
 }
-
-function buildOneInfix(row: Infix[], array: InfixConfig[], x: number) {
-  return row.map((cell, y) => {
-    if (typeof cell == 'string') {
-      return cell
-    } else {
-      return manageInfixLib(array, x, cell)
+type SimpleInfixNode<T> = string | MatchGet<T>
+type SimpleInfixArray<T> =
+  | SimpleInfixNode<T>[]
+  | {
+      type: 'rev'
+      values: SimpleInfixNode<T>[]
     }
-  })
-}
-function buildInfixLibArray(array: InfixConfig[]) {
-  return array.map((row, x) => {
-    if (Array.isArray(row)) {
-      return buildOneInfix(row, array, x)
-    } else {
-      return {
-        ...row,
-        values: buildOneInfix(row.values, array, x),
-      }
-    }
-  })
-}
-
-export function buildInfix<T>(
-  array: InfixConfig[],
-  skipWhiteSpace: EmptyFun,
-  parseLeafNode: () => T,
-  build: (infix: InfixToken, left: T, right: T) => T
+export function toInfixConfig<T>(
+  newList: SimpleInfixArray<T>[],
+  strInValue: (begin: number, value: string, end: number) => T
 ) {
-  const newList = buildInfixLibArray(array)
-  function parseEndNode(): T {
-    const node = or(
-      [
-        parseLeafNode,
-        () => {
-          skipAnyString('(')
-          skipWhiteSpace()
-          const value = parseNode()
-          skipWhiteSpace()
-          skipAnyString(')')
-          return value
-        },
-      ],
-      'end-node'
-    )
-    return node as any
+  function simpleToArray(row: SimpleInfixNode<T>[]) {
+    return row.map((cell) => {
+      if (typeof cell == 'string') {
+        return function () {
+          const begin = getCurrentQue()!.i
+          skipAnyString(cell)
+          const end = getCurrentQue()!.i
+          return strInValue(begin, cell, end)
+        }
+      } else {
+        return cell.parse
+      }
+    })
   }
-  const neAs = list(...newList)
-  function parseNode() {
-    return parseInfix(neAs, skipWhiteSpace, parseEndNode, build)
-  }
-
   function getInfixOrder(n: string): [number, string, boolean] {
     for (let i = newList.length - 1; i > -1; i--) {
       const row = newList[i]
@@ -119,25 +101,54 @@ export function buildInfix<T>(
         if (cell == n) {
           return [i, n, rev]
         } else if (typeof cell == 'object') {
-          if (cell.match(new Que(n))) {
-            return [i, cell.stringify(n), rev]
+          if (cell.match(n)) {
+            return [i, cell.stringify ? cell.stringify(n) : n, rev]
           }
         }
       }
     }
     throw new Error('unfind the infix order')
   }
-
+  return {
+    getInfixOrder,
+    array: newList.map<InfixConfig<T>>((row) => {
+      if (Array.isArray(row)) {
+        return simpleToArray(row)
+      } else {
+        return {
+          ...row,
+          values: simpleToArray(row.values),
+        }
+      }
+    }),
+  }
+}
+export function buildInfix<T, I>(
+  array: InfixConfig<I>[],
+  skipWhiteSpace: EmptyFun,
+  build: (infix: I, left: T, right: T) => T
+) {
+  const vs = list(...array)
+  function parseNode(parseLeafNode: () => T) {
+    return parseInfix(vs, skipWhiteSpace, parseLeafNode, build)
+  }
   return {
     parseNode,
-    parseSentence() {
+    parseSentence(parseLeafNode: () => T) {
       skipWhiteSpace()
-      let node = parseNode()
+      let node = parseNode(parseLeafNode)
       skipWhiteSpace()
       skipMatchEnd()
       return node
     },
-    getInfixOrder,
+    parseQuoteLeaf(parseLeafNode: () => T, begin: string, end = begin) {
+      skipAnyString(begin)
+      skipWhiteSpace()
+      const value = parseNode(parseLeafNode)
+      skipWhiteSpace()
+      skipAnyString(end)
+      return value
+    },
   }
 }
 
@@ -148,44 +159,43 @@ export type BaseDisplayT = {
   end: number
 }
 
-export type InfixNode<T> = {
+export type InfixNode<T, I> = {
   type: 'infix'
-  infix: InfixToken
-  left: InfixEndNode<T>
-  right: InfixEndNode<T>
+  infix: I
+  left: InfixEndNode<T, I>
+  right: InfixEndNode<T, I>
 }
 
-export type InfixEndNode<T> = T | InfixNode<T>
+export type InfixEndNode<T, I> = T | InfixNode<T, I>
 
-function isInfixNode<T extends { type: string }>(
-  endNode: T | InfixNode<T>
-): endNode is InfixNode<T> {
+function isInfixNode<T extends { type: string }, I>(
+  endNode: T | InfixNode<T, I>
+): endNode is InfixNode<T, I> {
   return endNode.type == 'infix'
 }
 
 export function endNotFillToToken<
   T extends { type: string },
+  I,
   F extends BaseDisplayT
 >(
   getOther: (
     n: T,
     list: F[],
-    parseSelf: (endNode: T | InfixNode<T>) => void
+    parseSelf: (endNode: T | InfixNode<T, I>) => void
   ) => void,
-  getInfix: (n: BaseDisplayT) => F,
+  getInfix: (
+    n: I,
+    list: F[],
+    parseSelf: (endNode: T | InfixNode<T, I>) => void
+  ) => void,
   getWhite: (n: BaseDisplayT) => F
 ) {
-  return function (endNode: T | InfixNode<T>, text: string, list: F[] = []) {
-    function endNodeToToken(endNode: T | InfixNode<T>) {
+  return function (endNode: T | InfixNode<T, I>, text: string, list: F[] = []) {
+    function endNodeToToken(endNode: T | InfixNode<T, I>) {
       if (isInfixNode(endNode)) {
         endNodeToToken(endNode.left)
-        list.push(
-          getInfix({
-            value: endNode.infix.value,
-            begin: endNode.infix.begin,
-            end: endNode.infix.end,
-          })
-        )
+        getInfix(endNode.infix, list, endNodeToToken)
         endNodeToToken(endNode.right)
       } else {
         getOther(endNode, list, endNodeToToken)

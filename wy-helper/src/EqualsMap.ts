@@ -1,14 +1,7 @@
-import { Compare, removeWhere } from "./equal"
-
-
-
-
-
+import { Compare, removeWhere } from './equal'
 
 export class EqualsMap<K, V> {
-  constructor(
-    public readonly _equals: Compare<K>
-  ) { }
+  constructor(public readonly _equals: Compare<K>) {}
   private equals(a: K, b: K) {
     if (a == b) {
       return true
@@ -16,7 +9,7 @@ export class EqualsMap<K, V> {
     return this._equals(a, b)
   }
   private list: {
-    key: K,
+    key: K
     value: V
   }[] = []
 
@@ -24,9 +17,12 @@ export class EqualsMap<K, V> {
     this.list.length = 0
   }
   delete(key: K) {
-    return !!removeWhere(this.list, x => this.equals(x.key, key))
+    return !!removeWhere(this.list, (x) => this.equals(x.key, key))
   }
-  forEach(callbackfn: (value: V, key: K, map: EqualsMap<K, V>) => void, thisArg?: any): void {
+  forEach(
+    callbackfn: (value: V, key: K, map: EqualsMap<K, V>) => void,
+    thisArg?: any
+  ): void {
     this.list.forEach(({ key, value }) => {
       callbackfn.call(thisArg, value, key, this)
     })
@@ -39,7 +35,7 @@ export class EqualsMap<K, V> {
   }
 
   private getPair(key: K) {
-    return this.list.find(v => this.equals(v.key, key))
+    return this.list.find((v) => this.equals(v.key, key))
   }
   set(key: K, value: V): this {
     const pair = this.getPair(key)
@@ -48,7 +44,7 @@ export class EqualsMap<K, V> {
     } else {
       this.list.push({
         key,
-        value
+        value,
       })
     }
     return this
@@ -59,12 +55,8 @@ export class EqualsMap<K, V> {
   }
 }
 
-Set
-
 export class EqualsSet<K> {
-  constructor(
-    public readonly _equals: Compare<K>
-  ) { }
+  constructor(public readonly _equals: Compare<K>) {}
   private equals(a: K, b: K) {
     if (a == b) {
       return true
@@ -94,8 +86,11 @@ export class EqualsSet<K> {
     return true
   }
 
-  forEach(callbackfn: (value: K, value2: K, set: EqualsSet<K>) => void, thisArg?: any): void {
-    this.list.forEach(value => {
+  forEach(
+    callbackfn: (value: K, value2: K, set: EqualsSet<K>) => void,
+    thisArg?: any
+  ): void {
+    this.list.forEach((value) => {
       callbackfn.call(thisArg, value, value, this)
     })
   }
@@ -105,7 +100,7 @@ export class EqualsSet<K> {
   }
 
   private getIndex(k: K) {
-    return this.list.findIndex(v => this.equals(v, k))
+    return this.list.findIndex((v) => this.equals(v, k))
   }
   get size() {
     return this.list.length

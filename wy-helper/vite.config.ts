@@ -17,19 +17,18 @@ export default defineConfig({
         router: resolve(__dirname, 'src/router/index.ts'),
         forceLayout: resolve(__dirname, 'src/forceLayout/index.ts'),
         viteImportMap: resolve(__dirname, 'src/viteImportMap/index.ts'),
+        'infix-o': resolve(__dirname, 'src/infix-o/index.ts'),
       },
-      formats: ["es", "cjs"]
+      formats: ['es', 'cjs'],
     },
     minify: false,
     rollupOptions: {
-      external: [
-        /^d3-binarytree(\/)?/,
-        /^d3-quadtree(\/)?/,
-        /^d3-octree(\/)?/,
-      ]
-    }
+      external: [/^d3-binarytree(\/)?/, /^d3-quadtree(\/)?/, /^d3-octree(\/)?/],
+    },
   },
-  plugins: [dts({
-    exclude: "test"
-  })]
+  plugins: [
+    dts({
+      exclude: 'test',
+    }),
+  ],
 })

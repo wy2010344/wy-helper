@@ -51,6 +51,11 @@
       "types": "./dist/viteImportmap/index.d.ts",
       "import": "./dist/viteImportmap.mjs",
       "require": "./dist/viteImportmap.js"
+    },
+    "./infix-o": {
+      "types": "./dist/infix-o/index.d.ts",
+      "import": "./dist/infix-o.mjs",
+      "require": "./dist/infix-o.js"
     }
   },
   "files": [
@@ -59,7 +64,8 @@
     "tokenParser",
     "kanren",
     "Vue",
-    "router"
+    "router",
+    "infix-o"
   ],
   "scripts": {
     "build": "tsc && vite build",

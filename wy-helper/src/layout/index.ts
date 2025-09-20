@@ -8,8 +8,11 @@ export type SizeKey = 'width' | 'height'
 export type LayoutKey = SizeKey | PointKey
 
 export const absoluteDisplay: MDisplayOut<any> = {
-  getChildInfo(x, i) {
-    throw 'no child location ' + x
+  getChildInfo(x, size) {
+    if (size) {
+      throw 'no child location ' + x
+    }
+    return 0
   },
   getSizeInfo(x, def) {
     if (def) {

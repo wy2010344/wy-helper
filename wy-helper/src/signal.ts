@@ -100,7 +100,8 @@ function addRelay(get: GetValue<any>, value: any) {
 class Signal<T> {
   constructor(private value: T, public shouldChange: Compare<T>) {}
   set = (v: T) => {
-    if (signalCache.onWorkBatch) {
+    if (signalCache.onWorkBatch && this.listeners.length) {
+      //如果在计算期间,且有依赖项,不能安全更新
       throw '计算期间不允许修改值'
     }
     if (this.shouldChange(v, this.value)) {
