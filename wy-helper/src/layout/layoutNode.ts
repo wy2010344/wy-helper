@@ -32,7 +32,7 @@ export class LayoutNode<M, K extends string> implements LayoutModel<K> {
   target!: M
   _index: number = 0
   _get: EmptyFun = emptyFun
-  parent: LayoutNode<M, K> | undefined
+  parent?: LayoutNode<M, K> | void
   index() {
     this._get()
     return this._index
@@ -79,8 +79,8 @@ export interface LayoutNodeConfigure<M, K extends string> {
       sizeAsInner?: boolean
       position?: InstanceCallbackOrValue<LayoutNode<M, K>>
       size?: InstanceCallbackOrValue<LayoutNode<M, K>>
-      paddingStart?: ValueOrGet<number>
-      paddingEnd?: ValueOrGet<number>
+      paddingStart?: InstanceCallbackOrValue<LayoutNode<M, K>>
+      paddingEnd?: InstanceCallbackOrValue<LayoutNode<M, K>>
       alignSelf?: AlignSelfFun
     }
   >
@@ -137,8 +137,14 @@ export function createLayoutNode<M, K extends string>(
   const _layout = valueOrGetToGet(n.layout || absoluteDisplay)
 
   const axis = objectMap(n.axis, function (v, key) {
-    const paddingStart = valueOrGetToGet(v.paddingStart || 0)
-    const paddingEnd = valueOrGetToGet(v.paddingEnd || 0)
+    const paddingStart = valueInstOrGetToGet<number, LayoutNode<M, K>>(
+      v.paddingStart ?? 0,
+      getIns
+    )!
+    const paddingEnd = valueInstOrGetToGet<number, LayoutNode<M, K>>(
+      v.paddingEnd ?? 0,
+      getIns
+    )!
     const defSize = valueInstOrGetToGet<number, LayoutNode<M, K>>(
       v.size,
       getIns
