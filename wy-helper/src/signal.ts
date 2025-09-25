@@ -61,6 +61,7 @@ const signalCache = m[DepKey] as {
   currentRelay?: MapGetDep
   //在执行effect期间
   onEffectRun?: boolean
+  onEffectLevel: number
   //是否在注入期间
   state: Version
   callGet?: boolean
@@ -74,20 +75,38 @@ function updateGlobalVersion(v: Version) {
   v.version = v.uid
 }
 
-export function addEffect(effect: EmptyFun, level = 0) {
-  let effects: Map<number, EmptyFun[]>
-  if (signalCache.onWorkBatch) {
-    effects = signalCache.onWorkBatch.effects
-  } else {
-    beginCurrentBatch()
-    effects = signalCache.currentBatch!.effects
-  }
+function effectsAddLevel(
+  effects: Map<number, EmptyFun[]>,
+  level: number,
+  effect: EmptyFun
+) {
   let olds = effects.get(level)
   if (!olds) {
     olds = []
     effects.set(level, olds)
   }
   olds.push(effect)
+}
+
+/**
+ * 向最近的effect添加
+ * @param effect
+ * @param level
+ */
+export function addEffect(effect: EmptyFun, level = 0) {
+  if (signalCache.onEffectRun && level > signalCache.onEffectLevel) {
+    //可在当前区间插入
+    effectsAddLevel(signalCache.nextBatch.effects, level, effect)
+  } else {
+    let effects: Map<number, EmptyFun[]>
+    if (signalCache.onWorkBatch) {
+      effects = signalCache.onWorkBatch.effects
+    } else {
+      beginCurrentBatch()
+      effects = signalCache.currentBatch!.effects
+    }
+    effectsAddLevel(effects, level, effect)
+  }
 }
 
 function addRelay(get: GetValue<any>, value: any) {
@@ -201,6 +220,7 @@ export function batchSignalEnd() {
 
     const keys = iterableToList(effects.keys()).sort(numberSortAsc)
     for (const key of keys) {
+      signalCache.onEffectLevel = key
       effects.get(key)?.forEach(run)
     }
     effects.clear()
