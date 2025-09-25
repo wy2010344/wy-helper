@@ -2,59 +2,61 @@ import { getDestination, getMaxScroll } from '../scroller/util'
 import { SetValue } from '../setStateHelper'
 import { quote } from '../util'
 import { AnimateSignal, AnimateSignalConfig } from './animateSignal'
-import { defaultSpringAnimationConfig, DeltaXSignalAnimationConfig } from './AnimationConfig'
+import {
+  defaultSpringAnimationConfig,
+  DeltaXSignalAnimationConfig,
+} from './AnimationConfig'
 import { ClampingScrollFactory } from './clamping'
-
 
 export interface ScrollHelper {
   distance: number
   /**
    * 根据位移求所需要的时间,临界阻尼(iOS)无法用初等函数直接求解
-   * @param distance 
+   * @param distance
    */
   getTimeToDistance(distance: number): number
   getVelocity(time: number): number
   animationConfig(duration?: number): AnimateSignalConfig
   cloneFromDistance(distance: number): ScrollHelper
 }
-export async function destinationWithMargin(
-  {
-    minScroll = 0,
-    maxScroll,
-    scroll,
-    frictional,
-    scrollToEdge,
-    edgeConfig = ClampingScrollFactory.edgeClampingConfig,
-    edgeBackConfig = defaultSpringAnimationConfig,
-    targetSnap = quote,
-    getForceStop = defaultGetForceStop,
-    onProcess,
-    onOutProcess
-  }: {
-    minScroll?: number
-    maxScroll: number
-    scroll: AnimateSignal,
 
-    frictional: ScrollHelper,
+export type DestinationWithMarginProps = {
+  minScroll?: number
+  maxScroll: number
+  scroll: AnimateSignal
 
-    /**滚动到边界,是否滚出去 */
-    scrollToEdge?(velocity: number, edge: number): boolean | void
-    edgeConfig?(velocity: number): AnimateSignalConfig
-    edgeBackConfig?: DeltaXSignalAnimationConfig
-    /**吸附 */
-    targetSnap?: (n: number) => number
+  frictional: ScrollHelper
 
-    /**获得强制吸附的位置 */
-    getForceStop?: (current: number, idealTarget: number) => number
-    onProcess?: SetValue<number>
-    onOutProcess?: SetValue<number>
-  }) {
+  /**滚动到边界,是否滚出去 */
+  scrollToEdge?(velocity: number, edge: number): boolean | void
+  edgeConfig?(velocity: number): AnimateSignalConfig
+  edgeBackConfig?: DeltaXSignalAnimationConfig
+  /**吸附 */
+  targetSnap?: (n: number) => number
+
+  /**获得强制吸附的位置 */
+  getForceStop?: (current: number, idealTarget: number) => number
+  onProcess?: SetValue<number>
+  onOutProcess?: SetValue<number>
+}
+export async function destinationWithMargin({
+  minScroll = 0,
+  maxScroll,
+  scroll,
+  frictional,
+  scrollToEdge,
+  edgeConfig = ClampingScrollFactory.edgeClampingConfig,
+  edgeBackConfig = defaultSpringAnimationConfig,
+  targetSnap = quote,
+  getForceStop = defaultGetForceStop,
+  onProcess,
+  onOutProcess,
+}: DestinationWithMarginProps) {
   const current = scroll.get()
   if (minScroll <= current && current <= maxScroll) {
     const idealTarget = current + frictional.distance
     const forceStop = getForceStop(current, idealTarget)
     const destination = targetSnap(forceStop)
-
 
     let elapsedTime = 0
     let edge = 0
@@ -71,7 +73,8 @@ export async function destinationWithMargin(
       const step1 = await scroll.change(
         frictional.animationConfig(elapsedTime),
         onProcess,
-        edge)
+        edge
+      )
       if (step1) {
         //到达边界
         if (scrollToEdge?.(edgeVelocity, edge)) {
@@ -79,12 +82,10 @@ export async function destinationWithMargin(
         }
         const step2 = await scroll.change(
           edgeConfig(edgeVelocity),
-          onOutProcess)
+          onOutProcess
+        )
         if (step2) {
-          return scroll.animateTo(
-            edge,
-            edgeBackConfig,
-            onOutProcess)
+          return scroll.animateTo(edge, edgeBackConfig, onOutProcess)
         }
       }
       return false
@@ -94,12 +95,14 @@ export async function destinationWithMargin(
         return scroll.change(
           frictional.animationConfig(),
           onProcess,
-          destination)
+          destination
+        )
       } else {
         return scroll.change(
           frictional.cloneFromDistance(destination - current).animationConfig(),
           onProcess,
-          destination)
+          destination
+        )
       }
     }
   } else {
@@ -107,7 +110,8 @@ export async function destinationWithMargin(
     return scroll.animateTo(
       getDestination(current, minScroll, maxScroll),
       edgeBackConfig,
-      onProcess)
+      onProcess
+    )
   }
 }
 
