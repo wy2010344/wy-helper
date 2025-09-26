@@ -8,7 +8,7 @@ import {
   emptyObject,
   iterableToList,
   messageChannelCallback,
-  numberSortAsc,
+  numberSortDesc,
   run,
 } from './util'
 
@@ -62,6 +62,7 @@ const signalCache = m[DepKey] as {
   //在执行effect期间
   onEffectRun?: boolean
   onEffectLevel: number
+  onEffectKeys: number[]
   //是否在注入期间
   state: Version
   callGet?: boolean
@@ -81,11 +82,13 @@ function effectsAddLevel(
   effect: EmptyFun
 ) {
   let olds = effects.get(level)
+  let has = olds
   if (!olds) {
     olds = []
     effects.set(level, olds)
   }
   olds.push(effect)
+  return has
 }
 
 /**
@@ -96,7 +99,17 @@ function effectsAddLevel(
 export function addEffect(effect: EmptyFun, level = 0) {
   if (signalCache.onEffectRun && level > signalCache.onEffectLevel) {
     //可在当前区间插入
-    effectsAddLevel(signalCache.nextBatch.effects, level, effect)
+    const has = effectsAddLevel(signalCache.nextBatch.effects, level, effect)
+    if (!has) {
+      //需要补充keys
+      const keys = signalCache.onEffectKeys
+      const idx = keys.findIndex((x) => x < level)
+      if (idx < 0) {
+        keys.push(level)
+      } else {
+        keys.splice(idx, 0, level)
+      }
+    }
   } else {
     let effects: Map<number, EmptyFun[]>
     if (signalCache.onWorkBatch) {
@@ -218,8 +231,10 @@ export function batchSignalEnd() {
     ///执行effect事件
     signalCache.onEffectRun = true
 
-    const keys = iterableToList(effects.keys()).sort(numberSortAsc)
-    for (const key of keys) {
+    const keys = iterableToList(effects.keys()).sort(numberSortDesc)
+    signalCache.onEffectKeys = keys
+    while (keys.length) {
+      const key = keys.pop()!
       signalCache.onEffectLevel = key
       effects.get(key)?.forEach(run)
     }
