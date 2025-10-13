@@ -7,9 +7,9 @@ import {
   streamAppendStream,
   streamBindGoal,
   success,
-} from '../kanren'
-import { EndNode, getInfixOrder } from './parse'
-import { VarPool } from './tool'
+} from '../kanren';
+import { EndNode, getInfixOrder } from './parse';
+import { VarPool } from './tool';
 import {
   IPair,
   ISubsitution,
@@ -17,27 +17,27 @@ import {
   baseUnify,
   walk,
   walkWithSet,
-} from './rewrite'
-import { infixRightNeedQuote } from './parseInfix'
+} from './rewrite';
+import { infixRightNeedQuote } from './parseInfix';
 
-export type RuleScope = List<EvalRule>
+export type RuleScope = List<EvalRule>;
 export function topEvalExp(sub: ISubsitution, topRules: RuleScope, exp: IType) {
-  const set = new Set<KVar>()
-  const newExp = walkWithSet(exp, sub, set)
+  const set = new Set<KVar>();
+  const newExp = walkWithSet(exp, sub, set);
   //这种方式明显缩小了作用域长度
   return streamBindGoal(
     toEvalRules(topRules, newExp, topRules),
     function (outSub) {
-      let newSub = sub
-      set.forEach((value) => {
-        const toValue = walk(value, outSub)
+      let newSub = sub;
+      set.forEach(value => {
+        const toValue = walk(value, outSub);
         if (!value.equals(toValue)) {
-          newSub = extendSubsitution(value, toValue, newSub)
+          newSub = extendSubsitution(value, toValue, newSub);
         }
-      })
-      return success(newSub)
+      });
+      return success(newSub);
     }
-  )
+  );
 }
 
 function toEvalRules(
@@ -46,23 +46,23 @@ function toEvalRules(
   topRules: RuleScope
 ): Stream<ISubsitution> {
   if (rules) {
-    const first = rules.left
-    const right = rules.right
+    const first = rules.left;
+    const right = rules.right;
     return streamAppendStream(first(exp, topRules), function () {
-      return toEvalRules(right, exp, topRules)
-    })
+      return toEvalRules(right, exp, topRules);
+    });
   }
-  return null
+  return null;
 }
 export function infixValue<L, R>(left: L, infix: string, right: R) {
-  return new IPair(infix, left, right)
+  return new IPair(infix, left, right);
 }
 
 export function displayValue(v: IType): any {
   if (v instanceof IPair) {
-    return [displayValue(v.left), v.type, displayValue(v.right)]
+    return [displayValue(v.left), v.type, displayValue(v.right)];
   } else {
-    return v
+    return v;
   }
 }
 
@@ -72,26 +72,26 @@ export function innerStringify(
   onRight?: boolean
 ): string {
   if (v instanceof IPair) {
-    const [order, simple, rev] = getInfixOrder(v.type)
-    const left = innerStringify(v.left, order, rev)
-    const right = innerStringify(v.right, order, !rev)
-    const needQuote = infixRightNeedQuote(pOrder, order, onRight)
-    const value = `${left}${simple}${right}`
+    const [order, simple, rev] = getInfixOrder(v.type);
+    const left = innerStringify(v.left, order, rev);
+    const right = innerStringify(v.right, order, !rev);
+    const needQuote = infixRightNeedQuote(pOrder, order, onRight);
+    const value = `${left}${simple}${right}`;
     if (needQuote) {
-      return `(${value})`
+      return `(${value})`;
     } else {
-      return value
+      return value;
     }
   }
-  return v + ''
+  return `${v}`;
 }
 export function stringify(v: IType) {
-  return innerStringify(v, -1)
+  return innerStringify(v, -1);
 }
 
 function evalEndNodeArg(n: EndNode, pool: VarPool): IType {
   if (n.type == 'infix') {
-    const infix = n.infix.value
+    const infix = n.infix.value;
     // if (infix == 'join@') {
     //   const right = evalEndNodeArg(n.right, pool)
     //   if (typeof right == 'string') {
@@ -105,11 +105,11 @@ function evalEndNodeArg(n: EndNode, pool: VarPool): IType {
       evalEndNodeArg(n.left, pool),
       infix,
       evalEndNodeArg(n.right, pool)
-    )
+    );
   } else if (n.type == 'var') {
-    return pool.get(n.value, true)
+    return pool.get(n.value, true);
   } else {
-    return n.value
+    return n.value;
   }
 }
 /**
@@ -121,14 +121,14 @@ function evalEndNodeArg(n: EndNode, pool: VarPool): IType {
  */
 export function evalEndNode(n: EndNode, pool: VarPool): IType {
   if (n.type == 'infix') {
-    const infix = n.infix.value
+    const infix = n.infix.value;
     if (infix == ':-') {
-      const newPool = new VarPool(pool)
+      const newPool = new VarPool(pool);
       return infixValue(
         evalEndNodeArg(n.left, newPool),
         infix,
         evalEndNode(n.right, newPool)
-      )
+      );
     }
     // else if (infix == 'join@') {
     //   const right = evalEndNode(n.right, pool)
@@ -145,11 +145,11 @@ export function evalEndNode(n: EndNode, pool: VarPool): IType {
       evalEndNode(n.left, pool),
       infix,
       evalEndNode(n.right, pool)
-    )
+    );
   } else if (n.type == 'var') {
-    return pool.get(n.value)
+    return pool.get(n.value);
   } else {
-    return n.value
+    return n.value;
   }
 }
 
@@ -164,12 +164,15 @@ function mapJoin(
       infixValue(mapJoin(list.left, infix, right, split), infix, right),
       split,
       infixValue(list.right, infix, right)
-    )
+    );
   }
-  return list
+  return list;
 }
 
-export type EvalRule = (exp: IType, topRules: RuleScope) => Stream<ISubsitution>
+export type EvalRule = (
+  exp: IType,
+  topRules: RuleScope
+) => Stream<ISubsitution>;
 
 function cloneIType(exp: IType, pool: VarPool): IType {
   if (exp instanceof IPair) {
@@ -177,29 +180,29 @@ function cloneIType(exp: IType, pool: VarPool): IType {
       cloneIType(exp.left, pool),
       exp.type,
       cloneIType(exp.right, pool)
-    )
+    );
   } else if (exp instanceof KVar) {
-    return pool.get(exp.flag)
+    return pool.get(exp.flag);
   } else {
-    return exp
+    return exp;
   }
 }
 
 export function toCustomRule(head: IType, body?: IType): EvalRule {
   return (exp, topRules) => {
-    const pool = new VarPool()
-    const headExp = cloneIType(head, pool)
-    const [match, sub] = baseUnify(headExp, exp, null)
+    const pool = new VarPool();
+    const headExp = cloneIType(head, pool);
+    const [match, sub] = baseUnify(headExp, exp, null);
     if (match) {
-      const stream = success(sub)
+      const stream = success(sub);
       if (body) {
         return streamBindGoal(stream, function (sub) {
-          const bodyExp = cloneIType(body, pool)
-          return topEvalExp(sub, topRules, bodyExp)
-        })
+          const bodyExp = cloneIType(body, pool);
+          return topEvalExp(sub, topRules, bodyExp);
+        });
       }
-      return stream
+      return stream;
     }
-    return fail(sub)
-  }
+    return fail(sub);
+  };
 }

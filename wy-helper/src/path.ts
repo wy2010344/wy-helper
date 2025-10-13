@@ -1,12 +1,10 @@
-
 function normalizeArray(parts: string[], allowAboveRoot?: boolean) {
-  var res = [];
-  for (var i = 0; i < parts.length; i++) {
-    var p = parts[i];
+  const res = [];
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
 
     // ignore empty parts
-    if (!p || p === '.')
-      continue;
+    if (!p || p === '.') continue;
 
     if (p === '..') {
       if (res.length && res[res.length - 1] !== '..') {
@@ -23,9 +21,9 @@ function normalizeArray(parts: string[], allowAboveRoot?: boolean) {
 }
 function isAbsolutePath(path: string) {
   return path.charAt(0) === '/';
-};
+}
 function normalize(path: string) {
-  var isAbsolute = isAbsolutePath(path),
+  const isAbsolute = isAbsolutePath(path),
     trailingSlash = path && path[path.length - 1] === '/';
 
   // Normalize the path
@@ -39,35 +37,33 @@ function normalize(path: string) {
   }
 
   return (isAbsolute ? '/' : '') + path;
-};
+}
 
 export function joinPath(...vs: (string | number | boolean)[]) {
-  var path = '';
-  for (var i = 0; i < vs.length; i++) {
-    var segment = vs[i];
+  let path = '';
+  for (let i = 0; i < vs.length; i++) {
+    const segment = vs[i];
     if (segment) {
       if (!path) {
         path += segment;
       } else {
-        path += '/' + segment;
+        path += `/${segment}`;
       }
     }
   }
   return normalize(path);
 }
 
-
-
-export function joinPathWin32(...vs: (string)[]) {
-  var paths: string[] = [];
-  for (var i = 0; i < vs.length; i++) {
-    var arg = vs[i];
+export function joinPathWin32(...vs: string[]) {
+  const paths: string[] = [];
+  for (let i = 0; i < vs.length; i++) {
+    const arg = vs[i];
     if (arg) {
       paths.push(arg);
     }
   }
 
-  var joined = paths.join('\\');
+  let joined = paths.join('\\');
 
   // Make sure that the joined path doesn't start with two slashes, because
   // normalize() will mistake it for an UNC path then.
@@ -87,10 +83,10 @@ export function joinPathWin32(...vs: (string)[]) {
   }
 
   return normalizeW32(joined);
-};
+}
 
 function normalizeW32(path: string) {
-  var result = win32StatPath(path),
+  let result = win32StatPath(path),
     device = result.device,
     isUnc = result.isUnc,
     isAbsolute = result.isAbsolute,
@@ -114,20 +110,20 @@ function normalizeW32(path: string) {
   }
 
   return device + (isAbsolute ? '\\' : '') + tail;
-};
-function normalizeUNCRoot(device: string) {
-  return '\\\\' + device.replace(/^[\\\/]+/, '').replace(/[\\\/]+/g, '\\');
 }
-var splitDeviceRe =
+function normalizeUNCRoot(device: string) {
+  return `\\\\${device.replace(/^[\\\/]+/, '').replace(/[\\\/]+/g, '\\')}`;
+}
+const splitDeviceRe =
   /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/;
 function win32StatPath(path: string) {
-  var result = splitDeviceRe.exec(path),
+  const result = splitDeviceRe.exec(path),
     device = result?.[1] || '',
     isUnc = !!device && device[1] !== ':';
   return {
-    device: device,
-    isUnc: isUnc,
+    device,
+    isUnc,
     isAbsolute: isUnc || !!result?.[2], // UNC paths are always absolute
-    tail: result?.[3] || ''
+    tail: result?.[3] || '',
   };
 }

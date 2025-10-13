@@ -1,4 +1,3 @@
-
 const entries = [
   ['acceptCharset', 'accept-charset'],
   ['htmlFor', 'for'],
@@ -81,7 +80,7 @@ const entries = [
   ['writingMode', 'writing-mode'],
   ['xmlnsXlink', 'xmlns:xlink'],
   ['xHeight', 'x-height'],
-] as [string, string][]
+] as [string, string][];
 const aliases = new Map(entries);
 
 export function getAttributeAlias(name: string): string {
@@ -91,8 +90,8 @@ export function getAttributeAlias(name: string): string {
 export function getAliasOfAttribute(alias: string): string {
   for (const value of entries) {
     if (value[1] == alias) {
-      return value[0]
+      return value[0];
     }
   }
-  return alias
+  return alias;
 }

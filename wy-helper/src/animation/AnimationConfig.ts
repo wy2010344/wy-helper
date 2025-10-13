@@ -1,12 +1,13 @@
-import { EaseFn } from "../scroller"
-import { Quote, alawaysFalse, emptyObject } from "../util"
-import { createAnimationTime } from "./animateSignal"
-import { AnimateSignalConfig } from "./animateSignal"
-import { SpringBaseArg, SpringOutValue, springBase, springIsStop } from "./spring"
-
-
-
-
+import { EaseFn } from '../scroller';
+import { Quote, alawaysFalse, emptyObject } from '../util';
+import { createAnimationTime } from './animateSignal';
+import { AnimateSignalConfig } from './animateSignal';
+import {
+  SpringBaseArg,
+  SpringOutValue,
+  springBase,
+  springIsStop,
+} from './spring';
 
 export function tweenAnimationConfigNoEnd(
   deltaX: number,
@@ -15,47 +16,43 @@ export function tweenAnimationConfigNoEnd(
   edge = Infinity
 ): Quote<number> {
   return function (diffTime) {
-    const pc = diffTime / duration
+    const pc = diffTime / duration;
     if (pc < edge) {
-      return deltaX * fn(pc)
+      return deltaX * fn(pc);
     }
-    return deltaX
-  }
+    return deltaX;
+  };
 }
 
 export type DeltaXSignalAnimationConfig = (
-  deltaX: number) => AnimateSignalConfig
-export function tween(
-  duration: number,
-  fn: Quote<number>
-) {
-  return function (
-    deltaX: number
-  ) {
+  deltaX: number
+) => AnimateSignalConfig;
+export function tween(duration: number, fn: Quote<number>) {
+  return function (deltaX: number) {
     return createAnimationTime(function (diffTime, setDisplacement) {
-      const pc = diffTime / duration
+      const pc = diffTime / duration;
       if (pc < 1) {
-        setDisplacement(deltaX * fn(pc))
+        setDisplacement(deltaX * fn(pc));
       } else {
-        setDisplacement(deltaX)
-        return true
+        setDisplacement(deltaX);
+        return true;
       }
-    })
-  }
+    });
+  };
 }
 
 export type SpringBaseAnimationConfigArg = {
-  config?: SpringBaseArg
+  config?: SpringBaseArg;
   /**初始速度 v0 (可选) */
-  initialVelocity?: number
-  displacementThreshold?: number,
-  velocityThreshold?: number
-}
+  initialVelocity?: number;
+  displacementThreshold?: number;
+  velocityThreshold?: number;
+};
 
 export function spring(arg: SpringBaseAnimationConfigArg = emptyObject) {
   return function (deltaX: number) {
-    return springDetla(arg, deltaX)
-  }
+    return springDetla(arg, deltaX);
+  };
 }
 
 export function springDetla(
@@ -63,43 +60,43 @@ export function springDetla(
     initialVelocity = 0,
     config,
     displacementThreshold,
-    velocityThreshold
+    velocityThreshold,
   }: SpringBaseAnimationConfigArg,
-  deltaX: number,
+  deltaX: number
 ) {
   return createAnimationTime(function (diffTime, setDisplacement) {
-    const out = springBase(diffTime, deltaX, initialVelocity, config, true)
-    const stop = springIsStop(out, displacementThreshold, velocityThreshold)
+    const out = springBase(diffTime, deltaX, initialVelocity, config, true);
+    const stop = springIsStop(out, displacementThreshold, velocityThreshold);
     if (stop) {
-      setDisplacement(deltaX)
+      setDisplacement(deltaX);
     } else {
-      setDisplacement(deltaX - out.displacement)
+      setDisplacement(deltaX - out.displacement);
     }
-    return stop
-  })
+    return stop;
+  });
 }
 
-export const defaultSpringAnimationConfig = spring()
+export const defaultSpringAnimationConfig = spring();
 
 export function springBaseAnimationConfigNoEnd(
   deltaX: number,
   {
     initialVelocity = 0,
     config,
-    shouldStop = alawaysFalse
+    shouldStop = alawaysFalse,
   }: {
-    initialVelocity?: number
-    config?: SpringBaseArg
-    shouldStop?(v: SpringOutValue): boolean
+    initialVelocity?: number;
+    config?: SpringBaseArg;
+    shouldStop?(v: SpringOutValue): boolean;
   } = emptyObject
 ): Quote<number> {
   return function (diffTime) {
-    const out = springBase(diffTime, deltaX, initialVelocity, config)
-    const stop = shouldStop(out)
+    const out = springBase(diffTime, deltaX, initialVelocity, config);
+    const stop = shouldStop(out);
     if (stop) {
-      return deltaX
+      return deltaX;
     } else {
-      return deltaX - out.displacement
+      return deltaX - out.displacement;
     }
-  }
+  };
 }

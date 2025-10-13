@@ -6,7 +6,7 @@ import {
   run,
   SetValue,
   SyncFun,
-} from 'wy-helper'
+} from 'wy-helper';
 import {
   BDomAttribute,
   BDomEvent,
@@ -15,15 +15,15 @@ import {
   DomElementType,
   React,
   SvgElementType,
-} from './html'
-import { CSSProperties } from '../util'
-import { isEvent, mergeEvent, updateDom, UpdateProp, updateSvg } from './fx'
-import { getAttributeAlias } from '../getAttributeAlias'
-export type Props = { [key: string]: any }
+} from './html';
+import { CSSProperties } from '../util';
+import { isEvent, mergeEvent, updateDom, UpdateProp, updateSvg } from './fx';
+import { getAttributeAlias } from '../getAttributeAlias';
+export type Props = { [key: string]: any };
 
 function runAndDelete(map: any, key: string) {
-  map[key]()
-  delete map[key]
+  map[key]();
+  delete map[key];
 }
 /**
  * 存在意义是什么???
@@ -35,110 +35,110 @@ function runAndDelete(map: any, key: string) {
 //   <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): void;
 // }
 export type WithCenterMap<T extends {}> = {
-  [key in keyof T]: T[key] | SyncFun<T[key]>
-}
+  [key in keyof T]: T[key] | SyncFun<T[key]>;
+};
 
 export type DataAttr = {
-  [key in `data-${string}`]?: string | number | boolean
-}
+  [key in `data-${string}`]?: string | number | boolean;
+};
 
 export type DomAttribute<T extends DomElementType> = WithCenterMap<
   BDomAttribute<T> & React.AriaAttributes & DataAttr
 > &
-  BDomEvent<T>
+  BDomEvent<T>;
 
 export type DomAttributeS<T extends DomElementType> = DomAttribute<T> & {
-  style: WithCenterMap<CSSProperties>
-}
+  style: WithCenterMap<CSSProperties>;
+};
 
 export type DomAttributeSO<T extends DomElementType> = DomAttribute<T> & {
-  style?: string | SyncFun<string | undefined> | WithCenterMap<CSSProperties>
-}
+  style?: string | SyncFun<string | undefined> | WithCenterMap<CSSProperties>;
+};
 
 export type SvgAttribute<T extends SvgElementType> = WithCenterMap<
   BSvgAttribute<T> & React.AriaAttributes & DataAttr
 > &
-  BSvgEvent<T>
+  BSvgEvent<T>;
 
 export type SvgAttributeS<T extends SvgElementType> = SvgAttribute<T> & {
-  style: WithCenterMap<CSSProperties>
-}
+  style: WithCenterMap<CSSProperties>;
+};
 
 export type SvgAttributeSO<T extends SvgElementType> = SvgAttribute<T> & {
-  style?: string | SyncFun<string | undefined> | WithCenterMap<CSSProperties>
-}
+  style?: string | SyncFun<string | undefined> | WithCenterMap<CSSProperties>;
+};
 
 export function updateStyle(
   node: Node & {
-    style: any
+    style: any;
   },
   style: WithCenterMap<CSSProperties>,
   oldStyle: WithCenterMap<CSSProperties>,
   styleMap: Props
 ) {
   objectDiffDeleteKey(oldStyle as any, style as any, function (key) {
-    const oldValue = oldStyle[key as any]
+    const oldValue = oldStyle[key as any];
     if (isSyncFun(oldValue)) {
-      runAndDelete(styleMap, key)
+      runAndDelete(styleMap, key);
     }
-    node.style[key] = ''
-  })
+    node.style[key] = '';
+  });
   for (const key in style) {
-    const value = style[key as keyof CSSProperties]
-    const oldValue = oldStyle[key as keyof CSSProperties]
+    const value = style[key as keyof CSSProperties];
+    const oldValue = oldStyle[key as keyof CSSProperties];
     if (value != oldValue) {
       if (isSyncFun(oldValue)) {
-        runAndDelete(styleMap, key)
+        runAndDelete(styleMap, key);
       }
       if (isSyncFun(value)) {
         if (key.startsWith('--')) {
-          styleMap[key] = (value as any)(setStyleP, node, key)
+          styleMap[key] = (value as any)(setStyleP, node, key);
         } else {
-          styleMap[key] = (value as any)(setStyle, node, key)
+          styleMap[key] = (value as any)(setStyle, node, key);
         }
       } else {
         if (key.startsWith('--')) {
           if (typeof value == 'undefined') {
-            node.style.removeProperty(key)
+            node.style.removeProperty(key);
           } else {
-            node.style.setProperty(key, value)
+            node.style.setProperty(key, value);
           }
         } else {
-          node.style[key] = value
+          node.style[key] = value;
         }
       }
     }
   }
-  return styleMap
+  return styleMap;
 }
 
 function setStyleP(v: string | number | undefined, node: any, key: string) {
   if (typeof v == 'undefined') {
-    node.style.removeProperty(key)
+    node.style.removeProperty(key);
   } else {
-    node.style.setProperty(key, v)
+    node.style.setProperty(key, v);
   }
 }
 function setStyle(v: string | number | undefined, node: any, key: string) {
-  node.style[key] = v
+  node.style[key] = v;
 }
 function setStyleS(v: string | undefined, node: any) {
   //其实可能是string,可能是object
-  node.style = v
+  node.style = v;
 }
 
 export function updateDomProps(value: any, node: any, key: string) {
   if (key.includes('-')) {
-    node.setAttribute(key, value)
+    node.setAttribute(key, value);
   } else {
-    updateDom(value, node, key)
+    updateDom(value, node, key);
   }
 }
 export function updateSvgProps(value: any, node: any, key: string) {
   if (key == 'innerHTML' || key == 'textContent') {
-    updateDomProps(node, key, value)
+    updateDomProps(node, key, value);
   } else {
-    updateSvg(value, node, key)
+    updateSvg(value, node, key);
   }
 }
 
@@ -159,35 +159,35 @@ function createMergeAttr(updateProp: UpdateProp) {
     //移除旧事件：新属性中不存在相应事件，或者事件不一样
     objectDiffDeleteKey(oldProps, props, function (key: string) {
       if (isEvent(key)) {
-        mergeEvent(node, key, oldProps[key])
+        mergeEvent(node, key, oldProps[key]);
       } else if (isProperty(key)) {
-        updateProp(undefined, node, key)
-        const del = keepMap[key]
+        updateProp(undefined, node, key);
+        const del = keepMap[key];
         if (del) {
           //如果存在,则销毁
           if (typeof del == 'function') {
-            del()
+            del();
           } else {
-            Object.values(del).forEach(run as any)
+            Object.values(del).forEach(run as any);
           }
-          delete keepMap[key]
+          delete keepMap[key];
         }
       }
-    })
+    });
     for (const key in props) {
-      const value = props[key]
-      const oldValue = oldProps[key]
+      const value = props[key];
+      const oldValue = oldProps[key];
       if (value != oldValue) {
         if (key == 'style') {
-          const n = node as unknown as Node & { style: any }
-          let oldStyleProps = oldValue
-          let styleProps = keepMap[key]
+          const n = node as unknown as Node & { style: any };
+          let oldStyleProps = oldValue;
+          let styleProps = keepMap[key];
           if (isSyncFun(oldValue)) {
             //旧是一个单值的valueCenter
-            styleProps()
-            delete keepMap[key]
-            oldStyleProps = emptyObject
-            styleProps = {}
+            styleProps();
+            delete keepMap[key];
+            oldStyleProps = emptyObject;
+            styleProps = {};
           }
           if (value && typeof value == 'object') {
             //新为object
@@ -196,49 +196,49 @@ function createMergeAttr(updateProp: UpdateProp) {
               value,
               oldStyleProps || emptyObject,
               styleProps || {}
-            )
+            );
           } else {
             //先销毁
             if (oldValue && typeof oldValue == 'object') {
-              Object.values(styleProps).forEach(run as any)
-              delete keepMap[key]
+              Object.values(styleProps).forEach(run as any);
+              delete keepMap[key];
             }
             if (isSyncFun(value)) {
               //新的是一个单值的valueCenter
-              keepMap.style = value(setStyleS, n)
+              keepMap.style = value(setStyleS, n);
             } else {
               //新是string
-              n.style = value
+              n.style = value;
             }
           }
         } else if (isEvent(key)) {
-          mergeEvent(node, key, oldValue, value)
+          mergeEvent(node, key, oldValue, value);
         } else if (isProperty(key)) {
           if (isSyncFun(oldValue)) {
             //旧属性删除
-            runAndDelete(keepMap, key)
+            runAndDelete(keepMap, key);
           }
           if (isSyncFun(value)) {
-            keepMap[key] = value(setProp, node, key, updateProp)
+            keepMap[key] = value(setProp, node, key, updateProp);
           } else {
-            updateProp(node, key, value)
+            updateProp(node, key, value);
           }
         }
       }
     }
-    return keepMap
-  }
+    return keepMap;
+  };
 }
 
-export const mergeDomAttr = createMergeAttr(updateDomProps)
-export const mergeSvgAttr = createMergeAttr(updateSvgProps)
+export const mergeDomAttr = createMergeAttr(updateDomProps);
+export const mergeSvgAttr = createMergeAttr(updateSvgProps);
 function setProp(v: string, node: any, key: string, updateProp: any) {
-  updateProp(node, key, v)
+  updateProp(node, key, v);
 }
 
 export function isSyncFun(n: any): n is SyncFun<any> {
   //是
-  return typeof n == 'function'
+  return typeof n == 'function';
 }
 /**
  * 是否是属性，非child且非事件
@@ -248,13 +248,13 @@ export function isSyncFun(n: any): n is SyncFun<any> {
 export function isProperty(key: string) {
   if (key == 'children' || key == 'ref' || key == 'key') {
     //兼容考虑tsx里的情形
-    return false
+    return false;
   }
-  return true
+  return true;
 }
 
 export function isSVG(name: string) {
-  return svgTagNames.includes(name as any)
+  return svgTagNames.includes(name as any);
 }
 export const svgTagNames: SvgElementType[] = [
   'svg',
@@ -316,7 +316,7 @@ export const svgTagNames: SvgElementType[] = [
   'use',
   'view',
   'title',
-]
+];
 
 export const domTagNames: DomElementType[] = [
   'a',
@@ -435,4 +435,4 @@ export const domTagNames: DomElementType[] = [
   'video',
   'wbr',
   'webview',
-]
+];

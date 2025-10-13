@@ -1,13 +1,13 @@
-import { getOutResolvePromise, GetValue, SetValue } from '../setStateHelper'
-import { createSignal } from '../signal'
-import { StoreRef } from '../storeRef'
-import { emptyFun } from '../util'
+import { getOutResolvePromise, GetValue, SetValue } from '../setStateHelper';
+import { createSignal, OneSetStoreRef } from '../signal';
+import { StoreRef } from '../storeRef';
+import { emptyFun } from '../util';
 import {
   defaultSpringAnimationConfig,
   DeltaXSignalAnimationConfig,
-} from './AnimationConfig'
+} from './AnimationConfig';
 
-import { batchSignalEnd } from '../signal'
+import { batchSignalEnd } from '../signal';
 /**
  * 或者视着实例而非消息,即是可变的,只在事件中不变
  */
@@ -23,162 +23,163 @@ export function createSubscribeRequestAnimationFrame(
      */
     onFinish: SetValue<boolean> = emptyFun
   ) {
-    let canceled = false
+    let canceled = false;
     function cancel() {
-      canceled = true
-      onFinish(false)
+      canceled = true;
+      onFinish(false);
     }
-    const startTime = getNow()
+    const startTime = getNow();
     function request(time: number) {
       if (canceled) {
-        return
+        return;
       }
-      const diffTime = time - startTime
+      const diffTime = time - startTime;
       if (diffTime > 0 && callback(diffTime)) {
-        onFinish(true)
-        return
+        onFinish(true);
+        return;
       }
-      requestAnimationFrame(request)
+      requestAnimationFrame(request);
     }
-    request(0)
-    return cancel
-  }
+    request(0);
+    return cancel;
+  };
 }
 
 export type SubscribeRequestAnimationFrame = ReturnType<
   typeof createSubscribeRequestAnimationFrame
->
+>;
 
 export interface AnimationTime {
-  (n: number): void
+  (n: number): void;
 }
 export function createAnimationTime(
   callback: (diffTime: number, setDisplacement: SetValue<number>) => any
 ): AnimateSignalConfig {
   return function (out: SilentDiff) {
     function setDisplacement(n: number) {
-      out.setDisplayment(n)
+      out.setDisplayment(n);
     }
     return function (diffTime) {
-      return callback(diffTime, setDisplacement)
-    }
-  }
+      return callback(diffTime, setDisplacement);
+    };
+  };
 }
 
 export class SilentDiff {
   constructor(
-    private value: StoreRef<number>,
+    private valueSet: SetValue<number>,
+    readonly getCurrent: GetValue<number>,
     private onProcess?: SetValue<number>,
     public target?: number
   ) {
-    this.initValue = value.get()
-    this.getCurrent = value.get
+    this.initValue = this.getCurrent();
   }
-  private initValue: number
-  getCurrent: GetValue<number>
+  private initValue: number;
   silentDiff(n: number) {
-    this.initValue = this.initValue + n
-    this.value.set(this.value.get() + n)
+    this.initValue = this.initValue + n;
+    this.valueSet(this.getCurrent() + n);
     if (typeof this.target == 'number') {
-      this.target = this.target + n
+      this.target = this.target + n;
     }
   }
   silentChangeTo(n: number) {
     if (typeof this.target == 'number') {
-      const diff = n - this.target
-      this.silentDiff(diff)
+      const diff = n - this.target;
+      this.silentDiff(diff);
     } else {
-      throw 'not a target function'
+      throw 'not a target function';
     }
   }
   setDisplayment(n: number) {
-    const nv = this.initValue + n
-    this.value.set(nv)
-    this.onProcess?.(nv)
+    const nv = this.initValue + n;
+    this.valueSet(nv);
+    this.onProcess?.(nv);
   }
 }
 
 export interface AnimateSignalConfig {
-  (value: SilentDiff): ((diffTime: number) => any) | void
+  (value: SilentDiff): ((diffTime: number) => any) | void;
 }
 
 interface AnimateSignalResult {
-  cancel(): void
-  resolve(e: boolean): void
-  out: SilentDiff
+  cancel(): void;
+  resolve(e: boolean): void;
+  out: SilentDiff;
 }
 
 export class AnimateSignal {
+  private valueSet: SetValue<number>;
   constructor(
-    initValue: number,
+    initValue: number | OneSetStoreRef<number>,
     private subscribeRequestAnimateFrame: SubscribeRequestAnimationFrame
   ) {
-    this.value = createSignal(initValue)
-    this.get = this.value.get
+    const value =
+      typeof initValue == 'number' ? createSignal(initValue) : initValue;
+    this.get = value.get;
+    this.valueSet = value.getOnlySet();
   }
-  get: GetValue<number>
+  get: GetValue<number>;
 
   getTarget() {
-    const out = this.lastCancel
+    const out = this.lastCancel;
     if (out) {
-      const target = out.out.target
+      const target = out.out.target;
       if (typeof target == 'number') {
-        return target
+        return target;
       }
     }
-    return this.get()
+    return this.get();
   }
-  private value: StoreRef<number>
 
-  private _onAnimation = createSignal<boolean>(false)
-  private lastCancel: AnimateSignalResult | undefined = undefined
+  private _onAnimation = createSignal<boolean>(false);
+  private lastCancel: AnimateSignalResult | undefined = undefined;
   private didFinish = (bool: boolean) => {
-    const o = this.lastCancel
+    const o = this.lastCancel;
     if (o) {
-      this.lastCancel = undefined
-      o.cancel()
-      o.resolve(bool)
-      this._onAnimation.set(false)
+      this.lastCancel = undefined;
+      o.cancel();
+      o.resolve(bool);
+      this._onAnimation.set(false);
     }
-  }
-  private lock = false
+  };
+  private lock = false;
   private reSubscribe(callback: SetValue<number>) {
-    return this.subscribeRequestAnimateFrame((time) => {
-      this.lock = true
-      const v = callback(time)
-      this.lock = false
-      return v
-    }, this.didFinish)
+    return this.subscribeRequestAnimateFrame(time => {
+      this.lock = true;
+      const v = callback(time);
+      this.lock = false;
+      return v;
+    }, this.didFinish);
   }
   set(n: number) {
     if (this.lock) {
-      throw '禁止在此时修改'
+      throw '禁止在此时修改';
     }
-    this.didFinish(false)
-    this.value.set(n)
-    return n
+    this.didFinish(false);
+    this.valueSet(n);
+    return n;
   }
-  onAnimation = this._onAnimation.get
+  onAnimation = this._onAnimation.get;
   silentDiff(n: number) {
-    const o = this.lastCancel
+    const o = this.lastCancel;
     if (o) {
-      o.out.silentDiff(n)
+      o.out.silentDiff(n);
     } else {
-      this.value.set(this.value.get() + n)
+      this.valueSet(this.get() + n);
     }
   }
 
   silentChangeTo(n: number) {
-    const o = this.lastCancel
+    const o = this.lastCancel;
     if (o) {
-      o.out.silentChangeTo(n)
+      o.out.silentChangeTo(n);
     } else {
-      this.value.set(n)
+      this.valueSet(n);
     }
   }
 
   changeDiff(n: number) {
-    this.set(this.value.get() + n)
+    this.set(this.get() + n);
   }
 
   change(
@@ -187,27 +188,27 @@ export class AnimateSignal {
     target?: number
   ) {
     if (this.lock) {
-      throw '禁止在此时修改'
+      throw '禁止在此时修改';
     }
     //需要锁一下,禁止修改
-    this.didFinish(false)
+    this.didFinish(false);
     //config构造期间禁止修改
-    this.lock = true
+    this.lock = true;
 
-    const out = new SilentDiff(this.value, onProcess, target)
-    const callback = config(out)
-    this.lock = false
+    const out = new SilentDiff(this.valueSet, this.get, onProcess, target);
+    const callback = config(out);
+    this.lock = false;
     if (callback) {
-      const [promise, resolve] = getOutResolvePromise<boolean>()
-      this._onAnimation.set(true)
+      const [promise, resolve] = getOutResolvePromise<boolean>();
+      this._onAnimation.set(true);
       this.lastCancel = {
         cancel: this.reSubscribe(callback),
         resolve,
-        out: out,
-      }
-      return promise
+        out,
+      };
+      return promise;
     } else {
-      return promiseImmediately
+      return promiseImmediately;
     }
   }
 
@@ -217,24 +218,24 @@ export class AnimateSignal {
     onProcess?: SetValue<number>
   ) {
     if (config) {
-      return this.animateTo(n, config, onProcess)
+      return this.animateTo(n, config, onProcess);
     }
-    return this.set(n)
+    return this.set(n);
   }
   stop() {
-    this.set(this.get())
+    this.set(this.get());
   }
   animateTo(
     n: number,
     config: DeltaXSignalAnimationConfig = defaultSpringAnimationConfig,
     onProcess?: SetValue<number>
   ) {
-    this.didFinish(false)
-    const diff = n - this.get()
+    this.didFinish(false);
+    const diff = n - this.get();
     if (diff) {
-      return this.change(config(diff), onProcess, n)
+      return this.change(config(diff), onProcess, n);
     }
-    return promiseImmediately
+    return promiseImmediately;
   }
 
   async animateThrow(
@@ -242,19 +243,19 @@ export class AnimateSignal {
     config: DeltaXSignalAnimationConfig = defaultSpringAnimationConfig,
     onProcess?: SetValue<number>
   ) {
-    const out = await this.animateTo(n, config, onProcess)
+    const out = await this.animateTo(n, config, onProcess);
     if (!out) {
-      throw new Error('user cancel')
+      throw new Error('user cancel');
     }
-    return out
+    return out;
   }
 }
 
-const promiseImmediately = Promise.resolve<'immediately'>('immediately')
+const promiseImmediately = Promise.resolve<'immediately'>('immediately');
 
 export function createAnimateSignal(
-  initValue: number,
+  initValue: number | OneSetStoreRef<number>,
   subscribeRequestAnimateFrame: SubscribeRequestAnimationFrame
 ) {
-  return new AnimateSignal(initValue, subscribeRequestAnimateFrame)
+  return new AnimateSignal(initValue, subscribeRequestAnimateFrame);
 }

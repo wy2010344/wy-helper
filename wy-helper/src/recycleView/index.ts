@@ -1,15 +1,15 @@
-import { GetValue } from '../setStateHelper'
-import { ReadArray } from '../util'
+import { GetValue } from '../setStateHelper';
+import { ReadArray } from '../util';
 
-export * from './recycleScrollView'
+export * from './recycleScrollView';
 
 export function circleFindNearst(diff: number, max: number) {
   if (diff < -max / 2) {
-    return max + diff
+    return max + diff;
   } else if (diff > max / 2) {
-    return diff - max
+    return diff - max;
   }
-  return diff
+  return diff;
 }
 
 /**
@@ -20,13 +20,13 @@ export function circleFindNearst(diff: number, max: number) {
  */
 export function circleFormat(n: number, max: number) {
   if (max) {
-    n = n % max
+    n = n % max;
     if (n < 0) {
-      return max + n
+      return max + n;
     }
-    return n
+    return n;
   }
-  return 0
+  return 0;
 }
 
 /**
@@ -48,30 +48,30 @@ export function getSubListForVirtualList<T>(
   containerSize: number,
   getSize: (n: T) => number
 ) {
-  let accHeight = 0
-  let notBegin = true
-  let beginIndex = 0
-  let endIndex = array.length
-  let paddingBegin = 0
+  let accHeight = 0;
+  let notBegin = true;
+  let beginIndex = 0;
+  let endIndex = array.length;
+  let paddingBegin = 0;
   for (let i = 0; i < array.length; i++) {
-    const row = array[i]
-    const size = getSize(row)
-    accHeight = accHeight + size
+    const row = array[i];
+    const size = getSize(row);
+    accHeight = accHeight + size;
     if (notBegin) {
       if (accHeight > scroll) {
-        notBegin = false
-        paddingBegin = accHeight - size
-        beginIndex = i
+        notBegin = false;
+        paddingBegin = accHeight - size;
+        beginIndex = i;
       }
     }
     if (accHeight - scroll > containerSize) {
-      endIndex = i + 1
-      break
+      endIndex = i + 1;
+      break;
     }
   }
   return {
     paddingBegin,
     beginIndex,
     endIndex,
-  }
+  };
 }

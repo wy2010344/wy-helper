@@ -1,53 +1,50 @@
-import { GetValue, SetValue } from "./setStateHelper"
-
+import { GetValue, SetValue } from './setStateHelper';
 
 export type RValue<T> = {
-  readonly get: GetValue<T>
-  readonly value: T
-}
+  readonly get: GetValue<T>;
+  readonly value: T;
+};
 
 export function initRValue<T>(get: GetValue<T>) {
-  return new ComputedValueImpl<T>(get)
+  return new ComputedValueImpl<T>(get);
 }
 
-class ComputedValueImpl<T> implements RValue<T>{
-  constructor(
-    public readonly get: GetValue<T>
-  ) { }
+class ComputedValueImpl<T> implements RValue<T> {
+  constructor(public readonly get: GetValue<T>) {}
   get value() {
-    return this.get()
+    return this.get();
   }
 }
 
 export type RWValue<T> = {
-  value: T
-  readonly get: GetValue<T>
-  readonly set: SetValue<T>
-  readonly readonly: RValue<T>
-}
+  value: T;
+  readonly get: GetValue<T>;
+  readonly set: SetValue<T>;
+  readonly readonly: RValue<T>;
+};
 
 export function initRWValue<T>(get: GetValue<T>, set: SetValue<T>) {
-  return new ModelValueImpl(get, set)
+  return new ModelValueImpl(get, set);
 }
 
-class ModelValueImpl<T> extends ComputedValueImpl<T> implements RWValue<T>{
+class ModelValueImpl<T> extends ComputedValueImpl<T> implements RWValue<T> {
   constructor(
     get: GetValue<T>,
     public readonly set: SetValue<T>
   ) {
-    super(get)
+    super(get);
   }
   get value() {
-    return this.get()
+    return this.get();
   }
   set value(v: T) {
-    this.set(v)
+    this.set(v);
   }
-  readonlyValue: RValue<T> = undefined!
+  readonlyValue: RValue<T> = undefined!;
   get readonly() {
     if (!this.readonlyValue) {
-      this.readonlyValue = new ComputedValueImpl(this.get)
+      this.readonlyValue = new ComputedValueImpl(this.get);
     }
-    return this.readonlyValue
+    return this.readonlyValue;
   }
 }

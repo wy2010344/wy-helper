@@ -1,122 +1,132 @@
-import { arrayMove } from "../ArrayHelper"
-import { EmptyFun, run } from "../util"
-import { beforeMoveOperate, rangeBetweenLeft, rangeBetweenRight, reorderCheckTarget } from "./util"
+import { arrayMove } from '../ArrayHelper';
+import { EmptyFun, run } from '../util';
+import {
+  beforeMoveOperate,
+  rangeBetweenLeft,
+  rangeBetweenRight,
+  reorderCheckTarget,
+} from './util';
 export type ReorderLocalModel<K> = {
   onMove?: {
-    key: K
+    key: K;
     info?: {
-      beginPoint: number
-      lastPoint: number
-    },
+      beginPoint: number;
+      lastPoint: number;
+    };
     endAt?: {
-      point: number
-      lastPoint: number
-    }
-  }
-  scrollTop: number
-  version: number
-  gap: number
-  updateEffect: (fun?: () => void) => void
+      point: number;
+      lastPoint: number;
+    };
+  };
+  scrollTop: number;
+  version: number;
+  gap: number;
+  updateEffect: (fun?: () => void) => void;
   changeIndex: (
     from: number,
-    to: number, version: number,
-    fun?: () => void) => void
-}
+    to: number,
+    version: number,
+    fun?: () => void
+  ) => void;
+};
 
 /**
  * @todo 将里面的动画、拖动改变为对外部元素的通知执行
  * 但有一点,状态变更后位置交换,要变更后才能突变,即需要effect
  * 还好一个是布局动画,一个是安静的改变
  */
-export type ReorderLocalAction<K> = {
-  type: "moveBegin"
-  key: K
-  point: number
-  scrollTop: number
-} | {
-  //在滚动的时候,也使用这个
-  type: "didMove"
-  point: number
+export type ReorderLocalAction<K> =
+  | {
+      type: 'moveBegin';
+      key: K;
+      point: number;
+      scrollTop: number;
+    }
+  | {
+      //在滚动的时候,也使用这个
+      type: 'didMove';
+      point: number;
 
-  version: number
-  gap?: number
-  elements: ReorderLocalElement<K>[]
-  scrollTop: number
-} | {
-  type: "end",
-  point: number
-  version: number
-  gap?: number
-  elements: ReorderLocalElement<K>[]
-  scrollTop: number
-} | {
-  type: "didEnd",
+      version: number;
+      gap?: number;
+      elements: ReorderLocalElement<K>[];
+      scrollTop: number;
+    }
+  | {
+      type: 'end';
+      point: number;
+      version: number;
+      gap?: number;
+      elements: ReorderLocalElement<K>[];
+      scrollTop: number;
+    }
+  | {
+      type: 'didEnd';
 
-  gap?: number
-  version: number
-  scrollTop: number
-  elements: ReorderLocalElement<K>[]
-}
+      gap?: number;
+      version: number;
+      scrollTop: number;
+      elements: ReorderLocalElement<K>[];
+    };
 
 export interface ReorderLocalElement<K> {
-  key: K
-  getHeight(): number
-  getTransY(): number
+  key: K;
+  getHeight(): number;
+  getTransY(): number;
   /**
    * 突变增加diff
-   * @param diff 
+   * @param diff
    */
-  changeDiff(diff: number): void
+  changeDiff(diff: number): void;
 
-  silentDiff(value: number): void
+  silentDiff(value: number): void;
   /**
    * layout动画,在内部去阻止重新动画
-   * @param value 
+   * @param value
    */
-  layoutFrom(value: number): void
+  layoutFrom(value: number): void;
   /**
    * 拖拽结束归于0
    */
-  endLayout(): void
+  endLayout(): void;
 }
 
-
 class MergeAction<K> {
-  onMoveList: EmptyFun[] = []
+  onMoveList: EmptyFun[] = [];
   append(v: EmptyFun) {
-    this.onMoveList.push(v)
+    this.onMoveList.push(v);
   }
   merge() {
     if (this.onMoveList.length) {
       return () => {
-        this.onMoveList.forEach(run)
-      }
+        this.onMoveList.forEach(run);
+      };
     }
   }
 }
 
 function getDefaultGap(oldGap: number, newGap?: number) {
   if (typeof newGap == 'number') {
-    return newGap
+    return newGap;
   }
-  return oldGap
+  return oldGap;
 }
 
 /**
  * 有一个问题:如果没有render,不应该触发新的排序
- * @param getKey 
- * @param config 
- * @param animateNumberFrameReducer 
- * @param getHeight 
- * @param getDiffHeight 
- * @returns 
+ * @param getKey
+ * @param config
+ * @param animateNumberFrameReducer
+ * @param getHeight
+ * @param getDiffHeight
+ * @returns
  */
 
 function getElementHeight<K>(v: ReorderLocalElement<K>) {
-  return v.getHeight()
+  return v.getHeight();
 }
 function getElementIndex<K>(elements: ReorderLocalElement<K>[], key: K) {
-  return elements.findIndex(v => v.key == key)
+  return elements.findIndex(v => v.key == key);
 }
 function changeDiff<K>(
   ma: MergeAction<K>,
@@ -127,16 +137,16 @@ function changeDiff<K>(
   canChange: boolean
 ) {
   if (!diffY) {
-    return
+    return;
   }
-  let ty = 0
-  const element = elements[currentIndex]
-  ty = element.getTransY() + diffY
+  let ty = 0;
+  const element = elements[currentIndex];
+  ty = element.getTransY() + diffY;
   ma.append(function () {
-    element.changeDiff(diffY)
-  })
+    element.changeDiff(diffY);
+  });
   if (!canChange) {
-    return
+    return;
   }
 
   const target = reorderCheckTarget(
@@ -145,17 +155,24 @@ function changeDiff<K>(
     getElementHeight,
     ty,
     gap
-  )
+  );
 
   if (target) {
-    const [idx, idx1] = target
-    const diff = beforeMoveOperate(idx, idx1, elements, getElementHeight, gap, (row, from, i) => {
-      row.layoutFrom(from)
-    })
+    const [idx, idx1] = target;
+    const diff = beforeMoveOperate(
+      idx,
+      idx1,
+      elements,
+      getElementHeight,
+      gap,
+      (row, from, i) => {
+        row.layoutFrom(from);
+      }
+    );
     ma.append(function () {
-      element.silentDiff(diff)
-    })
-    return target
+      element.silentDiff(diff);
+    });
+    return target;
 
     // const newElements = arrayMove(elements, idx, idx1, true)
     // // newList = arrayMove(newList, idx, idx1, true)
@@ -163,7 +180,7 @@ function changeDiff<K>(
     // /**
     //  * 如果向后移动
     //  * 从elements上取
-    //  * 
+    //  *
     //  */
     // let otherHeight = elements[idx].getHeight() + gap
     // if (idx > idx1) {
@@ -205,7 +222,7 @@ export function reorderLocalReducer<K, M extends ReorderLocalModel<K>>(
   model: M,
   action: ReorderLocalAction<K>
 ): M {
-  if (action.type == "moveBegin") {
+  if (action.type == 'moveBegin') {
     return {
       ...model,
       scrollTop: action.scrollTop,
@@ -213,62 +230,64 @@ export function reorderLocalReducer<K, M extends ReorderLocalModel<K>>(
         key: action.key,
         info: {
           beginPoint: action.point,
-          lastPoint: action.point
-        }
-      }
-    }
-  } if (action.type == "didMove") {
+          lastPoint: action.point,
+        },
+      },
+    };
+  }
+  if (action.type == 'didMove') {
     if (model.onMove?.info) {
-      const key = model.onMove.key
-      const info = model.onMove.info
-      const gap = getDefaultGap(model.gap, action.gap)
-      const ma = new MergeAction<K>()
-      const diffY = action.point - info.lastPoint
-      const diffYM = action.scrollTop - model.scrollTop
-      const currentIndex = getElementIndex(action.elements, key)
+      const key = model.onMove.key;
+      const info = model.onMove.info;
+      const gap = getDefaultGap(model.gap, action.gap);
+      const ma = new MergeAction<K>();
+      const diffY = action.point - info.lastPoint;
+      const diffYM = action.scrollTop - model.scrollTop;
+      const currentIndex = getElementIndex(action.elements, key);
       const change = changeDiff(
-        ma, currentIndex,
+        ma,
+        currentIndex,
         diffY + diffYM,
         action.elements,
         gap,
         model.version == action.version
       );
-      let version = action.version
+      let version = action.version;
       if (change) {
-        version = version + 1
-        model.changeIndex(change[0], change[1], version, ma.merge())
+        version = version + 1;
+        model.changeIndex(change[0], change[1], version, ma.merge());
       } else {
-        model.updateEffect(ma.merge())
+        model.updateEffect(ma.merge());
       }
       return {
         ...model,
         gap,
-        version: version,
+        version,
         scrollTop: action.scrollTop,
         onMove: {
           ...model.onMove,
           info: {
             ...model.onMove.info,
-            lastPoint: action.point
-          }
-        }
-      }
+            lastPoint: action.point,
+          },
+        },
+      };
     }
-  } else if (action.type == "end") {
+  } else if (action.type == 'end') {
     /**
      * @todo 似乎仍然不行
      * end的时候如果上次render没有完成,则视图列表不是最新的,需要didEnd
      * end的时候如果已经完成,则视图列表是最新的,不需要didEnd
-     * 
+     *
      * 也许脱离react的拖动只能是结果(动画完成时才触发),才允许更新.
      */
     if (model.onMove?.info) {
-      const info = model.onMove.info
+      const info = model.onMove.info;
       if (model.version == action.version) {
-        const index = model.onMove.key
-        const diffY = action.point - info.lastPoint
-        const diffYM = action.scrollTop - model.scrollTop
-        return didEnd(model, index, diffY + diffYM, action)
+        const index = model.onMove.key;
+        const diffY = action.point - info.lastPoint;
+        const diffYM = action.scrollTop - model.scrollTop;
+        return didEnd(model, index, diffY + diffYM, action);
       } else {
         return {
           ...model,
@@ -277,22 +296,22 @@ export function reorderLocalReducer<K, M extends ReorderLocalModel<K>>(
             info: undefined,
             endAt: {
               point: action.point,
-              lastPoint: model.onMove.info.lastPoint
-            }
-          }
-        }
+              lastPoint: model.onMove.info.lastPoint,
+            },
+          },
+        };
       }
     }
-  } else if (action.type == "didEnd") {
+  } else if (action.type == 'didEnd') {
     if (model.onMove?.endAt) {
-      const key = model.onMove.key
-      const endAt = model.onMove.endAt
-      const diffY = endAt.point - endAt.lastPoint
-      const diffYM = action.scrollTop - model.scrollTop
-      return didEnd(model, key, diffY + diffYM, action)
+      const key = model.onMove.key;
+      const endAt = model.onMove.endAt;
+      const diffY = endAt.point - endAt.lastPoint;
+      const diffYM = action.scrollTop - model.scrollTop;
+      return didEnd(model, key, diffY + diffYM, action);
     }
   }
-  return model
+  return model;
 }
 
 function didEnd<K, M extends ReorderLocalModel<K>>(
@@ -300,45 +319,47 @@ function didEnd<K, M extends ReorderLocalModel<K>>(
   key: K,
   diff: number,
   action: {
-    version: number
-    elements: ReorderLocalElement<K>[]
-    gap?: number
-    scrollTop: number
-  }) {
-  const ma = new MergeAction<K>()
-  const gap = getDefaultGap(model.gap, action.gap)
+    version: number;
+    elements: ReorderLocalElement<K>[];
+    gap?: number;
+    scrollTop: number;
+  }
+) {
+  const ma = new MergeAction<K>();
+  const gap = getDefaultGap(model.gap, action.gap);
 
-  const currentIndex = getElementIndex(action.elements, key)
-  const change = changeDiff(ma,
+  const currentIndex = getElementIndex(action.elements, key);
+  const change = changeDiff(
+    ma,
     currentIndex,
     diff,
     action.elements,
     gap,
-    action.version == model.version);
+    action.version == model.version
+  );
 
-
-  const element = action.elements[currentIndex]
+  const element = action.elements[currentIndex];
   if (element) {
     ma.append(function () {
-      element.endLayout()
-    })
+      element.endLayout();
+    });
   }
 
-  let version = model.version
+  let version = model.version;
   if (change) {
-    version = version + 1
-    model.changeIndex(change[0], change[1], version, ma.merge())
+    version = version + 1;
+    model.changeIndex(change[0], change[1], version, ma.merge());
   } else {
-    model.updateEffect(ma.merge())
+    model.updateEffect(ma.merge());
   }
   return {
     ...model,
     gap,
-    version: version,
+    version,
     scrollTop: action.scrollTop,
     onMove: {
       ...model.onMove,
-      endAt: undefined
-    }
-  }
+      endAt: undefined,
+    },
+  };
 }

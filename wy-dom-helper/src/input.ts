@@ -1,53 +1,54 @@
-
 export abstract class ComponentValueCache<E extends HTMLElement, V> {
-  constructor(
-    readonly input: E
-  ) { }
-  abstract get(): V
-  abstract set(v: V): void
+  constructor(readonly input: E) {}
+  abstract get(): V;
+  abstract set(v: V): void;
 }
 
-
-
-export class InputCache extends ComponentValueCache<HTMLInputElement | HTMLTextAreaElement, string> {
+export class InputCache extends ComponentValueCache<
+  HTMLInputElement | HTMLTextAreaElement,
+  string
+> {
   get(): string {
-    return this.input.value
+    return this.input.value;
   }
   set(v: string): void {
-    this.input.value = v
+    this.input.value = v;
   }
 }
 
-export class InputCheckCache extends ComponentValueCache<HTMLInputElement, boolean> {
+export class InputCheckCache extends ComponentValueCache<
+  HTMLInputElement,
+  boolean
+> {
   get() {
-    return this.input.checked
+    return this.input.checked;
   }
   set(v: boolean): void {
-    this.input.checked = v
+    this.input.checked = v;
   }
 }
 
-
-export class ContentTextCache extends ComponentValueCache<HTMLElement, string | null> {
+export class ContentTextCache extends ComponentValueCache<
+  HTMLElement,
+  string | null
+> {
   get() {
-    return this.input.textContent
+    return this.input.textContent;
   }
   set(v: string | null): void {
-    this.input.textContent = v
-    contentDidChange(this.input)
+    this.input.textContent = v;
+    contentDidChange(this.input);
   }
 }
 export class ContentHTMLCache extends ComponentValueCache<HTMLElement, string> {
   get() {
-    return this.input.innerHTML
+    return this.input.innerHTML;
   }
   set(v: string): void {
-    this.input.innerHTML = v
-    contentDidChange(this.input)
+    this.input.innerHTML = v;
+    contentDidChange(this.input);
   }
 }
-
-
 
 //这里倒是跟input类似了,外部设值失败后光标始终到最后
 //但禁止设值,光标是不应该变动的..

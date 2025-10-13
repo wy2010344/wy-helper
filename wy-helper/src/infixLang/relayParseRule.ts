@@ -15,7 +15,7 @@ import {
   ruleStrBetween,
   ruleStrBetweenGet1,
   whiteSpaceMatch,
-} from '../tokenParser'
+} from '../tokenParser';
 
 export const matchCommonExt = manyMatch(
   orMatch(
@@ -24,7 +24,7 @@ export const matchCommonExt = manyMatch(
     isNumber.matchCharBetween(),
     isChinese.matchCharBetween()
   )
-)
+);
 
 export const symbolRule = andMatch(
   orMatch(
@@ -32,7 +32,7 @@ export const symbolRule = andMatch(
     isChinese.matchCharBetween('某'.charCodeAt(0))
   ),
   matchCommonExt
-)
+);
 const varRule = andMatch(
   orMatch(
     isUpperEnglish.matchCharBetween(),
@@ -40,13 +40,13 @@ const varRule = andMatch(
     matchAnyString('_')
   ),
   matchCommonExt
-)
+);
 
 export function ruleGetNumber() {
   return parseGet<Que, NumberToken>(
     isFloatWithOpposite,
     function (begin, end) {
-      const value = begin.content.slice(begin.i, end.i)
+      const value = begin.content.slice(begin.i, end.i);
       return {
         type: 'number',
         begin: begin.i,
@@ -54,14 +54,14 @@ export function ruleGetNumber() {
         errors: [],
         value: Number(value),
         originalValue: value,
-      } as NumberToken
+      } as NumberToken;
     },
     'number'
-  )
+  );
 }
 export function ruleGetString() {
-  const [value, begin, end] = ruleStrBetweenGet1("'".charCodeAt(0))
-  const originalValue = begin.content.slice(begin.i, end.i)
+  const [value, begin, end] = ruleStrBetweenGet1("'".charCodeAt(0));
+  const originalValue = begin.content.slice(begin.i, end.i);
 
   return {
     type: 'string',
@@ -69,22 +69,22 @@ export function ruleGetString() {
     originalValue,
     begin: begin.i,
     end: end.i,
-  } as StringToken
+  } as StringToken;
 }
 
-const ruleComment = ruleStrBetween('"'.charCodeAt(0))
+const ruleComment = ruleStrBetween('"'.charCodeAt(0));
 export const ruleSkipWhiteOrComment = manyMatch(
   orMatch(ruleComment, whiteSpaceMatch)
-)
+);
 export const ruleSkipWhiteOrCommentMin1 = manyMatch(
   orMatch(ruleComment, whiteSpaceMatch),
   1
-)
+);
 export function skipWhiteOrComment(atLeastOne?: boolean) {
   if (atLeastOne) {
-    parseSkip(ruleSkipWhiteOrCommentMin1)
+    parseSkip(ruleSkipWhiteOrCommentMin1);
   } else {
-    parseSkip(ruleSkipWhiteOrComment)
+    parseSkip(ruleSkipWhiteOrComment);
   }
 }
 
@@ -92,58 +92,58 @@ export function ruleGetSymbol() {
   return parseGet<Que, SymbolToken>(
     symbolRule,
     function (begin, end) {
-      const value = begin.content.slice(begin.i, end.i)
+      const value = begin.content.slice(begin.i, end.i);
       return {
         type: 'symbol',
         begin: begin.i,
         end: end.i,
         errors: [],
         value,
-      } as SymbolToken
+      } as SymbolToken;
     },
     'symbol'
-  )
+  );
 }
 export function ruleGetVar() {
   return parseGet<Que, VarToken>(
     varRule,
     function (begin, end) {
-      const value = begin.content.slice(begin.i, end.i)
+      const value = begin.content.slice(begin.i, end.i);
       return {
         type: 'var',
         begin: begin.i,
         end: end.i,
         errors: [],
         value,
-      } as VarToken
+      } as VarToken;
     },
     'var'
-  )
+  );
 }
 
 export interface Token {
-  begin: number
-  end: number
+  begin: number;
+  end: number;
 }
 
 export interface StringToken extends Token {
-  type: 'string'
-  originalValue: string
-  value: string
+  type: 'string';
+  originalValue: string;
+  value: string;
 }
 
 export interface VarToken extends Token {
-  type: 'var'
-  value: string
+  type: 'var';
+  value: string;
 }
 
 export interface SymbolToken extends Token {
-  type: 'symbol'
-  value: string
+  type: 'symbol';
+  value: string;
 }
 
 export interface NumberToken extends Token {
-  type: 'number'
-  value: number
-  originalValue: string
+  type: 'number';
+  value: number;
+  originalValue: string;
 }

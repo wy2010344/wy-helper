@@ -17,7 +17,7 @@ import {
   InfixNode,
   MatchGet,
   toInfixConfig,
-} from './tool'
+} from './tool';
 import {
   Que,
   isParseSuccess,
@@ -34,7 +34,7 @@ import {
   parseGet,
   matchAnyString,
   ParseFun,
-} from '../tokenParser'
+} from '../tokenParser';
 import {
   symbolRule,
   StringToken,
@@ -46,7 +46,7 @@ import {
   ruleGetSymbol,
   ruleGetVar,
   skipWhiteOrComment,
-} from './relayParseRule'
+} from './relayParseRule';
 
 /**
  * 
@@ -72,72 +72,72 @@ import {
 三元条件运算符 (?:)
  */
 
-const nc = "'".charCodeAt(0)
+const nc = "'".charCodeAt(0);
 
 function parseInfixNode(value: {
-  match: ParseFun<Que>
-  get?(value: string): string
-  stringify?(n: string): string
-  display: string
+  match: ParseFun<Que>;
+  get?(value: string): string;
+  stringify?(n: string): string;
+  display: string;
 }): MatchGet<InfixToken> {
   return {
     parse() {
       return parseGet<Que, InfixToken>(value.match, (begin, end) => {
-        const originalValue = queToString(begin, end)
-        const str = value.get ? value.get(originalValue) : originalValue
+        const originalValue = queToString(begin, end);
+        const str = value.get ? value.get(originalValue) : originalValue;
         return {
           originalValue,
           value: str,
           begin: begin.i,
           end: end.i,
           errors: [],
-        }
-      })
+        };
+      });
     },
     match(n) {
-      return value.match(new Que(n))
+      return value.match(new Que(n));
     },
     stringify: value.stringify,
-  }
+  };
 }
 
 export const matchBetween = parseInfixNode({
   match: ruleStrBetween(nc),
   get(value) {
-    const nValue = ruleStrBetweenGet(nc)(new Que(value))
+    const nValue = ruleStrBetweenGet(nc)(new Que(value));
     if (isParseSuccess(nValue) && nValue.end.i == value.length) {
-      return nValue.value
+      return nValue.value;
     } else {
-      throw nValue
+      throw nValue;
     }
   },
   stringify(n) {
-    return ` '${n.replace(/`/g, '\\`')}' `
+    return ` '${n.replace(/`/g, '\\`')}' `;
   },
   display: 'anyMatch~',
-})
+});
 
 /**
  * 向后的可以排除,在前的却只有不参与
  */
-const specialChar = '~`!@#$^&?<>|:{}=+-*/'
+const specialChar = '~`!@#$^&?<>|:{}=+-*/';
 const specialMatchRule = manyMatch(
   matchCharIn(...stringToCharCode(specialChar)),
   1
-)
+);
 
 const specialMatch = parseInfixNode({
   match: specialMatchRule,
   display: 'specialMatch',
-})
+});
 
 const matchSymbolOrSpecial = parseInfixNode({
   match: andMatch(symbolRule, orMatchEmpty(specialMatchRule)),
   stringify(n) {
-    return ` ${n} `
+    return ` ${n} `;
   },
   display: 'symbolMatch',
-})
+});
 
 export const infixLibArray = [
   [';'], //或结束
@@ -147,7 +147,7 @@ export const infixLibArray = [
   [matchBetween, specialMatch, matchSymbolOrSpecial],
   ['+', '-'],
   ['*', '/', '%'],
-]
+];
 
 export const { array, getInfixOrder } = toInfixConfig(
   infixLibArray,
@@ -157,9 +157,9 @@ export const { array, getInfixOrder } = toInfixConfig(
       originalValue: value,
       begin,
       end,
-    } as InfixToken
+    } as InfixToken;
   }
-)
+);
 export const { parseSentence } = buildInfix(
   array,
   skipWhiteOrComment,
@@ -169,71 +169,71 @@ export const { parseSentence } = buildInfix(
       infix,
       left,
       right,
-    }
+    };
   }
-)
+);
 
-type NNode = StringToken | SymbolToken | NumberToken | VarToken
-export type EndNode = NNode | InfixNode<NNode, InfixToken>
+type NNode = StringToken | SymbolToken | NumberToken | VarToken;
+export type EndNode = NNode | InfixNode<NNode, InfixToken>;
 export type DisplayT = {
-  type: 'white' | 'keyword' | 'number' | 'string' | 'variable'
-} & BaseDisplayT
+  type: 'white' | 'keyword' | 'number' | 'string' | 'variable';
+} & BaseDisplayT;
 
 function unsafeAdd(k: DisplayT['type']) {
   return function (v: BaseDisplayT) {
-    const n = v as DisplayT
-    n.type = k
-    return n
-  }
+    const n = v as DisplayT;
+    n.type = k;
+    return n;
+  };
 }
 export const toFillToken = endNotFillToToken<EndNode, InfixToken, DisplayT>(
-  (endNode) => {
+  endNode => {
     if (endNode.type == 'string') {
       return {
         type: 'string',
         value: endNode.originalValue,
         begin: endNode.begin,
         end: endNode.end,
-      }
+      };
     } else if (endNode.type == 'number') {
       return {
         type: 'number',
         value: endNode.originalValue,
         begin: endNode.begin,
         end: endNode.end,
-      }
+      };
     } else if (endNode.type == 'symbol') {
       return {
         type: 'string',
         value: endNode.value,
         begin: endNode.begin,
         end: endNode.end,
-      }
+      };
     } else if (endNode.type == 'var') {
       return {
         type: 'variable',
         value: endNode.value,
         begin: endNode.begin,
         end: endNode.end,
-      }
+      };
     } else {
-      throw new Error('unknown type')
+      throw new Error('unknown type');
     }
   },
-  (old) => {
+  old => {
     return {
       type: 'keyword',
       begin: old.begin,
       end: old.end,
       value: old.originalValue,
-    }
+    };
   },
   unsafeAdd('white')
-)
+);
 
 export interface InfixToken {
-  begin: number
-  end: number
-  value: string
-  originalValue: string
+  begin: number;
+  end: number;
+  value: string;
+  originalValue: string;
 }

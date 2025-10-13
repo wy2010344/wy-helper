@@ -2,12 +2,14 @@
  * 大转盘
  */
 
-import { createSignal } from "../signal";
-import { StoreRef } from "../storeRef";
-import { EmptyFun, emptyObject, Quote } from "../util";
-import { ReadValueCenter, valueCenterOf } from "../ValueCenter";
-import { SpringBaseAnimationConfigArg, springBaseAnimationConfigNoEnd } from "./AnimationConfig";
-
+import { createSignal } from '../signal';
+import { StoreRef } from '../storeRef';
+import { EmptyFun, emptyObject, Quote } from '../util';
+import { ReadValueCenter, valueCenterOf } from '../ValueCenter';
+import {
+  SpringBaseAnimationConfigArg,
+  springBaseAnimationConfigNoEnd,
+} from './AnimationConfig';
 
 function createBeginTime(config: Quote<number>, from = 0) {
   let startTime = 0;
@@ -47,8 +49,8 @@ function createEndTime(createConfig: EndConfig) {
 
 /**
  * 创建一个大转盘
- * @param param0 
- * @returns 
+ * @param param0
+ * @returns
  */
 export function createBigSpin({
   beginConfig,
@@ -56,18 +58,18 @@ export function createBigSpin({
   value,
   cycle,
   onFinish,
-  timeout = 1000
+  timeout = 1000,
 }: {
   /**开始时怎么迭代升级 */
   beginConfig: Quote<number>;
   endConfig: EndConfig;
-  value: StoreRef<number>
-  cycle: number
-  onFinish(): void
-  timeout?: number
+  value: StoreRef<number>;
+  cycle: number;
+  onFinish(): void;
+  timeout?: number;
 }) {
-  let distance = 0
-  const drawValue = createSignal(false)
+  let distance = 0;
+  const drawValue = createSignal(false);
   return {
     onDrawEffect() {
       const beginFn = createBeginTime(beginConfig);
@@ -101,7 +103,7 @@ export function createBigSpin({
           const changeRadian = value.get() + speed;
           value.set(changeRadian % cycle);
         }
-      }
+      };
     },
     drawValue: drawValue.get,
     beginDraw() {
@@ -112,13 +114,15 @@ export function createBigSpin({
       return true;
     },
     setDistance(n: number) {
-      distance = n
-    }
-  }
+      distance = n;
+    },
+  };
 }
 
-
-export function bigSpinDeviceToEnd(edgeValue: number, deviceValue = 30): EndConfig {
+export function bigSpinDeviceToEnd(
+  edgeValue: number,
+  deviceValue = 30
+): EndConfig {
   return function (fromSpeed) {
     return function (time, diff, beforeValue) {
       const changeRadian = diff / deviceValue;
@@ -136,7 +140,7 @@ export function bigSpinDeviceToEnd(edgeValue: number, deviceValue = 30): EndConf
  */
 export function bigSpinSpringToEnd(
   edgeValue: number,
-  config: Omit<SpringBaseAnimationConfigArg, "initialVelocity"> = emptyObject
+  config: Omit<SpringBaseAnimationConfigArg, 'initialVelocity'> = emptyObject
 ): EndConfig {
   return function (fromSpeed, fromValue, delta, fromTime) {
     const fn = springBaseAnimationConfigNoEnd(delta, {
@@ -150,8 +154,6 @@ export function bigSpinSpringToEnd(
     };
   };
 }
-
-
 
 /**
  * 步进

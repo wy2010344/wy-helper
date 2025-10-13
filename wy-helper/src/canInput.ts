@@ -1,5 +1,3 @@
-
-
 export function canInputNumber(
   fix: number = 0,
   config?: {
@@ -9,16 +7,16 @@ export function canInputNumber(
 ) {
   if (fix != Infinity) {
     if (fix < 0) {
-      throw new Error("fix should be oppositive");
+      throw new Error('fix should be oppositive');
     }
     if (fix != Math.round(fix)) {
-      throw new Error("fix should be int");
+      throw new Error('fix should be int');
     }
   }
   return function (v: string) {
-    if (v == "") {
+    if (v == '') {
       return true;
-    } else if (v == "-") {
+    } else if (v == '-') {
       //负数
       if (config?.allowNegative) {
         return true;
@@ -33,7 +31,7 @@ export function canInputNumber(
       if (!config?.allowNegative && n < 0) {
         return false;
       }
-      const idx = v.indexOf(".");
+      const idx = v.indexOf('.');
       if (idx > -1) {
         if (fix == 0) {
           return false;

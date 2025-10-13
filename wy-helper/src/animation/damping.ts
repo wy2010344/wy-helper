@@ -1,6 +1,5 @@
-import { MomentumCallOut, MomentumEndArg } from "../scroller"
-import { getDestination, getMaxScroll } from "../scroller/util"
-
+import { MomentumCallOut, MomentumEndArg } from '../scroller';
+import { getDestination, getMaxScroll } from '../scroller/util';
 
 /**
  * 阻尼
@@ -11,7 +10,7 @@ export class DammpingFactory {
     /**质量除以阻尼系数 */
     public readonly gamma: number,
     public readonly velocityThreshold = 2
-  ) { }
+  ) {}
   static from(
     /** 阻尼系数 d */
     damping: number,
@@ -19,35 +18,36 @@ export class DammpingFactory {
     mass: number,
     velocityThreshold?: number
   ) {
-    return new DammpingFactory(mass / damping, velocityThreshold)
+    return new DammpingFactory(mass / damping, velocityThreshold);
   }
   getFromVelocity(initVelocity: number) {
-    return new Dammping(this, initVelocity)
+    return new Dammping(this, initVelocity);
   }
 
   /**
    * 根据位移生成初始位置
-   * @param distance 
-   * @returns 
+   * @param distance
+   * @returns
    */
   getFromDistance(distance: number) {
-    const initialVelocity = distance / this.gamma
-    return this.getFromVelocity(initialVelocity)
+    const initialVelocity = distance / this.gamma;
+    return this.getFromVelocity(initialVelocity);
   }
   /**
    * 获得惯性动画
-   * @param param0 
-   * @returns 
+   * @param param0
+   * @returns
    */
   destinationWithMargin({
-    current, velocity,
+    current,
+    velocity,
     containerSize,
     contentSize,
   }: MomentumEndArg): MomentumCallOut {
-    const lowerMargin = 0
-    const upperMargin = getMaxScroll(containerSize, contentSize)
-    velocity = velocity * 1000
-    const dammping = this.getFromVelocity(velocity)
+    const lowerMargin = 0;
+    const upperMargin = getMaxScroll(containerSize, contentSize);
+    velocity = velocity * 1000;
+    const dammping = this.getFromVelocity(velocity);
     if (lowerMargin < current && current < upperMargin) {
       //在容器内
       /**
@@ -57,31 +57,31 @@ export class DammpingFactory {
        * 阶段2,走出edge,使用弹簧动画
        *  但这个弹簧动画,阻尼是知道的,质量也可能确定了,弹性系数不知道,deltaX是0
        */
-      const destination = current + dammping.maxDistance
+      const destination = current + dammping.maxDistance;
       if (destination < lowerMargin || destination > upperMargin) {
-        const edge = getDestination(destination, lowerMargin, upperMargin)
+        const edge = getDestination(destination, lowerMargin, upperMargin);
         return {
-          type: "scroll-edge",
+          type: 'scroll-edge',
           from: current,
           target: destination,
           finalPosition: edge,
-          duration: dammping.duration
-        }
+          duration: dammping.duration,
+        };
       } else {
         return {
-          type: "scroll",
+          type: 'scroll',
           from: current,
           target: destination,
-          duration: dammping.duration
-        }
+          duration: dammping.duration,
+        };
       }
     } else {
-      const edge = getDestination(current, lowerMargin, upperMargin)
+      const edge = getDestination(current, lowerMargin, upperMargin);
       return {
-        type: "edge-back",
+        type: 'edge-back',
         from: current,
-        target: edge
-      }
+        target: edge,
+      };
       //从边缘恢复
       // return [
       //   getDestination(current, lowerMargin, upperMargin),
@@ -97,7 +97,7 @@ export class DammpingFactory {
 }
 
 /**
- * 
+ *
  * gemini
  * x(t)=x(0)+v(0)*t-gamma*0.5*v(0)*t^2 ???
  * v(t)=v(0)*e^(-gamma*t)
@@ -107,70 +107,67 @@ export class DammpingFactory {
  */
 export class Dammping {
   /**质量除以阻尼系数 */
-  public readonly gamma: number
+  public readonly gamma: number;
   constructor(
     public readonly factory: DammpingFactory,
     /**初始速度 */
-    public readonly initVelocity: number,
+    public readonly initVelocity: number
   ) {
-    this.gamma = this.factory.gamma
-    this.maxDistance = this.gamma * initVelocity
-    this.duration = this.getTimeToVelocity(this.factory.velocityThreshold)
+    this.gamma = this.factory.gamma;
+    this.maxDistance = this.gamma * initVelocity;
+    this.duration = this.getTimeToVelocity(this.factory.velocityThreshold);
   }
-  readonly duration: number
-  readonly maxDistance: number
+  readonly duration: number;
+  readonly maxDistance: number;
   /**
    * 从初始速度到达指定速度的时间
    * @param initialVelocity 初始速度
    * @param velocity 指定速度
-   * @returns 
+   * @returns
    */
-  getTimeToVelocity(
-    velocity: number
-  ) {
-    return -Math.log(Math.abs(velocity / this.initVelocity)) / this.gamma
+  getTimeToVelocity(velocity: number) {
+    return -Math.log(Math.abs(velocity / this.initVelocity)) / this.gamma;
   }
   /**
    * 余下的路程
-   * @param maxDistance 
-   * @param elapsedTime 
-   * @returns 
+   * @param maxDistance
+   * @param elapsedTime
+   * @returns
    */
   getDisplacement(
     /**时间 */
     elapsedTime: number
   ) {
-    return this.maxDistance * Math.exp(- this.gamma * elapsedTime)
+    return this.maxDistance * Math.exp(-this.gamma * elapsedTime);
   }
 
   getDistance(
     /**时间 */
     elapsedTime: number
   ) {
-    return this.maxDistance - this.getDisplacement(elapsedTime)
+    return this.maxDistance - this.getDisplacement(elapsedTime);
   }
   /**
-   * 
+   *
    * x(t)=max(1-getDisplacement(t))
    * getDisplacement(t)=
    * 获得到达指定距离的时间,即滚动到达边界
-   * @param initialVelocity 
-   * @param distance 
-   * @returns 
+   * @param initialVelocity
+   * @param distance
+   * @returns
    */
-  getTimeToDistance(
-    distance: number) {
-    return -Math.log(1 - Math.abs(distance / this.maxDistance)) / this.gamma
+  getTimeToDistance(distance: number) {
+    return -Math.log(1 - Math.abs(distance / this.maxDistance)) / this.gamma;
   }
   /**
    * 获得指定时间的速度
-   * @param elapsedTime 
-   * @returns 
+   * @param elapsedTime
+   * @returns
    */
   getVelocity(
     /**时间 */
     elapsedTime: number
   ) {
-    return this.initVelocity * Math.exp(-this.gamma * elapsedTime)
+    return this.initVelocity * Math.exp(-this.gamma * elapsedTime);
   }
 }

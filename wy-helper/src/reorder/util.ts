@@ -1,16 +1,15 @@
-import { emptyObject } from "../util";
-
+import { emptyObject } from '../util';
 
 /**
- * 
+ *
  * 这个不是中线相交发生替换,而是移动距离大于目标元素的一半
  * 实时的靠速度来判断
- * @param order 
- * @param index 当前元素所在坐标 
- * @param getOffsetHeight 
+ * @param order
+ * @param index 当前元素所在坐标
+ * @param getOffsetHeight
  * @param offset 拖拽偏移量
  * @param speed 速度决定判断的方向
- * @returns 
+ * @returns
  */
 export function reorderCheckTarget<T>(
   order: readonly T[],
@@ -31,85 +30,92 @@ export function reorderCheckTarget<T>(
   /**
    * 使用meetDiff,可以更多控制
    * 中线,startheight/2
-   * @param startHeight 
-   * @param endHeight 
-   * @param gap 
+   * @param startHeight
+   * @param endHeight
+   * @param gap
    */
   meetDiff?: (startHeight: number, endHeight: number, gap: number) => number
 ) {
   'worklet';
-  gap = Math.abs(gap)
+  gap = Math.abs(gap);
   //速度为0时,不调整
   if (!offset) {
-    return
+    return;
   }
-  const nextOffset = offset > 0 ? 1 : -1
-  let nextHeightOffset = gap * nextOffset
-  const startHeight = getOffsetHeight(order[index], index)
-  let flagIndex = index
+  const nextOffset = offset > 0 ? 1 : -1;
+  let nextHeightOffset = gap * nextOffset;
+  const startHeight = getOffsetHeight(order[index], index);
+  let flagIndex = index;
   while (flagIndex > -1 && flagIndex < order.length) {
-    const nextIndex = flagIndex + nextOffset
-    const nextItem = order[nextIndex]
+    const nextIndex = flagIndex + nextOffset;
+    const nextItem = order[nextIndex];
     if (!nextItem) {
-      break
+      break;
     }
-    const nextHeight = getOffsetHeight(nextItem, nextIndex)
-    let meetDiffValue = meetDiff?.(startHeight, nextHeight, gap) || 0
+    const nextHeight = getOffsetHeight(nextItem, nextIndex);
+    let meetDiffValue = meetDiff?.(startHeight, nextHeight, gap) || 0;
     if (meetDiffValue < 0) {
-      console.warn("差异值必须为正")
-      meetDiffValue = -meetDiffValue
+      console.warn('差异值必须为正');
+      meetDiffValue = -meetDiffValue;
     }
-    let nextHeightCenter = nextHeight / 2 + meetDiffValue
+    const nextHeightCenter = nextHeight / 2 + meetDiffValue;
     if (
       (nextOffset > 0 && offset > nextHeightOffset + nextHeightCenter) ||
       (nextOffset < 0 && offset < nextHeightOffset - nextHeightCenter)
     ) {
-      flagIndex = nextIndex
-      nextHeightOffset += ((nextHeight + gap) * nextOffset)
+      flagIndex = nextIndex;
+      nextHeightOffset += (nextHeight + gap) * nextOffset;
     } else {
-      break
+      break;
     }
   }
   if (flagIndex != index) {
-    return [index, flagIndex] as const
+    return [index, flagIndex] as const;
   }
 }
 
 /**
  * 从位置1变化到位置2
  */
-export type MoveIndex = readonly [number, number]
+export type MoveIndex = readonly [number, number];
 
 /**
  * 这两个概念太复杂了,
  * 在引用的地方,还是使用区分来处理
- * @param idx 
- * @param idx1 
- * @param callback 
+ * @param idx
+ * @param idx1
+ * @param callback
  */
-export function rangeBetweenLeft(idx: number, idx1: number, callback: (i: number) => void) {
+export function rangeBetweenLeft(
+  idx: number,
+  idx1: number,
+  callback: (i: number) => void
+) {
   if (idx < idx1) {
     for (let i = idx; i < idx1; i++) {
-      callback(i)
+      callback(i);
     }
   } else {
     for (let i = idx; i > idx1; i--) {
-      callback(i)
+      callback(i);
     }
   }
 }
-export function rangeBetweenRight(idx: number, idx1: number, callback: (i: number) => void) {
+export function rangeBetweenRight(
+  idx: number,
+  idx1: number,
+  callback: (i: number) => void
+) {
   if (idx < idx1) {
     for (let i = idx; i < idx1; i++) {
-      callback(i + 1)
+      callback(i + 1);
     }
   } else {
     for (let i = idx; i > idx1; i--) {
-      callback(i - 1)
+      callback(i - 1);
     }
   }
 }
-
 
 /**
  * 未调整顺序前的数组,如何处理
@@ -129,27 +135,27 @@ export function beforeMoveOperate<T>(
   gap: number,
   layoutFrom: (row: T, from: number, i: number) => void
 ) {
-  const div = outList[fromIndex]
-  const offsetHeight = getOffsetHeight(div, fromIndex)
+  const div = outList[fromIndex];
+  const offsetHeight = getOffsetHeight(div, fromIndex);
   if (toIndex < fromIndex) {
     //向前移动
-    let diff = 0
+    let diff = 0;
     for (let i = toIndex; i < fromIndex; i++) {
-      const row = outList[i]
-      diff = diff + getOffsetHeight(outList[i], i) + gap
-      layoutFrom(row, -offsetHeight - gap, i)
+      const row = outList[i];
+      diff = diff + getOffsetHeight(outList[i], i) + gap;
+      layoutFrom(row, -offsetHeight - gap, i);
     }
-    return diff
+    return diff;
   } else {
     //向后移动
 
-    let diff = 0
+    let diff = 0;
     for (let i = fromIndex + 1; i < toIndex + 1; i++) {
       //受影响的表演一次animation动画
-      const row = outList[i]
-      diff = diff + getOffsetHeight(outList[i], i) + gap
-      layoutFrom(row, offsetHeight + gap, i)
+      const row = outList[i];
+      diff = diff + getOffsetHeight(outList[i], i) + gap;
+      layoutFrom(row, offsetHeight + gap, i);
     }
-    return -diff
+    return -diff;
   }
 }

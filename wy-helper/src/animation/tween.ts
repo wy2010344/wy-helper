@@ -1,22 +1,22 @@
-import { Quote } from "../util";
+import { Quote } from '../util';
 
 //N次方:自定义
 function poly(n: number) {
   return function (t: number) {
-    return Math.pow(t, n)
-  }
+    return Math.pow(t, n);
+  };
 }
 /**
  * @todo 没有out-in,其实只有3种,每种动画,做成固定的
  */
-export type EaseType = 'in' | 'out' | 'in-out'
+export type EaseType = 'in' | 'out' | 'in-out';
 /**
  * 将一个easeIn的函数,转化成easeOut
- * @param elapsedTime 
- * @param easeInFn 
- * @param distance 
- * @param duration 
- * @returns 
+ * @param elapsedTime
+ * @param easeInFn
+ * @param distance
+ * @param duration
+ * @returns
  */
 export function easeOut(
   elapsedTime: number,
@@ -24,16 +24,16 @@ export function easeOut(
   distance: number,
   duration: number
 ) {
-  return distance - easeInFn(duration - elapsedTime)
+  return distance - easeInFn(duration - elapsedTime);
 }
 
 /**
  * 将一个easeIn的函数转化成easeInOut
- * @param elapsedTime 
- * @param easeInFn 
- * @param distance 
- * @param duration 
- * @returns 
+ * @param elapsedTime
+ * @param easeInFn
+ * @param distance
+ * @param duration
+ * @returns
  */
 export function easeInOut(
   elapsedTime: number,
@@ -42,9 +42,9 @@ export function easeInOut(
   duration: number
 ) {
   if (elapsedTime < 0.5 * duration) {
-    return easeInFn(elapsedTime * 2) / 2
+    return easeInFn(elapsedTime * 2) / 2;
   }
-  return distance - easeInFn((duration - elapsedTime) * 2) / 2
+  return distance - easeInFn((duration - elapsedTime) * 2) / 2;
 }
 
 export function easeOutIn(
@@ -64,32 +64,32 @@ export function easeOutIn(
  */
 export const easeFns = {
   in(easing: Quote<number>) {
-    return easing
+    return easing;
   },
   out(easing: Quote<number>) {
     return function (t: number) {
-      return 1 - easing(1 - t)
-    }
+      return 1 - easing(1 - t);
+    };
   },
   inOut(easing: Quote<number>) {
     return function (t: number) {
       if (t < 0.5) {
-        return easing(t * 2) / 2
+        return easing(t * 2) / 2;
       }
-      return 1 - easing((1 - t) * 2) / 2
-    }
+      return 1 - easing((1 - t) * 2) / 2;
+    };
   },
   /**
    * 像bonuceOut,对应的inOut就是这个
-   * @param easing 
-   * @returns 
+   * @param easing
+   * @returns
    */
   outIn(easing: Quote<number>) {
     return function (t: number) {
       return t < 0.5
         ? (1 - easing(1 - 2 * t)) / 2
         : (1 + easing(2 * t - 1)) / 2;
-    }
+    };
   },
   /**N次方 */
   poly,
@@ -103,29 +103,29 @@ export const easeFns = {
   quint: poly(5),
   /**
    * 正弦曲线的缓动
-   * @param t 
-   * @returns 
+   * @param t
+   * @returns
    */
   sine(t: number) {
-    return 1 - Math.cos(t * Math.PI / 2);
+    return 1 - Math.cos((t * Math.PI) / 2);
   },
   /**
    * 指数曲线的缓动
    * cubic-bezier(0.7, 0, 0.84, 0)
-   * @param t 
-   * @returns 
+   * @param t
+   * @returns
    */
   expo(t: number) {
-    return t == 0 ? 0 : Math.pow(2, 10 * (t - 1))
+    return t == 0 ? 0 : Math.pow(2, 10 * (t - 1));
   },
   /**
    * 圆形曲线的缓动
    * cubic-bezier(0.55, 0, 1, 0.45)
-   * @param t 
-   * @returns 
+   * @param t
+   * @returns
    */
   circ(t: number) {
-    return 1 - Math.sqrt(1 - t * t)
+    return 1 - Math.sqrt(1 - t * t);
   },
   /**
    * 模拟弹性动画
@@ -133,13 +133,13 @@ export const easeFns = {
    * 果冻效果，比back效果更强一些，会多抖动几次
    * 指数衰减的正弦曲线缓动
    * @param bounciness 弹性
-   * @returns 
+   * @returns
    */
   elasticOut(bounciness = 1) {
     const p = bounciness * Math.PI;
     return function (t: number) {
-      return 1 - Math.pow(Math.cos((t * Math.PI) / 2), 3) * Math.cos(t * p)
-    }
+      return 1 - Math.pow(Math.cos((t * Math.PI) / 2), 3) * Math.cos(t * p);
+    };
   },
   /**
    * 
@@ -157,23 +157,23 @@ return x === 0
    * @param p 频率(越小周期越多)
    * @returns 
    */
-  getElastic(
-    a: number,
-    p: number = 0.3) {
-    return function (
-      t: number) {
-      var s: number;
+  getElastic(a: number, p: number = 0.3) {
+    return function (t: number) {
+      let s: number;
       if (t == 0) return 0;
       if (t == 1) return 1;
       if (!a || a < Math.abs(1)) {
         s = p / 4;
         a = 1;
       } else {
-        s = p / (2 * Math.PI) * Math.asin(1 / a);
+        s = (p / (2 * Math.PI)) * Math.asin(1 / a);
       }
-      return -(a * Math.pow(2, 10 * (t -= 1)) *
-        Math.sin((t - s) * (2 * Math.PI) / p));
-    }
+      return -(
+        a *
+        Math.pow(2, 10 * (t -= 1)) *
+        Math.sin(((t - s) * (2 * Math.PI)) / p)
+      );
+    };
   },
   /**
    * 指数衰减的反弹缓动。
@@ -182,20 +182,20 @@ return x === 0
    * 当使用 Back 缓动函数时，s 参数用于控制动画的过冲效果。过冲是指动画在到达最终值之前超出目标值的现象，类似于弹簧在受到外力后会超过平衡位置一段距离然后再回弹回来的现象。
    * 当 s 的值较大时，过冲效果会更加明显，动画会超出目标值一段距离后再回弹回来。当 s 的值较小时，过冲效果会减弱，动画的回弹效果会相对缓和一些。
    * 常用的 s 参数值是 1.70158，但你也可以根据需要调整这个值来获得不同的过冲效果。通常情况下，s 的值应该是一个正数。
-   * @param s 
-   * @returns 
+   * @param s
+   * @returns
    */
   back(s = 1.70158) {
     return function (t: number) {
       return t * t * ((s + 1) * t - s);
-    }
+    };
   },
   /**
    * 弹跳动画
    * 模拟小球落地，最简单模拟东西落地的弹性效果，虽然也假了点，贵在简单易用。
    * 再用out包装一下,就能得到in
-   * @param t 
-   * @returns 
+   * @param t
+   * @returns
    */
   bounceOut(t: number) {
     if (t < 1 / 2.75) {
@@ -214,26 +214,30 @@ return x === 0
 
     const t2 = t - 2.625 / 2.75;
     return 7.5625 * t2 * t2 + 0.984375;
-  }
-}
+  },
+};
 
 const { sqrt, exp, sin, cos } = Math;
 /**
- * 
+ *
  * https://github.com/pomber/use-spring  stiffness=170 mass=1 damping=26
- * @param param0 
- * @returns 
+ * @param param0
+ * @returns
  */
 export function springAnimationFn({
-  dx, dt, v0,
-  k, c, m
+  dx,
+  dt,
+  v0,
+  k,
+  c,
+  m,
 }: {
   /**初始位置到最终位置的差 */
-  dx: number
+  dx: number;
   /**已经运动了多少时间,t-t0,秒,即如果是requestFrameAnimation,需要除以1000*/
-  dt: number
+  dt: number;
   /**初始速度,一般是0 */
-  v0: number
+  v0: number;
   /* Spring stiffness, in kg / s^2 刚度 170*/
   k: number;
   /**阻尼 damping 26*/
@@ -249,7 +253,7 @@ export function springAnimationFn({
     const b = (v0 - dx * rn) / (rp - rn);
     return {
       x: a * exp(rn * dt) + b * exp(rp * dt),
-      v: a * rn * exp(rn * dt) + b * rp * exp(rp * dt)
+      v: a * rn * exp(rn * dt) + b * rp * exp(rp * dt),
     };
   } else if (radicand < 0) {
     const r = -c / (2 * m);
@@ -260,7 +264,7 @@ export function springAnimationFn({
       x: exp(r * dt) * (a * cos(s * dt) + b * sin(s * dt)),
       v:
         exp(r * dt) *
-        ((b * s + a * r) * cos(s * dt) - (a * s - b * r) * sin(s * dt))
+        ((b * s + a * r) * cos(s * dt) - (a * s - b * r) * sin(s * dt)),
     };
   } else {
     const r = -c / (2 * m);
@@ -268,7 +272,7 @@ export function springAnimationFn({
     const b = v0 - r * dx;
     return {
       x: (a + b * dt) * exp(r * dt),
-      v: (b + a * r + b * r * dt) * exp(r * dt)
+      v: (b + a * r + b * r * dt) * exp(r * dt),
     };
   }
 }

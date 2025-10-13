@@ -1,24 +1,24 @@
-import { List } from '../kanren'
-import { EmptyFun, emptyFun } from '../util'
-import { or, parseGet } from '../tokenParser/parse'
+import { List } from '../kanren';
+import { EmptyFun, emptyFun } from '../util';
+import { or, parseGet } from '../tokenParser/parse';
 import {
   ParseFun,
   Que,
   matchAnyString,
   ruleGetString,
-} from '../tokenParser/tokenParser'
+} from '../tokenParser/tokenParser';
 
 export type Infix<T> = {
-  (): T
-} //string | MatchGet
+  (): T;
+}; //string | MatchGet
 /**
  * 从后往前结合
  */
 export type RevInfix<T> = {
-  type: 'rev'
-  values: Infix<T>[]
-}
-export type InfixConfig<T> = Infix<T>[] | RevInfix<T>
+  type: 'rev';
+  values: Infix<T>[];
+};
+export type InfixConfig<T> = Infix<T>[] | RevInfix<T>;
 
 function parseInfixBB<F, I>(
   parseLeaf: () => F,
@@ -26,16 +26,16 @@ function parseInfixBB<F, I>(
   // infixes: Infix[],
   skipWhiteSpace: EmptyFun
 ) {
-  const first = parseLeaf()
+  const first = parseLeaf();
   const exts: {
-    infix: I
-    value: F
-  }[] = []
+    infix: I;
+    value: F;
+  }[] = [];
   while (true) {
     const hasValue = or([
       () => {
-        skipWhiteSpace()
-        const infix = or(parseInfix)
+        skipWhiteSpace();
+        const infix = or(parseInfix);
         // const infix = or(
         //   infixes.map((value) => {
         //     if (typeof value == 'string') {
@@ -45,21 +45,21 @@ function parseInfixBB<F, I>(
         //     }
         //   })
         // )
-        skipWhiteSpace()
-        const right = parseLeaf() //
+        skipWhiteSpace();
+        const right = parseLeaf(); //
         exts.push({
           infix,
           value: right,
-        })
-        return true
+        });
+        return true;
       },
       emptyFun,
-    ])
+    ]);
     if (!hasValue) {
-      break
+      break;
     }
   }
-  return { first, exts }
+  return { first, exts };
 }
 
 /**
@@ -129,13 +129,13 @@ export function parseInfixBLeft<F, T, I>(
   skipWhiteSpace: EmptyFun,
   build: (infix: I, left: F | T, right: F) => T
 ) {
-  const { first, exts } = parseInfixBB(parseLeaf, parseInfix, skipWhiteSpace)
-  let value = first as F | T
+  const { first, exts } = parseInfixBB(parseLeaf, parseInfix, skipWhiteSpace);
+  let value = first as F | T;
   for (let i = 0; i < exts.length; i++) {
-    const ext = exts[i]
-    value = build(ext.infix, value, ext.value)
+    const ext = exts[i];
+    value = build(ext.infix, value, ext.value);
   }
-  return value
+  return value;
 }
 /**
  * 右结合
@@ -148,19 +148,19 @@ export function parseInfixBRight<F, T, I>(
   skipWhiteSpace: EmptyFun,
   build: (infix: I, left: F, right: F | T) => T
 ) {
-  const { first, exts } = parseInfixBB(parseLeaf, parseInfix, skipWhiteSpace)
+  const { first, exts } = parseInfixBB(parseLeaf, parseInfix, skipWhiteSpace);
   if (exts.length) {
-    let { value: tmpValue, infix } = exts[exts.length - 1]
-    let value = tmpValue as F | T
+    let { value: tmpValue, infix } = exts[exts.length - 1];
+    let value = tmpValue as F | T;
     for (let i = exts.length - 2; i > -1; i--) {
-      const ext = exts[i]
-      value = build(infix, ext.value, value)
-      infix = ext.infix
+      const ext = exts[i];
+      value = build(infix, ext.value, value);
+      infix = ext.infix;
     }
-    value = build(infix, first, value)
-    return value
+    value = build(infix, first, value);
+    return value;
   }
-  return first
+  return first;
 }
 /**
  * 默认是向后组装的
@@ -176,15 +176,15 @@ export function parseInfix<T, I>(
   build: (infix: I, left: T, right: T) => T
 ): T {
   if (!infixes) {
-    return parseNode()
+    return parseNode();
   }
-  const c = infixes.left
+  const c = infixes.left;
   const parseLeaf = () =>
-    parseInfix(infixes.right, skipWhiteSpace, parseNode, build)
+    parseInfix(infixes.right, skipWhiteSpace, parseNode, build);
   if (Array.isArray(c)) {
-    return parseInfixBLeft(parseLeaf, c, skipWhiteSpace, build)
+    return parseInfixBLeft(parseLeaf, c, skipWhiteSpace, build);
   } else {
-    return parseInfixBRight(parseLeaf, c.values, skipWhiteSpace, build)
+    return parseInfixBRight(parseLeaf, c.values, skipWhiteSpace, build);
   }
 }
 
@@ -201,13 +201,13 @@ export function infixRightNeedQuote(
   onLeft?: boolean
 ) {
   if (pOrder > order) {
-    return true
+    return true;
   } else if (pOrder < order) {
-    return false
+    return false;
   } else if (onLeft) {
-    return true
+    return true;
   } else {
-    return false
+    return false;
   }
 }
 // export type AInfixNode<T> = {

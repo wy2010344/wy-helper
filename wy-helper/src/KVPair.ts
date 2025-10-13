@@ -3,48 +3,48 @@ export class KVPair<T> {
     public readonly key: string,
     public readonly value: T,
     public readonly rest?: KVPair<T>
-  ) { }
+  ) {}
   get(key: string): KVPair<T> | undefined {
     if (this.key == key) {
       return this;
     }
-    let rest = this.rest
+    let rest = this.rest;
     while (rest) {
       if (rest.key == key) {
-        return rest
+        return rest;
       }
-      rest = rest.rest
+      rest = rest.rest;
     }
   }
   /**
    * 增加,如果现有,则删除现有
-   * @param key 
-   * @param value 
-   * @returns 
+   * @param key
+   * @param value
+   * @returns
    */
   add(key: string, value: T) {
     return new KVPair(key, value, this.remove(key));
   }
 
   addAll(vs: KVPair<T>) {
-    let ret: KVPair<T> = this
+    let ret: KVPair<T> = this;
     vs.forEach((key, value) => {
-      ret = this.add(key, value)
-    })
-    return ret
+      ret = this.add(key, value);
+    });
+    return ret;
   }
 
   forEach(callback: (key: string, value: T) => void) {
-    let temp: KVPair<T> | undefined = this
+    let temp: KVPair<T> | undefined = this;
     while (temp) {
-      callback(temp.key, temp.value)
-      temp = temp.rest
+      callback(temp.key, temp.value);
+      temp = temp.rest;
     }
   }
   /**
    * 删除现有
-   * @param key 
-   * @returns 
+   * @param key
+   * @returns
    */
   remove(key: string) {
     if (this.get(key)) {
@@ -74,19 +74,14 @@ export class KVPair<T> {
     return o;
   }
   static fromObject<T>(v: Record<string, T>) {
-    let ret: KVPair<T> | undefined = undefined
+    let ret: KVPair<T> | undefined = undefined;
     for (const key in v) {
-      ret = new KVPair(key, v[key], ret)
+      ret = new KVPair(key, v[key], ret);
     }
-    return ret!
+    return ret!;
   }
 }
 
-
-export function kvPair<T>(
-  key: string,
-  value: T,
-  parent?: KVPair<T>
-) {
-  return new KVPair(key, value, parent)
+export function kvPair<T>(key: string, value: T, parent?: KVPair<T>) {
+  return new KVPair(key, value, parent);
 }

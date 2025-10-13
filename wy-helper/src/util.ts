@@ -1,11 +1,11 @@
-import { GetValue, SetValue } from './setStateHelper'
+import { GetValue, SetValue } from './setStateHelper';
 
 export type ReadSet<V> = Omit<Set<V>, 'add' | 'clear' | 'forEach'> & {
   forEach(
     callbackfn: (value: V, key: V, map: ReadSet<V>) => void,
     thisArg?: any
-  ): void
-}
+  ): void;
+};
 export type ReadMap<K, V> = Omit<
   Map<K, V>,
   'set' | 'delete' | 'clear' | 'forEach'
@@ -13,272 +13,272 @@ export type ReadMap<K, V> = Omit<
   forEach(
     callbackfn: (value: V, key: K, map: ReadMap<K, V>) => void,
     thisArg?: any
-  ): void
-}
+  ): void;
+};
 export type ReadWrite<T> = {
-  -readonly [P in keyof T]: T[P]
-}
-export type NullType = undefined | null | void
+  -readonly [P in keyof T]: T[P];
+};
+export type NullType = undefined | null | void;
 /**6种情况为false,NaN是数字类型*/
-export type FalseType = false | 0 | 0n | '' | NullType
-export type EmptyFun = (...vs: any[]) => void
-export type Quote<T> = (v: T, ...vs: any[]) => T
+export type FalseType = false | 0 | 0n | '' | NullType;
+export type EmptyFun = (...vs: any[]) => void;
+export type Quote<T> = (v: T, ...vs: any[]) => T;
 export function quote<T>(v: T, ...vs: any[]) {
-  return v
+  return v;
 }
 export function run<T extends AnyFunction>(fun: T): ReturnType<T> {
-  return fun()
+  return fun();
 }
 
 class FreezeError extends Error {}
 
-const FreezeErrorSymbol = Symbol('FreezeErrorSymbol')
+const FreezeErrorSymbol = Symbol('FreezeErrorSymbol');
 export const objectFreeze =
-  'freeze' in Object ? Object.freeze.bind(Object) : quote
-export const objectFreezeThrow = run((): (<T extends Object>(v: T) => T) => {
+  'freeze' in Object ? Object.freeze.bind(Object) : quote;
+export const objectFreezeThrow = run((): (<T extends object>(v: T) => T) => {
   if (globalThis.Proxy) {
     return (a: any) => {
       return new Proxy(a, {
         get(target, p, receiver) {
           if (p == FreezeErrorSymbol) {
             //特殊的区分符号
-            return true
+            return true;
           }
-          return target[p]
+          return target[p];
         },
         set(target, p, newValue, receiver) {
-          throw new FreezeError("don't allow set value")
+          throw new FreezeError("don't allow set value");
         },
-      })
-    }
+      });
+    };
   }
-  return objectFreeze
-})
+  return objectFreeze;
+});
 // 检查对象是否是代理对象
 function isProxy(obj: any) {
-  return obj && obj[FreezeErrorSymbol]
+  return obj?.[FreezeErrorSymbol];
 }
 export function objectDeepFreezeThrow<T>(n: T, before: any[] = []) {
   if (typeof n == 'object' && n) {
     if (isProxy(n) || Object.isFrozen(n)) {
-      return n
+      return n;
     }
     if (before.includes(n)) {
-      return n
+      return n;
     }
     try {
-      const newBefore = before.concat(n)
+      const newBefore = before.concat(n);
       if (Array.isArray(n)) {
         for (let i = 0; i < n.length; i++) {
-          n[i] = objectDeepFreezeThrow(n[i], newBefore)
+          n[i] = objectDeepFreezeThrow(n[i], newBefore);
         }
       } else {
         for (const key in n) {
-          n[key] = objectDeepFreezeThrow(n[key], newBefore)
+          n[key] = objectDeepFreezeThrow(n[key], newBefore);
         }
       }
-      return objectFreezeThrow(n)
+      return objectFreezeThrow(n);
     } catch (err) {
       if (err instanceof FreezeError) {
         //忽略
       } else {
         //都忽略,比如动态import回来的模块,无法冻结
-        console.error('freeeze fail', err)
+        console.error('freeeze fail', err);
         // throw err
       }
     }
   }
-  return n
+  return n;
 }
 
-export const emptySet = objectFreeze(new Set())
-export const emptyMap = objectFreeze(new Map())
-export const emptyArray = objectFreeze([]) // objectFreezeThrow([]) as readonly any[]
+export const emptySet = objectFreeze(new Set());
+export const emptyMap = objectFreeze(new Map());
+export const emptyArray = objectFreeze([]); // objectFreezeThrow([]) as readonly any[]
 export function getTheEmptyArray<T>() {
-  return emptyArray as T[]
+  return emptyArray as T[];
 }
 export function createEmptyArray<T>() {
-  return [] as T[]
+  return [] as T[];
 }
-export const emptyObject = objectFreezeThrow({})
+export const emptyObject = objectFreezeThrow({});
 
 export function createEmptyObject<T>() {
-  return {} as T
+  return {} as T;
 }
 export function getTheEmptyObject<T>() {
-  return emptyObject as T
+  return emptyObject as T;
 }
 export function emptyFun(...vs: any[]) {}
 
 export function quoteOrLazyGet<T>(v: T | (() => T), ...vs: any[]): T {
   if (typeof v == 'function') {
-    return (v as any)()
+    return (v as any)();
   } else {
-    return v
+    return v;
   }
 }
-export type AnyFunction = (...vs: any[]) => any
+export type AnyFunction = (...vs: any[]) => any;
 export async function quotePromise<T>(v: T, ...vs: any[]) {
-  return v
+  return v;
 }
 export function expandFunCall<T extends AnyFunction>(fun: T) {
-  fun()
+  fun();
 }
 export interface ManageValue<T> {
-  add(v: T): void
-  remove(v: T): void
+  add(v: T): void;
+  remove(v: T): void;
 }
 
 export function iterableToList<T>(entity: IterableIterator<T>) {
-  const list: T[] = []
+  const list: T[] = [];
   while (true) {
-    const value = entity.next()
+    const value = entity.next();
     if (value.done) {
-      break
+      break;
     }
-    list.push(value.value)
+    list.push(value.value);
   }
-  return list
+  return list;
 }
 
 export function alawaysTrue(): true {
-  return true
+  return true;
 }
 export function alawaysFalse(): false {
-  return false
+  return false;
 }
 export function defaultToGetTrue(value: any) {
   if (value) {
     if (typeof value == 'function') {
-      return value
+      return value;
     }
-    return alawaysTrue
+    return alawaysTrue;
   }
-  return undefined
+  return undefined;
 }
 
 type VWithDestroy<V> = {
-  value: V
-  destroy?(): void
-}
+  value: V;
+  destroy?(): void;
+};
 export function getCacheCreateMapWithDestroy<K, V>(
   createV: (key: K) => VWithDestroy<V>
 ) {
-  const map = new Map<K, VWithDestroy<V>>()
+  const map = new Map<K, VWithDestroy<V>>();
 
   return {
     get(key: K): V {
-      let value = map.get(key)
+      let value = map.get(key);
       if (value) {
-        return value.value
+        return value.value;
       }
-      value = createV(key)
-      map.set(key, value)
-      return value.value
+      value = createV(key);
+      map.set(key, value);
+      return value.value;
     },
     has: map.has.bind(map),
     remove(key: K) {
-      const old = map.get(key)
+      const old = map.get(key);
       if (old) {
-        map.delete(key)
-        old.destroy?.()
-        return true
+        map.delete(key);
+        old.destroy?.();
+        return true;
       }
-      return false
+      return false;
     },
-  }
+  };
 }
 
 export function getCacheCreateMap<K, V>(createV: (key: K) => V) {
-  const map = new Map<K, V>()
+  const map = new Map<K, V>();
   return function (key: K) {
-    let value = map.get(key)
+    let value = map.get(key);
     if (value) {
-      return value
+      return value;
     }
-    value = createV(key)
-    map.set(key, value)
-    return value
-  } as any
+    value = createV(key);
+    map.set(key, value);
+    return value;
+  } as any;
 }
 
 export function delay(n: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, n)
-  })
+  return new Promise(resolve => {
+    setTimeout(resolve, n);
+  });
 }
 
 export function getTimeoutPromise(time: number, then = emptyFun) {
   return function () {
-    return delay(time).then(then)
-  }
+    return delay(time).then(then);
+  };
 }
 
-export const supportMicrotask = !!globalThis.queueMicrotask
-export const supportMessageChannel = typeof MessageChannel !== 'undefined'
+export const supportMicrotask = !!globalThis.queueMicrotask;
+export const supportMessageChannel = typeof MessageChannel !== 'undefined';
 
 export function messageChannelCallback(callback: EmptyFun) {
   if (supportMessageChannel) {
-    const { port1, port2 } = new MessageChannel()
+    const { port1, port2 } = new MessageChannel();
     if ('on' in port1) {
-      port1.on('message', callback)
+      port1.on('message', callback);
     } else {
-      ;(port1 as any).onmessage = callback
+      (port1 as any).onmessage = callback;
     }
-    return port2.postMessage(null)
+    return port2.postMessage(null);
   } else {
-    setTimeout(callback)
+    setTimeout(callback);
   }
 }
 
 export function asLazy<T>(v: T) {
   return function () {
-    return v
-  }
+    return v;
+  };
 }
 
 export function cacheGet<T>(fun: () => T) {
-  let value: { v: T } | undefined = undefined
+  let value: { v: T } | undefined = undefined;
   return function () {
     if (!value) {
-      value = { v: fun() }
+      value = { v: fun() };
     }
-    return value.v
-  }
+    return value.v;
+  };
 }
 
 export function cacheGetFun<T extends Function>(get: GetValue<T>): T {
-  let value: T
+  let value: T;
   return function () {
     if (!value) {
-      value = get()
+      value = get();
     }
-    return value.apply(null, arguments)
-  } as any
+    return value.apply(null, arguments);
+  } as any;
 }
 
 export function setToAdd<V>(set: Set<V>, ...vs: V[]) {
-  const aSet = new Set(set)
+  const aSet = new Set(set);
   for (const v of vs) {
-    aSet.add(v)
+    aSet.add(v);
   }
-  return aSet
+  return aSet;
 }
 
 export type ReadArray<T> = {
-  length: number
-  [index: number]: T
-}
+  length: number;
+  [index: number]: T;
+};
 
 export function readArrayMap<T, V>(
   vs: ReadArray<T>,
   fun: (v: T, i: number) => V
 ) {
-  const ls: V[] = []
+  const ls: V[] = [];
   for (let i = 0; i < vs.length; i++) {
-    ls.push(fun(vs[i], i))
+    ls.push(fun(vs[i], i));
   }
-  return ls
+  return ls;
 }
 
 export function readArraySlice<T>(
@@ -288,9 +288,9 @@ export function readArraySlice<T>(
   out: T[] = []
 ) {
   for (let i = from; i < to; i++) {
-    out.push(list[i])
+    out.push(list[i]);
   }
-  return out
+  return out;
 }
 
 export function readArraySliceCircle<T>(
@@ -299,78 +299,78 @@ export function readArraySliceCircle<T>(
   end: number = list.length
 ) {
   if (from > end) {
-    throw new Error('from 必须小于 end')
+    throw new Error('from 必须小于 end');
   }
-  const n = list.length
+  const n = list.length;
   if (end - from > n) {
-    throw new Error('必须在列表的长度区间!')
+    throw new Error('必须在列表的长度区间!');
   }
   if (from < 0) {
-    from = getAbsoulteIndex(n, from)
+    from = getAbsoulteIndex(n, from);
     if (end < 0) {
-      return readArraySlice(list, from, getAbsoulteIndex(n, end))
+      return readArraySlice(list, from, getAbsoulteIndex(n, end));
     }
-    const out: T[] = []
-    readArraySlice(list, from, n, out)
-    readArraySlice(list, 0, end, out)
-    return out
+    const out: T[] = [];
+    readArraySlice(list, from, n, out);
+    readArraySlice(list, 0, end, out);
+    return out;
   } else if (end >= n) {
-    end = getAbsoulteIndex(n, end)
+    end = getAbsoulteIndex(n, end);
     if (from >= n) {
-      return readArraySlice(list, getAbsoulteIndex(n, from), end)
+      return readArraySlice(list, getAbsoulteIndex(n, from), end);
     }
-    const out: T[] = []
-    readArraySlice(list, from, n, out)
-    readArraySlice(list, 0, end, out)
-    return out
+    const out: T[] = [];
+    readArraySlice(list, from, n, out);
+    readArraySlice(list, 0, end, out);
+    return out;
   }
-  return readArraySlice(list, from, end)
+  return readArraySlice(list, from, end);
 }
 
 export function getAbsoulteIndex(n: number, i: number) {
-  const at = i % n
+  const at = i % n;
   if (at < 0) {
-    return at + n
+    return at + n;
   }
-  return at
+  return at;
 }
 
 export class WrapperValue<T> {
   constructor(public readonly value: T) {}
 }
 
-export type DelayCall = (notify: EmptyFun) => EmptyFun
+export type DelayCall = (notify: EmptyFun) => EmptyFun;
 
 export function timeoutDelayCall(time: number): DelayCall {
   return function (notify) {
-    const inv = setTimeout(notify, time)
+    const inv = setTimeout(notify, time);
     return function () {
-      clearTimeout(inv)
-    }
-  }
+      clearTimeout(inv);
+    };
+  };
 }
 
 export function subscribeTimeout(callback: EmptyFun, time: number) {
   /**
    * 需要取消订阅,因为开发者模式useEffect执行多次,不取消会造成问题
    */
-  const inv = setTimeout(callback, time)
+  const inv = setTimeout(callback, time);
   return function () {
-    clearTimeout(inv)
-  }
+    clearTimeout(inv);
+  };
 }
 export function numberIntFillWithN0(n: number, x: number) {
-  const nx = n + ''
+  const nx = `${n}`;
 
-  let intLen = nx.indexOf('.')
+  let intLen = nx.indexOf('.');
   if (intLen < 0) {
-    intLen = nx.length
+    intLen = nx.length;
   }
-  const diff = x - intLen
+  const diff = x - intLen;
   if (diff > 0) {
-    return '0'.repeat(diff) + nx
+    return '0'.repeat(diff) + nx;
   }
-  return nx
+  return nx;
 }
 
 /**
@@ -380,16 +380,16 @@ export function numberIntFillWithN0(n: number, x: number) {
  */
 export function removeLastZero(nx: string) {
   if (nx.includes('.')) {
-    let i = nx.length - 1
+    let i = nx.length - 1;
     while (nx[i] == '0') {
-      i--
+      i--;
     }
     if (nx[i] == '.') {
-      i--
+      i--;
     }
-    return nx.slice(0, i + 1)
+    return nx.slice(0, i + 1);
   }
-  return nx
+  return nx;
 }
 /**
  * 保留fix位小数,如果后面为0,去掉
@@ -399,103 +399,103 @@ export function removeLastZero(nx: string) {
  */
 export function numberFixRemoveZero(n: number, fix: number) {
   if (fix > 0) {
-    const nx = n.toFixed(fix)
-    return removeLastZero(nx)
+    const nx = n.toFixed(fix);
+    return removeLastZero(nx);
   }
-  return n + ''
+  return `${n}`;
 }
 
 export function mathAdd(a: number, b: number) {
-  return a + b
+  return a + b;
 }
 
 export function mathSub(a: number, b: number) {
-  return a / b
+  return a / b;
 }
 
 export function mathMul(a: number, b: number) {
-  return a * b
+  return a * b;
 }
 
 export function mathDiv(a: number, b: number) {
-  return a / b
+  return a / b;
 }
 
 export function trueAndS(a: any, left: string, right = '') {
-  return a ? left : right
+  return a ? left : right;
 }
 
 export function numberSortAsc(a: number, b: number) {
-  return a - b
+  return a - b;
 }
 export function numberSortDesc(a: number, b: number) {
-  return b - a
+  return b - a;
 }
 /**
  * ({ x: "ax" } | { x: "cc" }) & { y: 99 };
  * 转化成
  * { x: "ax"; y: 99 } | { x: "cc"; y: 99 };
  */
-export type Flatten<T> = T extends T ? { [K in keyof T]: T[K] } : never
+export type Flatten<T> = T extends T ? { [K in keyof T]: T[K] } : never;
 
 export function genTemplateStringS1(
   ts: TemplateStringsArray,
   vs: (string | number)[]
 ) {
-  const xs: any[] = []
+  const xs: any[] = [];
   for (let i = 0; i < vs.length; i++) {
-    xs.push(ts[i])
-    xs.push(vs[i])
+    xs.push(ts[i]);
+    xs.push(vs[i]);
   }
-  xs.push(ts[vs.length])
-  return xs.join('')
+  xs.push(ts[vs.length]);
+  return xs.join('');
 }
 
-export type VType = string | number | GetValue<number | string>
+export type VType = string | number | GetValue<number | string>;
 export function vTypeisGetValue(v: VType): v is GetValue<number | string> {
-  return typeof v == 'function'
+  return typeof v == 'function';
 }
 
 function toSingleValue(v: VType) {
   if (typeof v == 'function') {
-    return v()
+    return v();
   }
-  return v
+  return v;
 }
 
 export function genTemplateStringS2(ts: TemplateStringsArray, vs: VType[]) {
-  return genTemplateStringS1(ts, vs.map(toSingleValue))
+  return genTemplateStringS1(ts, vs.map(toSingleValue));
 }
 
 export function tw(strings: TemplateStringsArray, ...vs: string[]) {
-  return genTemplateStringS1(strings, vs)
+  return genTemplateStringS1(strings, vs);
 }
 
 export function numberBetween(min: number, value: number, max: number) {
   if (min > max) {
-    console.log('erroro')
-    throw new Error('min must less than max')
+    console.log('erroro');
+    throw new Error('min must less than max');
   }
-  return Math.min(Math.max(min, value), max)
+  return Math.min(Math.max(min, value), max);
 }
 
 export function mergeSet<T>(...sets: (SetValue<T> | FalseType)[]) {
   return function (v: T) {
     for (let i = 0; i < sets.length; i++) {
-      const set = sets[i]
+      const set = sets[i];
       if (typeof set == 'function') {
-        set(v)
+        set(v);
       }
     }
-  }
+  };
 }
 type MethodKeys<T> = {
   [K in keyof T]: K extends string
     ? T[K] extends (...args: any[]) => any
       ? K
       : never
-    : never
-}[keyof T]
+    : never;
+}[keyof T];
 
 /**
  * 缓存性绑定
@@ -504,13 +504,13 @@ type MethodKeys<T> = {
  * @returns
  */
 export function methodBind<T, K extends MethodKeys<T>>(it: T, key: K) {
-  const fun = it[key] as any
+  const fun = it[key] as any;
   if (fun.binded) {
     //已经绑定了
-    return fun as T[K]
+    return fun as T[K];
   }
-  const out = fun.bind(it)
-  out.binded = it
-  it[key] = out
-  return out as T[K]
+  const out = fun.bind(it);
+  out.binded = it;
+  it[key] = out;
+  return out as T[K];
 }

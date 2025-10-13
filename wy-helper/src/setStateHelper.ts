@@ -1,19 +1,19 @@
-import { StoreRef } from './storeRef'
-import { Quote, ReadArray } from './util'
+import { StoreRef } from './storeRef';
+import { Quote, ReadArray } from './util';
 
-export type SetStateAction<T> = T | ((v: T) => T)
-export type SetValue<F> = (v: F, ...vs: any[]) => void
-export type GetValue<F> = (...vs: any[]) => F
-export type GetThisValue<T, F> = (this: T, ...vs: any[]) => F
-export type ReduceState<T> = SetValue<SetStateAction<T>>
+export type SetStateAction<T> = T | ((v: T) => T);
+export type SetValue<F> = (v: F, ...vs: any[]) => void;
+export type GetValue<F> = (...vs: any[]) => F;
+export type GetThisValue<T, F> = (this: T, ...vs: any[]) => F;
+export type ReduceState<T> = SetValue<SetStateAction<T>>;
 
-export type ParentSet<T> = SetValue<Quote<T>>
+export type ParentSet<T> = SetValue<Quote<T>>;
 
 export function applySetStateAction<T>(v: SetStateAction<T>, old: T): T {
   if (typeof v == 'function') {
-    return (v as any)(old)
+    return (v as any)(old);
   }
-  return v
+  return v;
 }
 
 export function buildSubSet<PARENT, CHILD>(
@@ -22,8 +22,8 @@ export function buildSubSet<PARENT, CHILD>(
   buildParent: (s: PARENT, t: CHILD) => PARENT
 ) {
   return function (setChild: SetStateAction<CHILD>) {
-    parentSet((x) => buildParent(x, applySetStateAction(setChild, getChild(x))))
-  }
+    parentSet(x => buildParent(x, applySetStateAction(setChild, getChild(x))));
+  };
 }
 
 export function createSubSetStore<PARENT, CHILD>(
@@ -33,13 +33,13 @@ export function createSubSetStore<PARENT, CHILD>(
 ) {
   return {
     get() {
-      return getChild(model.get())
+      return getChild(model.get());
     },
     set(v: CHILD) {
-      model.set(buildParent(model.get(), v))
-      return v
+      model.set(buildParent(model.get(), v));
+      return v;
     },
-  }
+  };
 }
 
 export function buildSubSetObject<PARENT, K extends keyof PARENT>(
@@ -49,14 +49,14 @@ export function buildSubSetObject<PARENT, K extends keyof PARENT>(
 ) {
   return buildSubSet(
     parentSet,
-    (v) => v[key],
+    v => v[key],
     (parent, sub) => {
       return {
         ...parent,
         [key]: callback ? callback(sub, parent) : sub,
-      }
+      };
     }
-  )
+  );
 }
 
 export function createSubSetObject<PARENT, K extends keyof PARENT>(
@@ -66,38 +66,38 @@ export function createSubSetObject<PARENT, K extends keyof PARENT>(
 ) {
   return createSubSetStore<PARENT, PARENT[K]>(
     model,
-    (v) => v[key],
+    v => v[key],
     (parent, sub) => {
       return {
         ...parent,
         [key]: callback ? callback(sub, parent) : sub,
-      }
+      };
     }
-  )
+  );
 }
 
-export type ReduceRowState<T> = (() => void) & ((v: SetStateAction<T>) => void)
+export type ReduceRowState<T> = (() => void) & ((v: SetStateAction<T>) => void);
 export function buildSubSetArray<T>(
   parentSet: ParentSet<readonly T[]>,
   equal: (v: T) => boolean
 ): ReduceRowState<T> {
   return function () {
-    const isRemove = arguments.length == 0
-    const v = arguments[0]
-    parentSet((ts) => {
-      const idx = ts.findIndex(equal)
+    const isRemove = arguments.length == 0;
+    const v = arguments[0];
+    parentSet(ts => {
+      const idx = ts.findIndex(equal);
       if (idx < 0) {
-        return ts
+        return ts;
       }
-      const vs = ts.slice()
+      const vs = ts.slice();
       if (isRemove) {
-        vs.splice(idx, 1)
+        vs.splice(idx, 1);
       } else {
-        vs.splice(idx, 1, applySetStateAction(v, ts[idx]))
+        vs.splice(idx, 1, applySetStateAction(v, ts[idx]));
       }
-      return vs
-    })
-  }
+      return vs;
+    });
+  };
 }
 
 export function createSubSetArray<T>(
@@ -106,25 +106,25 @@ export function createSubSetArray<T>(
 ) {
   return {
     get() {
-      return model.get().find(equal)
+      return model.get().find(equal);
     },
     set(v?: T) {
-      const isRemove = arguments.length == 0
-      const ts = model.get()
-      const idx = ts.findIndex(equal)
+      const isRemove = arguments.length == 0;
+      const ts = model.get();
+      const idx = ts.findIndex(equal);
       if (idx < 0) {
-        return ts
+        return ts;
       }
-      const vs = ts.slice()
+      const vs = ts.slice();
       if (isRemove) {
-        vs.splice(idx, 1)
+        vs.splice(idx, 1);
       } else {
-        vs.splice(idx, 1, v!)
+        vs.splice(idx, 1, v!);
       }
-      model.set(vs)
-      return v
+      model.set(vs);
+      return v;
     },
-  }
+  };
 }
 
 export function buildSubSetArrayKey<T, K>(
@@ -132,9 +132,9 @@ export function buildSubSetArrayKey<T, K>(
   getKey: (v: T) => K,
   row: T
 ) {
-  return buildSubSetArray(parentSet, (value) => {
-    return getKey(value) == getKey(row)
-  })
+  return buildSubSetArray(parentSet, value => {
+    return getKey(value) == getKey(row);
+  });
 }
 
 export function createSubSetArrayKey<T, K>(
@@ -142,34 +142,34 @@ export function createSubSetArrayKey<T, K>(
   getKey: (v: T) => K,
   row: T
 ) {
-  return createSubSetArray(parentSet, (value) => {
-    return getKey(value) == getKey(row)
-  })
+  return createSubSetArray(parentSet, value => {
+    return getKey(value) == getKey(row);
+  });
 }
 
 export function serialEvent<T extends (...args: any[]) => any>(
   ..._vs: (T | undefined | null)[]
 ): T | undefined {
-  const vs = _vs.filter((x) => x) as T[]
+  const vs = _vs.filter(x => x) as T[];
   if (vs.length) {
     return function (...args) {
-      let out = vs[0](...args)
+      let out = vs[0](...args);
       for (let i = 1; i < vs.length; i++) {
-        const nv = vs[i]
-        out = nv(...args)
+        const nv = vs[i];
+        out = nv(...args);
       }
-      return out
-    } as T
+      return out;
+    } as T;
   }
 }
 
 export function objectDeepEqual(a: any, b: any, deps = Infinity) {
   if (a == b) {
     //内存相等,或相同的值
-    return true
+    return true;
   }
   if (deps == 0) {
-    return
+    return;
   }
   if (Array.isArray(a)) {
     if (Array.isArray(b)) {
@@ -177,59 +177,59 @@ export function objectDeepEqual(a: any, b: any, deps = Infinity) {
       if (a.length == b.length) {
         for (let i = 0; i < a.length; i++) {
           if (!objectDeepEqual(a[i], b[i], deps - 1)) {
-            return false
+            return false;
           }
         }
-        return true
+        return true;
       }
-      return false
+      return false;
     }
-    return false
+    return false;
   }
   if (Array.isArray(b)) {
-    return false
+    return false;
   }
   if (a && b && typeof a == 'object' && typeof b == 'object') {
-    const akeys = Object.keys(a).sort()
-    const bkeys = Object.keys(b).sort()
+    const akeys = Object.keys(a).sort();
+    const bkeys = Object.keys(b).sort();
     if (akeys.length == bkeys.length) {
       for (let i = 0; i < akeys.length; i++) {
-        const aKey = akeys[i]
-        const bkey = bkeys[i]
+        const aKey = akeys[i];
+        const bkey = bkeys[i];
         if (aKey != bkey) {
-          return false
+          return false;
         }
         if (!objectDeepEqual(a[aKey], b[bkey], deps - 1)) {
-          return false
+          return false;
         }
       }
-      return true
+      return true;
     }
   }
-  return false
+  return false;
 }
 
 export function objectClone<T>(a: T): T {
   if (Array.isArray(a)) {
-    return a.map(objectClone) as unknown as T
+    return a.map(objectClone) as unknown as T;
   } else if (a && typeof a == 'object') {
-    const b: any = {}
+    const b: any = {};
     for (const key in a) {
-      b[key] = objectClone(a[key])
+      b[key] = objectClone(a[key]);
     }
-    return b
+    return b;
   }
-  return a
+  return a;
 }
-const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' // 英文字母表
+const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'; // 英文字母表
 export function numberToLetterBase(number: number) {
-  let result = ''
+  let result = '';
   while (number > 0) {
-    const remainder = (number - 1) % letters.length // 获取余数，范围为 0 到 25
-    result = letters[remainder] + result // 将对应的字母添加到结果字符串的前面
-    number = Math.floor((number - 1) / letters.length) // 更新 number
+    const remainder = (number - 1) % letters.length; // 获取余数，范围为 0 到 25
+    result = letters[remainder] + result; // 将对应的字母添加到结果字符串的前面
+    number = Math.floor((number - 1) / letters.length); // 更新 number
   }
-  return result
+  return result;
 }
 
 export function findIndexFrom<T>(
@@ -238,12 +238,12 @@ export function findIndexFrom<T>(
   from: number
 ) {
   for (let i = from; i < list.length; i++) {
-    const row = list[i]
+    const row = list[i];
     if (predicate(row, i)) {
-      return i
+      return i;
     }
   }
-  return -1
+  return -1;
 }
 
 /**
@@ -254,69 +254,69 @@ export function findIndexFrom<T>(
  */
 export function masonryList<T>(list: T[], count: number) {
   const columns: {
-    list: T[]
-    key: string
-  }[] = []
+    list: T[];
+    key: string;
+  }[] = [];
   for (let i = 0; i < count; i++) {
     columns[i] = {
       list: [],
       key: `${count}-${i}`,
-    }
+    };
   }
-  let idx = 0
+  let idx = 0;
   for (let i = 0; i < list.length; i++) {
-    columns[idx].list.push(list[i])
-    idx = idx + 1
+    columns[idx].list.push(list[i]);
+    idx = idx + 1;
     if (idx == count) {
-      idx = 0
+      idx = 0;
     }
   }
-  return columns
+  return columns;
 }
 
 export function groupToMap<T, F>(list: readonly T[], getKey: (v: T) => F) {
-  const map = new Map<F, T[]>()
+  const map = new Map<F, T[]>();
   for (const row of list) {
-    const key = getKey(row)
-    const oldDef = map.get(key)
+    const key = getKey(row);
+    const oldDef = map.get(key);
     if (oldDef) {
-      oldDef.push(row)
+      oldDef.push(row);
     } else {
-      map.set(key, [row])
+      map.set(key, [row]);
     }
   }
-  return map
+  return map;
 }
 
 export function iteratorToList<V>(iterable: IterableIterator<V>) {
-  const list: V[] = []
+  const list: V[] = [];
   while (true) {
-    const value = iterable.next()
+    const value = iterable.next();
     if (value.done) {
-      break
+      break;
     }
-    list.push(value.value)
+    list.push(value.value);
   }
-  return list
+  return list;
 }
 
 export function objectMap<K extends string, M, F>(
   a: Record<K, M>,
   fun: (v: M, key: K) => F
 ) {
-  const out = {} as any
+  const out = {} as any;
   for (const key in a) {
-    out[key] = fun(a[key], key)
+    out[key] = fun(a[key], key);
   }
-  return out as Record<K, F>
+  return out as Record<K, F>;
 }
 
 export function getOutResolvePromise<T>() {
-  let resolve: (v: T) => void
-  let reject: (v?: any) => void
+  let resolve: (v: T) => void;
+  let reject: (v?: any) => void;
   const promise = new Promise<T>(function (_resolve, _reject) {
-    resolve = _resolve
-    reject = _reject
-  })
-  return [promise, resolve!, reject!] as const
+    resolve = _resolve;
+    reject = _reject;
+  });
+  return [promise, resolve!, reject!] as const;
 }

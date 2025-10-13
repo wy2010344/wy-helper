@@ -36,11 +36,10 @@ export function formatFirstWeek(firstWeek: number) {
   if (i == 0) {
     i = 7;
   }
-  return i
+  return i;
 }
 
 export class YearMonthVirtualView {
-
   constructor(
     public readonly year: number,
     public readonly month: number,
@@ -59,12 +58,12 @@ export class YearMonthVirtualView {
     this.firstDay = date.getDay();
   }
 
-  private _keys!: number[]
+  private _keys!: number[];
   getKeys() {
     if (!this._keys) {
-      this._keys = [this.year, this.month, this.firstDay]
+      this._keys = [this.year, this.month, this.firstDay];
     }
-    return this._keys
+    return this._keys;
   }
   /**
    * 这个月的第一天是星期几
@@ -78,25 +77,11 @@ export class YearMonthVirtualView {
   /**第一列是星期几(1-7) */
   public readonly firstWeek: number;
 
-  getLastYear(
-    month = this.month,
-    firstWeek = this.firstWeek
-  ) {
-    return new YearMonthVirtualView(
-      this.year - 1,
-      month,
-      firstWeek
-    );
+  getLastYear(month = this.month, firstWeek = this.firstWeek) {
+    return new YearMonthVirtualView(this.year - 1, month, firstWeek);
   }
-  getNextYear(
-    month = this.month,
-    firstWeek: number = this.firstWeek
-  ) {
-    return new YearMonthVirtualView(
-      this.year + 1,
-      month,
-      firstWeek
-    );
+  getNextYear(month = this.month, firstWeek: number = this.firstWeek) {
+    return new YearMonthVirtualView(this.year + 1, month, firstWeek);
   }
 
   /**
@@ -119,8 +104,8 @@ export class YearMonthVirtualView {
   lastMonth() {
     if (!this._lastMonth) {
       const lastMonth = this.getlastMonth();
-      this._lastMonth = lastMonth
-      lastMonth._nextMonth = this
+      this._lastMonth = lastMonth;
+      lastMonth._nextMonth = this;
     }
     return this._lastMonth;
   }
@@ -139,8 +124,8 @@ export class YearMonthVirtualView {
   nextMonth() {
     if (!this._nextMonth) {
       const nextMonth = this.getNextMonth();
-      this._nextMonth = nextMonth
-      nextMonth._lastMonth = this
+      this._nextMonth = nextMonth;
+      nextMonth._lastMonth = this;
     }
     return this._nextMonth;
   }
@@ -176,55 +161,52 @@ export class YearMonthVirtualView {
   lessDayOf(x: number, y: number) {
     const d = this.dayOf(x, y);
     if (d < 1) {
-      return "";
+      return '';
     } else if (d > this.days) {
-      return "";
+      return '';
     } else {
       return d;
     }
   }
 
-  fullDayOf(
-    x: number,
-    y: number
-  ): MonthFullDay {
+  fullDayOf(x: number, y: number): MonthFullDay {
     const d = this.dayOf(x, y);
     if (d < 1) {
       return {
-        type: "last",
+        type: 'last',
         day: this.lastMonth().days + d,
       };
     } else if (d > this.days) {
       //y==4,1,y==5,2
       return {
-        type: "next",
+        type: 'next',
         day: d - this.days,
       };
     } else {
       return {
-        type: "this",
+        type: 'this',
         day: d,
       };
     }
   }
   toNumber() {
-    return yearMonthToNumber(this.year, this.month)
+    return yearMonthToNumber(this.year, this.month);
   }
 
   equals(n: YearMonthVirtualView) {
-    return this.toNumber() == n.toNumber() && this.firstWeek == n.firstWeek
+    return this.toNumber() == n.toNumber() && this.firstWeek == n.firstWeek;
   }
 }
 
 export type MonthFullDay = {
-  type: "last" | "this" | "next";
+  type: 'last' | 'this' | 'next';
   day: number;
-}
+};
 
 export function yearMonthVirtualViewGetKey(a: YearMonthVirtualView) {
-  return a.getKeys()
+  return a.getKeys();
 }
 
 export function yearMonthToNumber(year: number, month: number) {
-  return year * 100 + month
+  return year * 100 + month;
 }

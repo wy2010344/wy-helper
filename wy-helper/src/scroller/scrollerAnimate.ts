@@ -12,7 +12,7 @@
  * License: MIT + Apache (V2)
  */
 
-import { EmptyFun } from "../util";
+import { EmptyFun } from '../util';
 
 /**
  * Generic animation class with support for dropped frames both optional easing and duration.
@@ -24,33 +24,41 @@ import { EmptyFun } from "../util";
  * rendering. This eases a lot of cases where it might be pretty complex to break down a state
  * based on the pure time difference.
  */
-var time = function () {
-  return performance.now()
+const time = function () {
+  return performance.now();
 };
-var desiredFrames = 60;
-var millisecondsPerSecond = 1000;
+const desiredFrames = 60;
+const millisecondsPerSecond = 1000;
 /*** 启动动画。
-*
-* @param stepCallback  指向每一步执行的函数的指针。
-* @param verifyCallback 在每个动画步骤之前执行。
-* @param completeCallback
-* @param duration 运行动画的毫秒数
-* @param easingMethod  指向缓和函数的指针
-* @return 动画标识符。可用于随时停止动画。
-  */
+ *
+ * @param stepCallback  指向每一步执行的函数的指针。
+ * @param verifyCallback 在每个动画步骤之前执行。
+ * @param completeCallback
+ * @param duration 运行动画的毫秒数
+ * @param easingMethod  指向缓和函数的指针
+ * @return 动画标识符。可用于随时停止动画。
+ */
 export function start(
   requestAnimationFrame: (cb: EmptyFun) => any,
-  stepCallback: (percent: number, now: number, virtual: boolean) => boolean | void,
+  stepCallback: (
+    percent: number,
+    now: number,
+    virtual: boolean
+  ) => boolean | void,
   verifyCallback: (finish: EmptyFun) => boolean,
-  completedCallback: (droppedFrames: number, finish: EmptyFun, finished: boolean) => void,
+  completedCallback: (
+    droppedFrames: number,
+    finish: EmptyFun,
+    finished: boolean
+  ) => void,
   duration?: number,
   easingMethod?: (percent: number) => number
 ) {
-  let stoped = false
+  let stoped = false;
   const start = time();
-  var lastFrame = start;
-  var percent = 0;
-  var dropCounter = 0;
+  let lastFrame = start;
+  let percent = 0;
+  let dropCounter = 0;
   // 这是每隔几毫秒调用一次的内部步骤方法
   const step = function (virtual?: boolean | number) {
     // Normalize virtual value
@@ -59,18 +67,22 @@ export function start(
     const now = time();
     // 在下一个动画步骤之前执行验证
     if (stoped || (verifyCallback && !verifyCallback(finish))) {
-      stoped = true
+      stoped = true;
       completedCallback?.(
-        desiredFrames - (dropCounter / ((now - start) / millisecondsPerSecond)),
+        desiredFrames - dropCounter / ((now - start) / millisecondsPerSecond),
         finish,
-        false);
+        false
+      );
       return;
     }
     // 为了应用当前的渲染，让我们更新内存中省略的步骤。
     // 这对于及时更新内部状态变量非常重要。
     if (render) {
-      const droppedFrames = Math.round((now - lastFrame) / (millisecondsPerSecond / desiredFrames)) - 1;
-      for (var j = 0; j < Math.min(droppedFrames, 4); j++) {
+      const droppedFrames =
+        Math.round(
+          (now - lastFrame) / (millisecondsPerSecond / desiredFrames)
+        ) - 1;
+      for (let j = 0; j < Math.min(droppedFrames, 4); j++) {
         step(true);
         dropCounter++;
       }
@@ -83,13 +95,17 @@ export function start(
       }
     }
     // Execute step callback, then...
-    var value = easingMethod ? easingMethod(percent) : percent;
-    if ((stepCallback(value, now, render) === false || percent === 1) && render) {
-      stoped = true
+    const value = easingMethod ? easingMethod(percent) : percent;
+    if (
+      (stepCallback(value, now, render) === false || percent === 1) &&
+      render
+    ) {
+      stoped = true;
       completedCallback?.(
-        desiredFrames - (dropCounter / ((now - start) / millisecondsPerSecond)),
+        desiredFrames - dropCounter / ((now - start) / millisecondsPerSecond),
         finish,
-        percent === 1 || duration == null);
+        percent === 1 || duration == null
+      );
     } else if (render) {
       lastFrame = now;
       requestAnimationFrame(step);
@@ -99,7 +115,7 @@ export function start(
   requestAnimationFrame(step);
   // Return unique animation ID
   const finish = function () {
-    stoped = true
-  }
-  return finish
+    stoped = true;
+  };
+  return finish;
 }

@@ -2,7 +2,10 @@ import { Plugin } from 'vite';
 import fs from 'fs';
 import path from 'path';
 
-function scanPagesDir(pagesDir: string, isFile: (v: string) => boolean): string[] {
+function scanPagesDir(
+  pagesDir: string,
+  isFile: (v: string) => boolean
+): string[] {
   const files: string[] = [];
   function scan(dir: string) {
     const items = fs.readdirSync(dir);
@@ -20,7 +23,11 @@ function scanPagesDir(pagesDir: string, isFile: (v: string) => boolean): string[
   return files;
 }
 
-function generateRouteContent(files: string[], pagesDir: string, regex: RegExp): string {
+function generateRouteContent(
+  files: string[],
+  pagesDir: string,
+  regex: RegExp
+): string {
   let content = 'export default {\n';
 
   for (const file of files) {
@@ -30,7 +37,7 @@ function generateRouteContent(files: string[], pagesDir: string, regex: RegExp):
       .replace(regex, '')
       .replace(/\\/g, '/'); // 将 Windows 路径分隔符转换为 Unix 风格
 
-    console.log("files", relativePath)
+    console.log('files', relativePath);
     // 生成动态导入代码
     content += `  '${relativePath}'() {\n`;
     content += `    return import('./pages/${relativePath}');\n`;
@@ -46,28 +53,30 @@ function generateRouteContent(files: string[], pagesDir: string, regex: RegExp):
  *  import.meta.glob("./pages/*")只处理一层
  *  甚至import.meta.glob("./pages/*.ts")
  * @deprecated
- * @param param0 
- * @returns 
+ * @param param0
+ * @returns
  */
 export default function ({
   watchFolder,
   outputFile,
-  suffixes = ['ts']
+  suffixes = ['ts'],
 }: {
-  watchFolder: string
-  outputFile: string
-  suffixes?: string[]
+  watchFolder: string;
+  outputFile: string;
+  suffixes?: string[];
 }): Plugin {
-  const regex = new RegExp(`(${suffixes.map(suffix => `\\.${suffix}`).join('|')})$`)
-  const suffixesPlus = suffixes.map(suffix => `.${suffix}`)
+  const regex = new RegExp(
+    `(${suffixes.map(suffix => `\\.${suffix}`).join('|')})$`
+  );
+  const suffixesPlus = suffixes.map(suffix => `.${suffix}`);
   function isFile(name: string) {
     for (let i = 0; i < suffixesPlus.length; i++) {
-      const suffix = suffixesPlus[i]
+      const suffix = suffixesPlus[i];
       if (name.endsWith(suffix)) {
-        return true
+        return true;
       }
     }
-    return false
+    return false;
   }
   function rebuild() {
     // 扫描 pages 目录
@@ -80,11 +89,11 @@ export default function ({
   return {
     name: 'vite-plugin-import-map',
     buildStart() {
-      rebuild()
+      rebuild();
     },
     watchChange(id, change) {
       if (id.startsWith(watchFolder) && change.event != 'update') {
-        rebuild()
+        rebuild();
       }
     },
   };

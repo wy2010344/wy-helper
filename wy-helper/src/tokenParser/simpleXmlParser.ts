@@ -2,24 +2,40 @@
  * 简单的xml解析,主要是用于i18n
  * dafew dfawe <xm />
  * efawe <dd csd dsfe="dd">dfwef</df>
- * 
+ *
  * 应该视着以字符串开始 然后以尖括号开始
  */
 
-import { ruleStrBetweenGet } from ".";
-import { quote } from "..";
-import { ParseFunGet, Que, alawaysGet, andMatch, andRuleGet, isParseSuccess, manyMatch, manyRuleGet, matchAnyString, matchCharNotIn, matchToEnd, orMatch, orRuleGet, reduceRuleGet, ruleGet, ruleGetString, ruleGetTranslate, ruleSkip, whiteSpaceRuleZero } from "./tokenParser";
-import { isLowerEnglish, isNumber, isUpperEnglish } from "./util";
-
+import { ruleStrBetweenGet } from '.';
+import { quote } from '..';
+import {
+  ParseFunGet,
+  Que,
+  alawaysGet,
+  andMatch,
+  andRuleGet,
+  isParseSuccess,
+  manyMatch,
+  manyRuleGet,
+  matchAnyString,
+  matchCharNotIn,
+  matchToEnd,
+  orMatch,
+  orRuleGet,
+  reduceRuleGet,
+  ruleGet,
+  ruleGetString,
+  ruleGetTranslate,
+  ruleSkip,
+  whiteSpaceRuleZero,
+} from './tokenParser';
+import { isLowerEnglish, isNumber, isUpperEnglish } from './util';
 
 /**
  * 这里,使用大小写英文开头,后面仍然为英文,可以有数字
  */
 const isPureWord = andMatch(
-  orMatch(
-    isUpperEnglish.matchCharBetween(),
-    isLowerEnglish.matchCharBetween()
-  ),
+  orMatch(isUpperEnglish.matchCharBetween(), isLowerEnglish.matchCharBetween()),
   manyMatch(
     orMatch(
       isUpperEnglish.matchCharBetween(),
@@ -27,42 +43,41 @@ const isPureWord = andMatch(
       isNumber.matchCharBetween()
     )
   )
-)
-
-
+);
 
 type AttrMap = {
-  [key in string]: string | true
-}
+  [key in string]: string | true;
+};
 class XmlBeginNode {
   constructor(
     public readonly key: string,
     public readonly map: AttrMap,
     public readonly close: boolean
-  ) { }
+  ) {}
 }
 class XmlEndNode {
-  constructor(
-    public readonly key: string
-  ) { }
+  constructor(public readonly key: string) {}
 }
 
-const matchTheEnd = matchToEnd('<')
+const matchTheEnd = matchToEnd('<');
 /**
  * 匹配纯字符串区域
  */
-const matchInlineContent = ruleGetTranslate(manyRuleGet(
-  orRuleGet(
-    [ruleGet(matchAnyString('\\\\'), v => '\\'),
-    ruleGet(matchAnyString(`\\<`), v => '<'),
-    ruleGet(matchCharNotIn(), que => que.current())]
+const matchInlineContent = ruleGetTranslate(
+  manyRuleGet(
+    orRuleGet([
+      ruleGet(matchAnyString('\\\\'), v => '\\'),
+      ruleGet(matchAnyString(`\\<`), v => '<'),
+      ruleGet(matchCharNotIn(), que => que.current()),
+    ]),
+    0,
+    matchTheEnd,
+    matchTheEnd
   ),
-  0,
-  matchTheEnd,
-  matchTheEnd
-), function (vs) {
-  return vs.join('')
-})
+  function (vs) {
+    return vs.join('');
+  }
+);
 
 export function generateParseXml(
   //类型解析
@@ -72,66 +87,56 @@ export function generateParseXml(
   //属性value
   ruleGetValue: ParseFunGet<Que, string>
 ) {
-
   /**
    * xml参数
    */
-  const argRuleGet: ParseFunGet<Que, {
-    key: string
-    value: string | true
-  }> = andRuleGet(
+  const argRuleGet: ParseFunGet<
+    Que,
+    {
+      key: string;
+      value: string | true;
+    }
+  > = andRuleGet(
     [
       ruleGetKey,
-      orRuleGet(
-        [
-          andRuleGet(
-            [
-              ruleGet(matchAnyString('='), quote),
-              ruleGetValue
-            ],
-            function (a, b) {
-              return b
-            }
-          ),
-          alawaysGet(() => true as const)
-        ]
-      )
+      orRuleGet([
+        andRuleGet(
+          [ruleGet(matchAnyString('='), quote), ruleGetValue],
+          function (a, b) {
+            return b;
+          }
+        ),
+        alawaysGet(() => true as const),
+      ]),
     ],
     function (a, b) {
       return {
         key: a,
-        value: b
-      }
+        value: b,
+      };
     }
-  )
+  );
 
   const matchBracket: ParseFunGet<Que, XmlBeginNode> = andRuleGet(
     [
       ruleGet(matchAnyString('<'), quote),
       ruleGetType,
       ruleGet(whiteSpaceRuleZero, quote),
-      manyRuleGet(
-        argRuleGet,
-        0,
-        whiteSpaceRuleZero
-      ),
+      manyRuleGet(argRuleGet, 0, whiteSpaceRuleZero),
       ruleGet(whiteSpaceRuleZero, quote),
-      ruleGet(
-        matchAnyString(">", "/>"),
-        ruleGetString
-      )
+      ruleGet(matchAnyString('>', '/>'), ruleGetString),
     ],
     function (a, b, c, d, e, f) {
-      const map: AttrMap = {}
-      for (let x of d) {
+      const map: AttrMap = {};
+      for (const x of d) {
         if (x.key in map) {
-          throw `duplicate key ${x.key}`
+          throw `duplicate key ${x.key}`;
         }
-        map[x.key] = x.value
+        map[x.key] = x.value;
       }
-      return new XmlBeginNode(b, map, f == '/>')
+      return new XmlBeginNode(b, map, f == '/>');
     }
-  )
+  );
 
   const matchBracketEnd = andRuleGet(
     [
@@ -140,126 +145,107 @@ export function generateParseXml(
       ruleSkip(matchAnyString('>')),
     ],
     function (a, b, c) {
-      return new XmlEndNode(b)
+      return new XmlEndNode(b);
     }
-  )
+  );
 
   const parseXml = reduceRuleGet(
     ruleGetTranslate(matchInlineContent, v => {
-      const last = new XmlNode("", {}, [])
+      const last = new XmlNode('', {}, []);
       if (v) {
-        last.children.push(v)
+        last.children.push(v);
       }
-      return [last] as XmlNode[]
+      return [last] as XmlNode[];
     }),
     andRuleGet(
-      [
-        orRuleGet(
-          [
-            matchBracket,
-            matchBracketEnd
-          ]
-        ),
-        matchInlineContent
-      ],
+      [orRuleGet([matchBracket, matchBracketEnd]), matchInlineContent],
       function (a, b) {
         return {
           brack: a,
-          content: b
-        }
+          content: b,
+        };
       }
     ),
     function (init, { brack, content }) {
-      let last = init.at(-1)
+      let last = init.at(-1);
       if (!last) {
-        return
+        return;
       }
       if (brack instanceof XmlBeginNode) {
         if (brack.close) {
-          last.children.push(new XmlNode(brack.key, brack.map, []))
+          last.children.push(new XmlNode(brack.key, brack.map, []));
         } else {
-          const newNode = new XmlNode(brack.key, brack.map, [])
-          last.children.push(newNode)
-          init.push(newNode)
-          last = newNode
+          const newNode = new XmlNode(brack.key, brack.map, []);
+          last.children.push(newNode);
+          init.push(newNode);
+          last = newNode;
         }
       } else if (brack instanceof XmlEndNode) {
         if (last.type != brack.key) {
-          throw 'not match the before quote'
+          throw 'not match the before quote';
         }
-        init.pop()
-        last = init.at(-1)
+        init.pop();
+        last = init.at(-1);
       } else {
-        throw 'unknown node' + brack
+        throw `unknown node${brack}`;
       }
       if (!last) {
-        throw 'unexpected end!'
+        throw 'unexpected end!';
       }
       if (content) {
-        last.children.push(content)
+        last.children.push(content);
       }
-      return init
+      return init;
     }
-  )
+  );
 
-  return parseXml
+  return parseXml;
 }
-
-
-
-
-
 
 export class XmlNode {
   constructor(
     public readonly type: string,
     public readonly attrs: AttrMap,
     public readonly children: AllXmlNode[]
-  ) { }
+  ) {}
 }
 
-const simplePureWord = ruleGet(isPureWord, ruleGetString)
+const simplePureWord = ruleGet(isPureWord, ruleGetString);
 const defaultParseXML = generateParseXml(
   simplePureWord,
   simplePureWord,
   ruleStrBetweenGet('"'.charCodeAt(0))
-)
+);
 
-export type AllXmlNode = string | XmlNode
-export function toXmlNodes(
-  text: string,
-  parseXml = defaultParseXML
-) {
-  const out = parseXml(new Que(text))
+export type AllXmlNode = string | XmlNode;
+export function toXmlNodes(text: string, parseXml = defaultParseXML) {
+  const out = parseXml(new Que(text));
   if (isParseSuccess(out)) {
     if (out.end.i == out.end.content.length) {
-      const v = out.value
+      const v = out.value;
       if (v.length == 1) {
-        return v[0].children
+        return v[0].children;
       } else {
-        throw new Error('not completely closed')
+        throw new Error('not completely closed');
       }
     } else {
-      throw new Error('Unable to fully parse')
+      throw new Error('Unable to fully parse');
     }
   }
-  throw new Error(out.message)
+  throw new Error(out.message);
 }
-
-
-
 
 function getTransRC<T>(toSingle: ToSingle<T>) {
   return function transRC(list: AllXmlNode[], getDefine: GetDefine<T>): T {
     return toSingle(
-      list.map((row) => {
+      list.map(row => {
         if (row instanceof XmlNode) {
           return getDefine(row.type, {
             attrs: row.attrs,
-            children: transRC(row.children, getDefine)
-          })
+            children: transRC(row.children, getDefine),
+          });
         } else {
-          return row
+          return row;
         }
       })
     );
@@ -276,7 +262,7 @@ function getElements(xml: string, noCache?: boolean) {
   if (old) {
     return old;
   } else {
-    const nodes = toXmlNodes(xml)
+    const nodes = toXmlNodes(xml);
     if (!noCache) {
       cacheMap.set(xml, nodes);
     }
@@ -289,5 +275,5 @@ export function getRenderXMLFun<T>(toSingle: ToSingle<T>, noCache?: boolean) {
   const transRC = getTransRC(toSingle);
   return function (xml: string, getDefine: GetDefine<T>) {
     return transRC(getElements(xml, noCache), getDefine);
-  }
+  };
 }

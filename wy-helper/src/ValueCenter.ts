@@ -1,120 +1,124 @@
-import { applySetStateAction, SetStateAction, SetValue } from './setStateHelper'
-import { EmptyFun, alawaysTrue, emptyFun, quote, run } from './util'
+import {
+  applySetStateAction,
+  SetStateAction,
+  SetValue,
+} from './setStateHelper';
+import { EmptyFun, alawaysTrue, emptyFun, quote, run } from './util';
 
 export interface SyncFun<T> {
-  (set: SetValue<T>): EmptyFun
-  <A>(set: (t: T, a: A) => void, a: A): EmptyFun
-  <A, B>(set: (t: T, a: A, b: B) => void, a: A, b: B): EmptyFun
-  <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): EmptyFun
+  (set: SetValue<T>): EmptyFun;
+  <A>(set: (t: T, a: A) => void, a: A): EmptyFun;
+  <A, B>(set: (t: T, a: A, b: B) => void, a: A, b: B): EmptyFun;
+  <A, B, C>(set: (t: T, a: A, b: B, c: C) => void, a: A, b: B, c: C): EmptyFun;
 }
 /**
  * 还是使用signal吧
  */
-type EventHandler<T> = (v: T) => void
-type EventChangeHandler<T> = (v: T, old: T) => void
+type EventHandler<T> = (v: T) => void;
+type EventChangeHandler<T> = (v: T, old: T) => void;
 export interface VirtualEventCenter<T> {
-  subscribe(notify: EventChangeHandler<T>): EmptyFun
+  subscribe(notify: EventChangeHandler<T>): EmptyFun;
 }
 export class EventCenter<T> {
-  private pool = new Set<EventChangeHandler<T>>()
+  private pool = new Set<EventChangeHandler<T>>();
   poolSize() {
-    return this.pool.size
+    return this.pool.size;
   }
   subscribe(notify: EventChangeHandler<T>): EmptyFun {
     if (this.pool.has(notify)) {
-      return emptyFun
+      return emptyFun;
     }
-    this.pool.add(notify)
-    const that = this
+    this.pool.add(notify);
+    const that = this;
     return function () {
-      that.pool.delete(notify)
-    }
+      that.pool.delete(notify);
+    };
   }
   notify(v: T, oldV: T) {
-    this.pool.forEach((notify) => notify(v, oldV))
+    this.pool.forEach(notify => notify(v, oldV));
   }
 }
 export function toReduceState<T>(set: (v: T) => void, get: () => T) {
   return function (v: SetStateAction<T>) {
-    set(applySetStateAction(v, get()))
-  }
+    set(applySetStateAction(v, get()));
+  };
 }
 
 export interface ReadValueCenter<T> extends VirtualEventCenter<T> {
-  get(): T
+  get(): T;
 }
 export interface ValueCenter<T> extends ReadValueCenter<T> {
-  set(v: T): void
+  set(v: T): void;
 }
 
-const __sync__ = '__SYNC__'
+const __sync__ = '__SYNC__';
 export function getCenterSync<T>(v: ReadValueCenter<T>) {
-  const vx = v as any
+  const vx = v as any;
   if (!vx[__sync__]) {
     vx[__sync__] = function () {
-      const [set, a, b, c] = arguments
-      set(v.get(), a, b, c)
-      return v.subscribe((n) => {
-        set(n, a, b, c)
-      })
-    }
+      const [set, a, b, c] = arguments;
+      set(v.get(), a, b, c);
+      return v.subscribe(n => {
+        set(n, a, b, c);
+      });
+    };
   }
-  return vx[__sync__] as SyncFun<T>
+  return vx[__sync__] as SyncFun<T>;
 }
 
 export class ReadValueCenterProxyImpl<T> implements ReadValueCenter<T> {
   constructor(private center: ValueCenter<T>) {}
   get(): T {
-    return this.center.get()
+    return this.center.get();
   }
   subscribe(ev: EventChangeHandler<T>) {
-    return this.center.subscribe(ev)
+    return this.center.subscribe(ev);
   }
 }
 export class ValueCenterDefaultImpl<T> implements ValueCenter<T> {
   constructor(private value: T) {}
-  private ec = new EventCenter<T>()
+  private ec = new EventCenter<T>();
   set(v: T): void {
-    const oldValue = this.value
-    this.value = v
-    this.ec.notify(v, oldValue)
+    const oldValue = this.value;
+    this.value = v;
+    this.ec.notify(v, oldValue);
   }
   poolSize(): number {
-    return this.ec.poolSize()
+    return this.ec.poolSize();
   }
   get(): T {
-    return this.value
+    return this.value;
   }
   subscribe(ev: EventChangeHandler<T>) {
-    return this.ec.subscribe(ev)
+    return this.ec.subscribe(ev);
   }
 
-  private rv: ReadValueCenter<T> | undefined = undefined
+  private rv: ReadValueCenter<T> | undefined = undefined;
   readonly() {
     if (!this.rv) {
-      this.rv = new ReadValueCenterProxyImpl(this)
+      this.rv = new ReadValueCenterProxyImpl(this);
     }
-    return this.rv
+    return this.rv;
   }
 }
 
 export function valueCenterOf<T>(value: T) {
-  return new ValueCenterDefaultImpl(value)
+  return new ValueCenterDefaultImpl(value);
 }
 export function syncMergeCenter<T>(c: ReadValueCenter<T>, cb: EventHandler<T>) {
-  cb(c.get())
-  return c.subscribe(cb)
+  cb(c.get());
+  return c.subscribe(cb);
 }
 
 // 定义将元素类型映射成另一种类型的映射函数
-type MapTo<T> = { [K in keyof T]: ValueCenter<T[K]> }
+type MapTo<T> = { [K in keyof T]: ValueCenter<T[K]> };
 
 // type ExtractValues<T> = {
 //   -readonly [K in keyof T]: T[K] extends ReadValueCenter<infer U> ? U : never;
 // }
 export type BuildValueCenters<T> = {
-  readonly [K in keyof T]: ReadValueCenter<T[K]>
-}
+  readonly [K in keyof T]: ReadValueCenter<T[K]>;
+};
 function baseCenterArray<VS extends readonly any[]>(
   vs: any,
   list: BuildValueCenters<VS>,
@@ -122,26 +126,26 @@ function baseCenterArray<VS extends readonly any[]>(
   delay = run
 ) {
   function callback() {
-    cb(vs)
+    cb(vs);
   }
   const destroys = list.map((row, i) => {
-    vs[i] = row.get()
+    vs[i] = row.get();
     return row.subscribe(function (c) {
-      vs[i] = c
-      delay(callback)
-    })
-  })
+      vs[i] = c;
+      delay(callback);
+    });
+  });
   return function () {
-    destroys.forEach(run)
-  }
+    destroys.forEach(run);
+  };
 }
 export function subscribeCenterArray<VS extends readonly any[]>(
   list: BuildValueCenters<VS>,
   cb: EventHandler<VS>,
   delay = run
 ) {
-  const vs = [] as any
-  return baseCenterArray(vs, list, cb, delay)
+  const vs = [] as any;
+  return baseCenterArray(vs, list, cb, delay);
 }
 
 export function syncMergeCenterArray<VS extends readonly any[]>(
@@ -149,10 +153,10 @@ export function syncMergeCenterArray<VS extends readonly any[]>(
   cb: EventHandler<VS>,
   delay = run
 ) {
-  const vs = [] as unknown as any
-  const destroy = baseCenterArray(vs, list, cb, delay)
-  cb(vs)
-  return destroy
+  const vs = [] as unknown as any;
+  const destroy = baseCenterArray(vs, list, cb, delay);
+  cb(vs);
+  return destroy;
 }
 /**
  * 事实上可以用于多种状态机
@@ -165,23 +169,23 @@ export function createReduceValueCenter<T, A>(
   init: T,
   shouldChange: (a: T, b: T) => any = alawaysTrue
 ) {
-  const center = valueCenterOf(init)
-  const taskList: A[] = []
+  const center = valueCenterOf(init);
+  const taskList: A[] = [];
   function set(action: A) {
-    taskList.push(action)
+    taskList.push(action);
     if (taskList.length == 1) {
       while (taskList.length) {
-        const task = taskList.pop()!
-        const oldValue = center.get()
-        const [newValue, act] = reducer(oldValue, task)
+        const task = taskList.pop()!;
+        const oldValue = center.get();
+        const [newValue, act] = reducer(oldValue, task);
         if (shouldChange(newValue, oldValue)) {
-          center.set(newValue)
+          center.set(newValue);
         }
-        act?.(set)
+        act?.(set);
       }
     }
   }
-  return [center.readonly(), set] as const
+  return [center.readonly(), set] as const;
 }
 
 export function subscribeOnce<T>(
@@ -189,19 +193,19 @@ export function subscribeOnce<T>(
   fun: EventChangeHandler<T>
 ) {
   const callback: EventChangeHandler<T> = (v, old) => {
-    fun(v, old)
-    destroy()
-  }
-  const destroy = v.subscribe(callback)
+    fun(v, old);
+    destroy();
+  };
+  const destroy = v.subscribe(callback);
 }
 
-export type Reducer<T, A> = (v: T, a: A) => T
+export type Reducer<T, A> = (v: T, a: A) => T;
 export type ReducerWithDispatch<T, A> = (
   v: T,
   a: A
-) => ReducerWithDispatchResult<T, A>
-export type ReducerDispatch<A> = SetValue<SetValue<A>> | undefined
-export type ReducerWithDispatchResult<T, A> = [T, ReducerDispatch<A>] | [T]
+) => ReducerWithDispatchResult<T, A>;
+export type ReducerDispatch<A> = SetValue<SetValue<A>> | undefined;
+export type ReducerWithDispatchResult<T, A> = [T, ReducerDispatch<A>] | [T];
 
 export function mapReducerDispatch<A, B>(
   act: ReducerDispatch<A>,
@@ -210,9 +214,9 @@ export function mapReducerDispatch<A, B>(
   if (act) {
     return function (dispatch) {
       act(function (value) {
-        dispatch(map(value))
-      })
-    }
+        dispatch(map(value));
+      });
+    };
   }
 }
 
@@ -225,11 +229,11 @@ export function mapReducerDispatchList<A, B>(
       acts.forEach(function (act) {
         if (act) {
           act(function (value) {
-            dispatch(map(value))
-          })
+            dispatch(map(value));
+          });
         }
-      })
-    }
+      });
+    };
   }
 }
 export function mapReducerDispatchListA<A, B, D>(
@@ -240,13 +244,13 @@ export function mapReducerDispatchListA<A, B, D>(
   if (data.length) {
     return function (dispatch) {
       data.forEach(function (row) {
-        const act = getDispatch(row)
+        const act = getDispatch(row);
         if (act) {
           act(function (value) {
-            dispatch(map(value, row))
-          })
+            dispatch(map(value, row));
+          });
         }
-      })
-    }
+      });
+    };
   }
 }
