@@ -48,11 +48,12 @@
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
-    "tsdown": "latest",
-    "@types/stylis": "^4.2.6",
     "@repo/eslint-config": "workspace:*",
     "@repo/prettier-config": "workspace:*",
-    "@repo/typescript-config": "workspace:*"
+    "@repo/typescript-config": "workspace:*",
+    "@types/stylis": "^4.2.6",
+    "lint-staged": "^16.2.4",
+    "tsdown": "latest"
   },
   "peerDependencies": {
     "wy-helper": "workspace:*"

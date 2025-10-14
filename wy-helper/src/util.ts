@@ -221,7 +221,7 @@ export function messageChannelCallback(callback: EmptyFun) {
   if (supportMessageChannel) {
     const { port1, port2 } = new MessageChannel();
     if ('on' in port1) {
-      port1.on('message', callback);
+      (port1 as any).on('message', callback);
     } else {
       (port1 as any).onmessage = callback;
     }
