@@ -3,6 +3,19 @@
   "author": "wy2010344",
   "version": "1.0.0",
   "license": "MIT",
+  "description": "DOM manipulation utilities and helpers for web development",
+  "keywords": [
+    "dom",
+    "utilities",
+    "web",
+    "css",
+    "canvas",
+    "contenteditable"
+  ],
+  "homepage": "https://github.com/wy2010344/wy-helper#readme",
+  "bugs": {
+    "url": "https://github.com/wy2010344/wy-helper/issues"
+  },
   "typings": "dist/index.d.ts",
   "module": "dist/index.mjs",
   "main": "dist/index.js",

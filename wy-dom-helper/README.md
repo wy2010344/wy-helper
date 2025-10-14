@@ -1,29 +1,56 @@
 # wy-dom-helper
 
+DOM manipulation utilities and helpers for web development.
 
-
-## 安装
+## Installation
 
 ```bash
 npm install wy-dom-helper
-# 或
+# or
 pnpm add wy-dom-helper
-# 或
+# or
 yarn add wy-dom-helper
 ```
 
-## 使用
+## Peer Dependencies
+
+- `wy-helper` (workspace dependency)
+
+## Features
+
+### Core Modules
+
+- **contentEditable** - Content editable utilities and helpers
+- **canvas** - Canvas manipulation and drawing utilities
+- **CSS Processing** - CSS styling and manipulation tools
+- **Layout Utilities** - Text layout and line breaking
+
+### Dependencies
+
+- `csstype` - CSS type definitions
+- `linebreak` - Unicode line breaking algorithm
+- `stylis` - CSS preprocessor
+
+## Usage
 
 ```typescript
-import { } from 'wy-dom-helper';
+// Import from main module
+import {} from /* DOM utilities */ 'wy-dom-helper';
 
-// 使用示例
+// Import specific modules
+import {} from /* content editable utilities */ 'wy-dom-helper/contentEditable';
+import {} from /* canvas utilities */ 'wy-dom-helper/canvas';
 ```
 
-## API 文档
+## Submodule Exports
 
-详细的 API 文档请查看 [在线文档](../../docs)。
+- `wy-dom-helper/contentEditable` - Content editable functionality
+- `wy-dom-helper/canvas` - Canvas manipulation tools
 
-## 许可证
+## Development
+
+See the [main README](../README.md) for development setup instructions.
+
+## License
 
 MIT

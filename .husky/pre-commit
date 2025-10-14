@@ -1,8 +1,4 @@
 echo "🚀 Running pre-commit checks for wy-helper workspace..."
-
-# 处理当前目录的文件
-npx lint-staged
-
 # 检查子包变更并运行对应的 lint-staged
 if git diff --cached --name-only | grep "wy-helper/" > /dev/null; then
   echo "📦 Running lint-staged for wy-helper package..."

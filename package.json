@@ -11,19 +11,22 @@
     "format": "cd wy-helper && pnpm run format && cd ../wy-dom-helper && pnpm run format",
     "format:check": "cd wy-helper && pnpm run format:check && cd ../wy-dom-helper && pnpm run format:check",
     "type-check": "cd wy-helper && pnpm run type-check && cd ../wy-dom-helper && pnpm run type-check",
-    "build": "cd wy-helper && pnpm run build && cd ../wy-dom-helper && pnpm run build"
+    "build": "cd wy-helper && pnpm run build && cd ../wy-dom-helper && pnpm run build",
+    "docs": "typedoc",
+    "docs:serve": "pnpm run docs && cd docs && python3 -m http.server 8080"
   },
   "devDependencies": {
-    "commitizen": "^4.3.1",
-    "cz-conventional-changelog": "^3.3.0",
     "@commitlint/cli": "^20.1.0",
     "@commitlint/config-conventional": "^20.0.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^15.5.2",
     "@repo/eslint-config": "workspace:*",
     "@repo/prettier-config": "workspace:*",
+    "commitizen": "^4.3.1",
+    "cz-conventional-changelog": "^3.3.0",
     "eslint": "^9.37.0",
-    "prettier": "^3.6.2"
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.6.2",
+    "typedoc": "^0.28.14"
   },
   "config": {
     "commitizen": {

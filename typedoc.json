@@ -1,0 +1,66 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "wy-helper",
+  "entryPoints": ["wy-helper", "wy-dom-helper"],
+  "entryPointStrategy": "packages",
+  "out": "docs",
+  "theme": "default",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "readme": "README.md",
+  "categorizeByGroup": true,
+  "defaultCategory": "Other",
+  "categoryOrder": [
+    "Core",
+    "Utilities",
+    "DOM",
+    "Animation",
+    "Data Structures",
+    "*"
+  ],
+  "sort": ["source-order"],
+  "kindSortOrder": [
+    "Document",
+    "Project",
+    "Module",
+    "Namespace",
+    "Enum",
+    "EnumMember",
+    "Class",
+    "Interface",
+    "TypeAlias",
+    "Constructor",
+    "Property",
+    "Variable",
+    "Function",
+    "Accessor",
+    "Method",
+    "Parameter",
+    "TypeParameter",
+    "TypeLiteral",
+    "CallSignature",
+    "ConstructorSignature",
+    "IndexSignature",
+    "GetSignature",
+    "SetSignature"
+  ],
+  "visibilityFilters": {
+    "protected": false,
+    "private": false,
+    "inherited": true,
+    "external": false
+  },
+  "searchInComments": true,
+  "cleanOutputDir": true,
+  "titleLink": "https://github.com/wy2010344/wy-helper",
+  "navigationLinks": {
+    "GitHub": "https://github.com/wy2010344/wy-helper",
+    "NPM": "https://www.npmjs.com/package/wy-helper"
+  },
+  "sidebarLinks": {
+    "GitHub": "https://github.com/wy2010344/wy-helper",
+    "Issues": "https://github.com/wy2010344/wy-helper/issues"
+  }
+}

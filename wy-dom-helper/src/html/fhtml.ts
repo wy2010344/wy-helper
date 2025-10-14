@@ -332,7 +332,7 @@ export type FMergeChildAttr<T> =
     }
   | {
       childrenType?: never;
-      children?: SetValue<T>;
+      children?: SetValue<T> | number | string;
     };
 
 export const mergeFDomAttr = createMergeFNodeAttr(updateSvg);
