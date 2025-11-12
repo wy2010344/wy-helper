@@ -1,7 +1,7 @@
 {
   "name": "wy-helper",
   "author": "wy2010344",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "description": "A comprehensive JavaScript utility library with various helper functions",
   "keywords": [
@@ -34,49 +34,49 @@
     },
     "./tokenParser": {
       "development": "./src/tokenParser/index.ts",
-      "types": "./dist/tokenParser/index.d.ts",
+      "types": "./dist/tokenParser.d.ts",
       "import": "./dist/tokenParser.mjs",
       "require": "./dist/tokenParser.js"
     },
     "./infixLang": {
       "development": "./src/infixLang/index.ts",
-      "types": "./dist/infixLang/index.d.ts",
+      "types": "./dist/infixLang.d.ts",
       "import": "./dist/infixLang.mjs",
       "require": "./dist/infixLang.js"
     },
     "./kanren": {
       "development": "./src/kanren/index.ts",
-      "types": "./dist/kanren/index.d.ts",
+      "types": "./dist/kanren.d.ts",
       "import": "./dist/kanren.mjs",
       "require": "./dist/kanren.js"
     },
     "./ObserverCenter": {
       "development": "./src/observerCenter/index.ts",
-      "types": "./dist/observerCenter/index.d.ts",
+      "types": "./dist/observerCenter.d.ts",
       "import": "./dist/observerCenter.mjs",
       "require": "./dist/observerCenter.js"
     },
     "./router": {
       "development": "./src/router/index.ts",
-      "types": "./dist/router/index.d.ts",
+      "types": "./dist/router.d.ts",
       "import": "./dist/router.mjs",
       "require": "./dist/router.js"
     },
     "./forceLayout": {
       "development": "./src/forceLayout/index.ts",
-      "types": "./dist/forceLayout/index.d.ts",
+      "types": "./dist/forceLayout.d.ts",
       "import": "./dist/forceLayout.mjs",
       "require": "./dist/forceLayout.js"
     },
     "./viteImportmap": {
       "development": "./src/viteImportmap/index.ts",
-      "types": "./dist/viteImportmap/index.d.ts",
+      "types": "./dist/viteImportmap.d.ts",
       "import": "./dist/viteImportmap.mjs",
       "require": "./dist/viteImportmap.js"
     },
     "./infix-o": {
       "development": "./src/infix-o/index.ts",
-      "types": "./dist/infix-o/index.d.ts",
+      "types": "./dist/infix-o.d.ts",
       "import": "./dist/infix-o.mjs",
       "require": "./dist/infix-o.js"
     }

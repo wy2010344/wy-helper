@@ -1,5 +1,6 @@
 import { compile, serialize, stringify, middleware, prefixer } from 'stylis';
 import { EmptyFun, run, ValueCenter } from 'wy-helper';
+import { createStyle } from './util';
 
 let uid = 0;
 function newClassName() {
@@ -13,11 +14,9 @@ function toCssFragment(className: string, css: string) {
 }
 
 export function createBodyStyleTag() {
-  const style = document.createElement('style');
-  const head = document.head;
+  const style = createStyle();
   const className = newClassName();
   style.id = className;
-  head.appendChild(style);
   return style;
 }
 

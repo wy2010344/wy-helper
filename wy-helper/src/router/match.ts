@@ -57,6 +57,69 @@ const getQuote = andRuleGet(
   }
 );
 
+const getQuoteSimple = andRuleGet(
+  [
+    ruleGet(matchCharIn(QuoteLeft), quote),
+    ruleGetKey,
+    ruleGet(matchCharIn(QuoteRight), quote),
+  ],
+  function (a, b, c) {
+    return b;
+  }
+);
+
+export const parseTemplate = andRuleGet(
+  [
+    manyRuleGet(
+      andRuleGet([getStr0, getQuoteSimple], function (a, b) {
+        return {
+          begin: a,
+          var: b,
+        };
+      })
+    ),
+    getStr0,
+  ],
+  function (a, b) {
+    return {
+      before: a,
+      last: b,
+    };
+  }
+);
+
+export function fillTemplate(
+  args: Record<string, any>,
+  temp: {
+    before: {
+      begin: string;
+      var: string;
+    }[];
+    last: string;
+  }
+) {
+  if (temp.before) {
+    const vs: string[] = [];
+    temp.before.forEach(v => {
+      vs.push(v.begin, args[v.var]);
+    });
+    vs.push(temp.last);
+    return vs.join('');
+  }
+  return temp.last;
+}
+
+export function toTemplateNode(node: string) {
+  const abc = parseTemplate(new Que(node));
+  if (abc instanceof ParserSuccess) {
+    if (abc.end.notEnd()) {
+      throw new Error('未匹配到结束');
+    }
+    return abc.value;
+  }
+  throw abc;
+}
+
 const parseRule = andRuleGet(
   [
     manyRuleGet(

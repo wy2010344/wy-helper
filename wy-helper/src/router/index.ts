@@ -1,7 +1,13 @@
 import { KVPair } from '../KVPair';
 import { joinPath } from '../path';
 import { emptyObject, quote } from '../util';
-import { matchMatch, MatchNode, toMatchNode } from './match';
+import {
+  fillTemplate,
+  matchMatch,
+  MatchNode,
+  toMatchNode,
+  toTemplateNode,
+} from './match';
 
 type RouteBranch<BranchLoader, LeafLoader, NotfoundLoader> = {
   //名称
@@ -16,13 +22,34 @@ type RouteBranch<BranchLoader, LeafLoader, NotfoundLoader> = {
   default?(): Promise<NotfoundLoader>;
   children?: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader>[];
 };
-function sortBranch(
-  a: RouteBranch<any, any, any>,
-  b: RouteBranch<any, any, any>
-) {
+
+type AliasBranch = {
+  key: string;
+  match: MatchNode;
+  order: number;
+  getNodes?(args: Record<string, any>): string | string[];
+  children?: AliasBranch[];
+};
+
+type Order = {
+  order: number;
+};
+type OrderWithChildren = {
+  order: number;
+  children?: OrderWithChildren[];
+};
+type AbsBranch = {
+  key: string;
+  match: MatchNode;
+  order: number;
+  children?: AbsBranch[];
+};
+function sortBranch(a: Order, b: Order) {
   return a.order - b.order;
 }
-
+export type AliasMap = {
+  [key: string]: string | ((args: Record<string, any>) => string | string[]);
+};
 export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
   constructor(
     private typeDefMap: Record<string, (v: string) => any>,
@@ -38,6 +65,29 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
     order: 0,
   };
 
+  private aliasBranch: AliasBranch = {
+    key: '',
+    match: '',
+    order: 0,
+  };
+
+  buildFromAlias(alias: AliasMap) {
+    for (const key in alias) {
+      const nodes = key.split('/').filter(quote);
+      const tempBranch = this.buildBranch(nodes, this.aliasBranch);
+      const value = alias[key];
+      if (typeof value == 'string') {
+        const vns = value.split('/').filter(quote);
+        const nodes = vns.map(toTemplateNode);
+        tempBranch.getNodes = function (args) {
+          return nodes.map(node => fillTemplate(args, node));
+        };
+      } else {
+        tempBranch.getNodes = value;
+      }
+    }
+  }
+
   buildFromMap(
     pages: Record<string, () => Promise<any>>,
     prefix: string,
@@ -52,7 +102,7 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
           .slice(0, queryPath.length - INDEX.length)
           .split('/')
           .filter(quote);
-        const tempBranch = this.buildRoot(nodes);
+        const tempBranch = this.buildBranch(nodes, this.rootBranch);
         tempBranch.index = this.transLoader(pages[key]) as any;
       }
       if (queryPath.endsWith(LAYOUT)) {
@@ -60,7 +110,7 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
           .slice(0, queryPath.length - LAYOUT.length)
           .split('/')
           .filter(quote);
-        const tempBranch = this.buildRoot(nodes);
+        const tempBranch = this.buildBranch(nodes, this.rootBranch);
         tempBranch.layout = this.transLoader(pages[key]) as any;
       }
 
@@ -69,13 +119,13 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
           .slice(0, queryPath.length - DEFAULT.length)
           .split('/')
           .filter(quote);
-        const tempBranch = this.buildRoot(nodes);
+        const tempBranch = this.buildBranch(nodes, this.rootBranch);
         tempBranch.default = this.transLoader(pages[key]) as any;
       }
     }
   }
-  buildRoot(nodes: string[]) {
-    let tempBranch = this.rootBranch;
+  buildBranch<T extends AbsBranch>(nodes: string[], branch: T) {
+    let tempBranch = branch;
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i];
       if (!tempBranch.children) {
@@ -83,52 +133,64 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
       }
       let subBranch = tempBranch.children.find(x => x.key == node);
       if (!subBranch) {
-        const sp = node.split('.');
-        let order = 0;
-        let match = node;
-        if (sp.length > 1) {
-          order = Number(sp[0]);
-          if (isNaN(order)) {
-            order = 0;
-          } else {
-            sp.shift();
-            match = sp.join('.');
-          }
-        }
-        subBranch = {
-          key: node,
-          match: toMatchNode(match, this.typeDefMap),
-          order,
-        };
+        subBranch = this.getB(node);
         tempBranch.children.push(subBranch);
       }
-      tempBranch = subBranch;
+      tempBranch = subBranch as T;
     }
     return tempBranch;
   }
 
-  private sort(vs: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader>[]) {
-    vs.sort(sortBranch);
-    for (let i = 0; i < vs.length; i++) {
-      const children = vs[i].children;
-      if (children) {
-        this.sort(children);
+  private getB(node: string) {
+    const sp = node.split('.');
+    let order = 0;
+    let match = node;
+    if (sp.length > 1) {
+      order = Number(sp[0]);
+      if (isNaN(order)) {
+        order = 0;
+      } else {
+        sp.shift();
+        match = sp.join('.');
       }
     }
+    return {
+      key: node,
+      match: toMatchNode(match, this.typeDefMap),
+      order,
+    };
   }
   finishBuild() {
+    const aliasBranchChildren = this.aliasBranch.children;
+    if (aliasBranchChildren) {
+      sort(aliasBranchChildren);
+    }
     const rootChildren = this.rootBranch.children;
     if (rootChildren) {
-      this.sort(rootChildren);
+      sort(rootChildren);
     }
-    return rootChildren;
   }
   matchNodes(nodes: string[]) {
+    const alias = foundAlias(nodes, 0, this.aliasBranch, undefined);
+    if (typeof alias == 'string') {
+      nodes = alias.split('/').filter(quote);
+    } else if (Array.isArray(alias)) {
+      nodes = alias;
+    }
     const ret = buildBranch(nodes, 0, this.rootBranch, undefined);
     return ret;
   }
 }
 
+function sort(vs: OrderWithChildren[]) {
+  vs.sort(sortBranch);
+  for (let i = 0; i < vs.length; i++) {
+    const children = vs[i].children;
+    if (children) {
+      sort(children);
+    }
+  }
+}
 function buildBranch<BranchLoader, LeafLoader, NotfoundLoader>(
   nodes: string[],
   index: number,
@@ -140,6 +202,31 @@ function buildBranch<BranchLoader, LeafLoader, NotfoundLoader>(
     return new PairBranchI(branch, nodes, index, ret, currentQuery);
   }
   return ret;
+}
+
+function foundAlias(
+  nodes: string[],
+  index: number,
+  tempBranch: AliasBranch,
+  currentQuery: KVPair<any> | undefined
+) {
+  if (index == nodes.length) {
+    return tempBranch.getNodes?.(currentQuery?.toObject() ?? emptyObject);
+  } else if (tempBranch.children) {
+    const node = nodes[index];
+    let foundMath: AliasBranch | undefined = undefined;
+    for (let i = 0; i < tempBranch.children.length && !foundMath; i++) {
+      const cacheTempBranch = tempBranch.children[i];
+      const match = cacheTempBranch.match;
+      try {
+        currentQuery = matchMatch(node, match, currentQuery);
+        foundMath = cacheTempBranch;
+      } catch (err) {}
+    }
+    if (foundMath) {
+      return foundAlias(nodes, index + 1, foundMath, currentQuery);
+    }
+  }
 }
 function foundInner<BranchLoader, LeafLoader, NotfoundLoader>(
   nodes: string[],

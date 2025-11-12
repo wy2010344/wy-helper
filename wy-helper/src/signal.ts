@@ -160,6 +160,10 @@ class Signal<T> implements OneSetStoreRef<T> {
   get = () => {
     const value = this.value;
     addRelay(this.get, value);
+    // 在事件中也会去get!
+    // if (!signalCache.onWorkBatch && this.listeners.length) {
+    //   console.warn('get signal value not in observer,check if it is right');
+    // }
     if (signalCache.currentFun) {
       //只收集自己的依赖
       if (signalCache.currentFunRemove) {

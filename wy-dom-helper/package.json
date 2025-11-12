@@ -1,7 +1,7 @@
 {
   "name": "wy-dom-helper",
   "author": "wy2010344",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "description": "DOM manipulation utilities and helpers for web development",
   "keywords": [
@@ -28,15 +28,21 @@
     },
     "./contentEditable": {
       "development": "./src/contentEditable/index.ts",
-      "types": "./dist/contentEditable/index.d.ts",
+      "types": "./dist/contentEditable.d.ts",
       "import": "./dist/contentEditable.mjs",
       "require": "./dist/contentEditable.js"
     },
     "./canvas": {
       "development": "./src/canvas/index.ts",
-      "types": "./dist/canvas/index.d.ts",
+      "types": "./dist/canvas.d.ts",
       "import": "./dist/canvas.mjs",
       "require": "./dist/canvas.js"
+    },
+    "./window-theme": {
+      "development": "./src/window-theme/index.ts",
+      "types": "./dist/window-theme.d.ts",
+      "import": "./dist/window-theme.mjs",
+      "require": "./dist/window-theme.js"
     },
     "./package.json": "./package.json"
   },
@@ -61,6 +67,7 @@
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
+    "@material/material-color-utilities": "^0.3.0",
     "@repo/eslint-config": "workspace:*",
     "@repo/prettier-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",

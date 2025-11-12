@@ -45,5 +45,6 @@ export * from './dragMove';
 export * from './path';
 export * from './signal-ext';
 export * from './diffMove';
+export * from './material';
 // export * as kanren from './kanren'
 // export * as tokenParser from './tokenParser'

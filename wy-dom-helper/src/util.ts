@@ -1,10 +1,16 @@
+import { getTrim, camelToSplit } from 'wy-helper';
 export function createScript(src: string) {
   const script = document.createElement('script');
   script.src = src;
   document.head.appendChild(script);
   return script;
 }
-
+export function createStyle() {
+  const style = document.createElement('style');
+  const head = document.head;
+  head.appendChild(style);
+  return style;
+}
 export function createLink(href: string) {
   const link = document.createElement('link');
   link.href = href;
@@ -102,18 +108,10 @@ export function delayAnimationFrame() {
 export function stringifyStyle(style: CSSProperties) {
   const s = Object.entries(style)
     .map(function (v) {
-      return `${underlineToCamel(v[0])}:${v[1]};`;
+      return `${camelToSplit(v[0])}:${v[1]};`;
     })
     .join('');
   return s;
-}
-
-export function underlineToCamel(str: string) {
-  return str.replace(/\B([A-Z])/g, '-$1').toLowerCase();
-}
-
-export function getTrim(v: string) {
-  return v.trim();
 }
 /**
  * 先就简单这么分割吧,如果文字还\n,\t,会以之分割并中断
@@ -158,6 +156,19 @@ export function observerIntersection(
   return function () {
     observer.unobserve(flag);
     observer.disconnect();
+  };
+}
+
+export function observerResize(
+  callback: ResizeObserverCallback,
+  target: Element,
+  options?: ResizeObserverOptions
+) {
+  const o = new ResizeObserver(callback);
+  o.observe(target, options);
+  return function () {
+    o.unobserve(target);
+    o.disconnect();
   };
 }
 

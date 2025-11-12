@@ -56,13 +56,3 @@ pnpm run docs:serve
 ```
 
 The documentation will be available at http://localhost:8080
-
-## Publishing
-
-From the monorepo root:
-
-```bash
-pnpm changeset
-pnpm version-packages
-pnpm release
-```

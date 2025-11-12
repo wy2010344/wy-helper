@@ -514,3 +514,39 @@ export function methodBind<T, K extends MethodKeys<T>>(it: T, key: K) {
   it[key] = out;
   return out as T[K];
 }
+
+/**
+ * 驼峰法转短线分割
+ * \B是去除了首字母大写
+ * @param str
+ * @returns
+ */
+export function camelToSplit(str: string, split = '-') {
+  return str.replace(/\B([A-Z])/g, `${split}$1`).toLowerCase();
+}
+
+export function getTrim(v: string) {
+  return v.trim();
+}
+
+export function createGetId({
+  flag = 'A',
+  min = Number.MIN_SAFE_INTEGER,
+  max = Number.MAX_SAFE_INTEGER,
+}: {
+  flag?: string;
+  min?: number;
+  max?: number;
+} = emptyObject) {
+  let before = flag;
+  let add = min;
+  return function () {
+    if (add == max) {
+      add = min;
+      before = before + flag;
+    } else {
+      add++;
+    }
+    return before + add;
+  };
+}

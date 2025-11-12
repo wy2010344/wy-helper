@@ -21,12 +21,13 @@ export * from './html/xhtml';
 export * from './html/mhtml';
 export * from './input';
 export * from './html/moveChildren';
+export * from './cssObjectToString';
 export { isEvent, addEvent } from './html/fx';
 export type { UpdateProp } from './html/fx';
 
-const w = createSignal(window.innerWidth);
-const h = createSignal(window.innerHeight);
-window.addEventListener('resize', function () {
+const w = createSignal(window?.innerWidth);
+const h = createSignal(window?.innerHeight);
+window?.addEventListener('resize', function () {
   w.set(window.innerWidth);
   h.set(window.innerHeight);
   batchSignalEnd();

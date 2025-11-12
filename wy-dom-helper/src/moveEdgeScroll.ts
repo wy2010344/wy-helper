@@ -13,11 +13,14 @@ const defConfig: EdgeScrollConfig = {
   config: true,
 };
 /**
+ *
  * 鼠标移动到滚动区域外,滚动到此外
  * 如果是mouseMove事件触发,只在触发时生效
  * 所以要动画检测
- * @param point 光标位置,pageX或pageY
- * @param v
+ * @param container
+ * @param param1 {
+ * }
+ * @returns
  */
 export function moveEdgeScroll(
   container: HTMLElement,
@@ -26,6 +29,7 @@ export function moveEdgeScroll(
     direction,
     config = defConfig,
     scrollDiff,
+    /**速度倍乘多少 */
     multi = 1,
   }: MoveEdgeScrollProps
 ) {
