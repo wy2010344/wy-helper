@@ -1,11 +1,6 @@
-import { createGetId } from 'wy-helper';
-import { createBodyStyleTag } from '../stylis';
 import {
   CreateStyle,
-  cssObjectToString,
-  StyleConfig,
   StyleConfigMap,
-  StyleVariants,
   StyleVariantsMap,
 } from '../cssObjectToString';
 

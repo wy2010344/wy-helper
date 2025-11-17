@@ -140,6 +140,7 @@ export class ScrollFromPage<T extends WithTimeStampEvent> {
   private lastPage: number;
   private superLastEvent: T | undefined = undefined;
   private superLastPage: number = 0;
+  readonly endNotMove = true;
   constructor(
     private lastEvent: T,
     private arg: ScrollFromPageI<T>,

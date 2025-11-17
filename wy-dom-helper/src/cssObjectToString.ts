@@ -1,9 +1,9 @@
-import { createGetId } from 'wy-helper';
+import { EmptyFun, addEffect, createGetId } from 'wy-helper';
 import { createStyle, CSSProperties } from './util';
 import { createBodyStyleTag } from './stylis';
 
 export type NestedCSSObject = CSSProperties & {
-  [key in string]: NestedCSSObject;
+  [key in string]?: NestedCSSObject;
 };
 /**
  * 将 CSS 对象转换为字符串
@@ -124,14 +124,19 @@ class StoreEach<Tokens> {
     private readonly theme: Tokens
   ) {}
   //在类似useEffect里调用
-  effect() {
+  effect(nextTimeCall: (fun: EmptyFun) => void) {
     this.count++;
     return () => {
       this.count--;
-      if (!this.count) {
-        this.style.remove();
-        this.map.delete(this.theme);
+      if (this.count) {
+        return;
       }
+      nextTimeCall(() => {
+        if (!this.count) {
+          this.style.remove();
+          this.map.delete(this.theme);
+        }
+      });
     };
   }
 }

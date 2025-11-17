@@ -550,3 +550,5 @@ export function createGetId({
     return before + add;
   };
 }
+
+export type OneOrArray<T> = T | T[];

@@ -164,3 +164,91 @@ export function setEqual<T>(a: Set<T>, b: Set<T>) {
   });
   return ret;
 }
+
+/**
+ * 基于有序数组 + 二分查找的 Map<number, V>
+ * 插入/删除 O(n)，查找 O(log n)，遍历有序
+ */
+export class SortMap<V> {
+  private _keys: number[] = [];
+  private _vals: V[] = [];
+
+  /** 元素个数 */
+  public get size(): number {
+    return this._keys.length;
+  }
+
+  /** 二分查找，返回索引；找不到返回 -(插入点+1) */
+  private _binarySearch(key: number): number {
+    let low = 0;
+    let high = this._keys.length - 1;
+    while (low <= high) {
+      const mid = (low + high) >>> 1;
+      const mk = this._keys[mid];
+      if (mk === key) return mid;
+      if (mk < key) low = mid + 1;
+      else high = mid - 1;
+    }
+    return -(low + 1); // 标准库风格
+  }
+
+  /** 查询 */
+  public get(key: number): V | undefined {
+    const idx = this._binarySearch(key);
+    if (idx < 0) {
+      return;
+    }
+    return this._vals[idx];
+  }
+
+  getOrCreate(key: number, create: (n: number) => V) {
+    const idx = this._binarySearch(key);
+    if (idx < 0) {
+      const tidx = -idx - 1;
+      const v = create(tidx);
+      this._keys.splice(tidx, 0, key);
+      this._vals.splice(tidx, 0, v);
+      return v;
+    }
+    return this._vals[idx];
+  }
+
+  /** 插入或更新 */
+  public set(key: number, value: V): this {
+    const idx = this._binarySearch(key);
+    if (idx >= 0) {
+      // 已存在，覆盖
+      this._vals[idx] = value;
+    } else {
+      // 新插入，保持有序
+      const insertAt = -idx - 1;
+      this._keys.splice(insertAt, 0, key);
+      this._vals.splice(insertAt, 0, value);
+    }
+    return this;
+  }
+
+  /** 删除 */
+  public delete(key: number): boolean {
+    const idx = this._binarySearch(key);
+    if (idx >= 0) {
+      this._keys.splice(idx, 1);
+      this._vals.splice(idx, 1);
+      return true;
+    }
+    return false;
+  }
+
+  /** 有序遍历 (key, value) */
+  public forEach(callback: (value: V, key: number) => void): void {
+    for (let i = 0; i < this._keys.length; i++) {
+      callback(this._vals[i], this._keys[i]);
+    }
+  }
+
+  /** 清空 */
+  public clear(): void {
+    this._keys.length = 0;
+    this._vals.length = 0;
+  }
+}

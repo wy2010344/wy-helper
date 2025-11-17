@@ -1,11 +1,4 @@
-import {
-  EmptyFun,
-  emptyObject,
-  getValueOrGet,
-  PointKey,
-  run,
-  ValueOrGet,
-} from 'wy-helper';
+import { EmptyFun, emptyObject, PointKey, run } from 'wy-helper';
 import { subscribeEventListener } from './util';
 
 export function stopSelect() {
@@ -161,6 +154,7 @@ export function resizeHelper(p: {
 }
 
 export type MoveEnd<T> = {
+  endNotMove?: boolean;
   onMove(e: T): void;
   onEnd?(e: T): void;
   leave?: boolean;
@@ -204,17 +198,15 @@ export function pointerMove(
     upOption?: boolean | AddEventListenerOptions;
   } = emptyObject
 ) {
+  const onMove = out.onMove.bind(out);
   destroyList.push(
-    subscribeEventListener(
-      element,
-      'pointermove',
-      e => out.onMove(e),
-      moveOption
-    )
+    subscribeEventListener(element, 'pointermove', onMove, moveOption)
   );
-  const onEnd = (out.onEnd || out.onMove).bind(out);
   function endFun(e: PointerEvent) {
-    onEnd(e);
+    if (!out.endNotMove) {
+      onMove(e);
+    }
+    out.onEnd?.(e);
     destroyList.forEach(run);
   }
   destroyList.push(
@@ -250,12 +242,15 @@ export function touchMove(
     cancelOption?: boolean | AddEventListenerOptions;
   } = emptyObject
 ) {
+  const onMove = out.onMove.bind(out);
   destroyList.push(
-    subscribeEventListener(element, 'touchmove', e => out.onMove(e), moveOption)
+    subscribeEventListener(element, 'touchmove', onMove, moveOption)
   );
-  const onEnd = (out.onEnd || out.onMove).bind(out);
   function endFun(e: TouchEvent) {
-    onEnd(e);
+    if (!out.endNotMove) {
+      onMove(e);
+    }
+    out.onEnd?.(e);
     destroyList.forEach(run);
   }
   destroyList.push(
