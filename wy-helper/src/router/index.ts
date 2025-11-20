@@ -170,14 +170,15 @@ export class TreeRoute<BranchLoader, LeafLoader, NotfoundLoader> {
       sort(rootChildren);
     }
   }
-  matchNodes(nodes: string[]) {
-    const alias = foundAlias(nodes, 0, this.aliasBranch, undefined);
+  matchNodes(orgnodes: string[]) {
+    const alias = foundAlias(orgnodes, 0, this.aliasBranch, undefined);
+    let nodes = orgnodes;
     if (typeof alias == 'string') {
       nodes = alias.split('/').filter(quote);
     } else if (Array.isArray(alias)) {
       nodes = alias;
     }
-    const ret = buildBranch(nodes, 0, this.rootBranch, undefined);
+    const ret = buildBranch(nodes, 0, this.rootBranch, undefined, orgnodes);
     return ret;
   }
 }
@@ -195,11 +196,12 @@ function buildBranch<BranchLoader, LeafLoader, NotfoundLoader>(
   nodes: string[],
   index: number,
   branch: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader>,
-  currentQuery?: KVPair<any>
+  currentQuery: KVPair<any> | undefined,
+  aliasNodes: string[]
 ): PairNode<BranchLoader, LeafLoader, NotfoundLoader> {
-  const ret = foundInner(nodes, index, branch, currentQuery);
+  const ret = foundInner(nodes, index, branch, currentQuery, aliasNodes);
   if (branch.layout) {
-    return new PairBranchI(branch, nodes, index, ret, currentQuery);
+    return new PairBranchI(branch, nodes, index, ret, currentQuery, aliasNodes);
   }
   return ret;
 }
@@ -232,13 +234,20 @@ function foundInner<BranchLoader, LeafLoader, NotfoundLoader>(
   nodes: string[],
   index: number,
   tempBranch: RouteBranch<BranchLoader, LeafLoader, NotfoundLoader>,
-  currentQuery: KVPair<any> | undefined
+  currentQuery: KVPair<any> | undefined,
+  aliasNodes: string[]
 ): PairNode<BranchLoader, LeafLoader, NotfoundLoader> {
   try {
     if (index == nodes.length) {
       //叶子节点
       if (tempBranch.index) {
-        return new PairLeafI(nodes, index, tempBranch.index!, currentQuery);
+        return new PairLeafI(
+          nodes,
+          index,
+          tempBranch.index!,
+          currentQuery,
+          aliasNodes
+        );
       } else {
         throw new Error('not found');
       }
@@ -257,7 +266,13 @@ function foundInner<BranchLoader, LeafLoader, NotfoundLoader>(
         } catch (err) {}
       }
       if (foundMath) {
-        return buildBranch(nodes, index + 1, foundMath, currentQuery);
+        return buildBranch(
+          nodes,
+          index + 1,
+          foundMath,
+          currentQuery,
+          aliasNodes
+        );
       } else {
         throw new Error('not found');
       }
@@ -267,7 +282,13 @@ function foundInner<BranchLoader, LeafLoader, NotfoundLoader>(
   } catch (err) {
     if (tempBranch.default) {
       //leaf
-      return new PairNotfoundI(nodes, index, tempBranch.default!, currentQuery);
+      return new PairNotfoundI(
+        nodes,
+        index,
+        tempBranch.default!,
+        currentQuery,
+        aliasNodes
+      );
     } else {
       throw err;
     }
@@ -307,10 +328,14 @@ export type PairBranch<BranchLoader, LeafLoader, NotfoundLoader> =
 class AbsPair {
   constructor(
     readonly nodes: string[],
-    readonly index: number
+    readonly index: number,
+    readonly aliasNodes: string[]
   ) {}
-  getAbsolutePath(url: string) {
-    return joinPath(`/${this.nodes.slice(0, this.index).join('/')}`, url);
+  getAbsolutePath(url: string, alias?: boolean) {
+    return joinPath(
+      `/${(alias ? this.aliasNodes : this.nodes).slice(0, this.index).join('/')}`,
+      url
+    );
   }
 }
 class PairBranchI<BranchLoader, LeafLoader, NotfoundLoader>
@@ -323,16 +348,17 @@ class PairBranchI<BranchLoader, LeafLoader, NotfoundLoader>
     nodes: string[],
     index: number,
     readonly next: PairNode<BranchLoader, LeafLoader, NotfoundLoader>,
-    readonly currentQuery?: KVPair<any> | undefined
+    readonly currentQuery: KVPair<any> | undefined,
+    aliasNodes: string[]
   ) {
-    super(nodes, index);
+    super(nodes, index, aliasNodes);
     this.query = next.query;
     this.loader = branch.layout!;
   }
   readonly loader: () => Promise<BranchLoader>;
   readonly query: Readonly<Record<string, any>>;
   /**
-   * 全路径节点
+   * 全路径节点,只能相对自身
    */
   load(
     path: string,
@@ -341,12 +367,8 @@ class PairBranchI<BranchLoader, LeafLoader, NotfoundLoader>
     if (!absolute) {
       path = this.getAbsolutePath(path);
     }
-    return foundInner(
-      path.split('/').filter(quote),
-      this.index,
-      this.branch,
-      this.currentQuery
-    );
+    const nodes = path.split('/').filter(quote);
+    return foundInner(nodes, this.index, this.branch, this.currentQuery, nodes);
   }
 }
 
@@ -356,9 +378,10 @@ class PairLeafI<LeafLoader> extends AbsPair implements PairLeaf<LeafLoader> {
     nodes: string[],
     index: number,
     readonly loader: () => Promise<LeafLoader>,
-    readonly currentQuery?: KVPair<any> | undefined
+    readonly currentQuery: KVPair<any> | undefined,
+    aliasNodes: string[]
   ) {
-    super(nodes, index);
+    super(nodes, index, aliasNodes);
     this.query = currentQuery?.toObject() || emptyObject;
   }
   readonly query: Readonly<Record<string, any>>;
@@ -373,9 +396,10 @@ class PairNotfoundI<NotfoundLoader>
     nodes: string[],
     index: number,
     readonly loader: () => Promise<NotfoundLoader>,
-    readonly currentQuery?: KVPair<any> | undefined
+    readonly currentQuery: KVPair<any> | undefined,
+    aliasNodes: string[]
   ) {
-    super(nodes, index);
+    super(nodes, index, aliasNodes);
     this.query = currentQuery?.toObject() || emptyObject;
   }
   readonly query: Readonly<Record<string, any>>;

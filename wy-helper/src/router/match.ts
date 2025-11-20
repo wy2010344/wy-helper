@@ -25,7 +25,7 @@ export type MatchNode =
     };
 const QuoteLeft = '['.charCodeAt(0);
 const QuoteRight = ']'.charCodeAt(0);
-const Colon = ':'.charCodeAt(0);
+const Colon = '-'.charCodeAt(0);
 const matchNotChat = matchCharNotIn(QuoteLeft, QuoteRight);
 const matchNotChatColon = matchCharNotIn(QuoteLeft, QuoteRight, Colon);
 const getStr0 = ruleGet<Que, string>(manyMatch(matchNotChat), ruleGetString);
