@@ -123,16 +123,7 @@ export function splitClassNames(names: string) {
 }
 
 import * as CSS from 'csstype';
-import {
-  EmptyFun,
-  FalseType,
-  Point,
-  SetValue,
-  batchSignalEnd,
-  buildThrottle,
-  quote,
-  run,
-} from 'wy-helper';
+import { FalseType, Point, SetValue, batchSignalEnd, quote } from 'wy-helper';
 export type PureCSSProperties = CSS.Properties<string | number>;
 export interface CSSProperties extends PureCSSProperties {
   [key: `--${string}`]: string | number | undefined;
@@ -218,14 +209,6 @@ export function getPageOffset(element: HTMLElement) {
   }
   return point;
 }
-export function requestAnimationFrameThrottle(call: EmptyFun): EmptyFun;
-export function requestAnimationFrameThrottle<T>(
-  call: SetValue<T>
-): SetValue<T>;
-export function requestAnimationFrameThrottle(call: EmptyFun): EmptyFun {
-  return buildThrottle(requestBatchAnimationFrame, call);
-}
-
 // 定义 subscribeEventListener 函数
 export function subscribeEventListener<
   T extends EventTarget,

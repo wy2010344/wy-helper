@@ -3,8 +3,12 @@ import { Quote, ReadArray } from './util';
 
 export type SetStateAction<T> = T | ((v: T) => T);
 export type SetValue<F> = (v: F, ...vs: any[]) => void;
-export type GetValue<F> = (...vs: any[]) => F;
-export type GetThisValue<T, F> = (this: T, ...vs: any[]) => F;
+export type GetValue<F> = (...vs: readonly any[]) => F;
+export type GetThisValue<T, F> = (this: T, ...vs: readonly any[]) => F;
+export type SetThisValue<T, F extends readonly any[]> = (
+  this: T,
+  ...vs: F
+) => void;
 export type ReduceState<T> = SetValue<SetStateAction<T>>;
 
 export type ParentSet<T> = SetValue<Quote<T>>;
