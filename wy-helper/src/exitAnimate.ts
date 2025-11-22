@@ -199,7 +199,7 @@ export function buildUseExitAnimate<V>(
         v => v.promise
       );
       if (thisRemoveList.length) {
-        const allDestroyPromise = Promise.all(removePromiseList);
+        const allDestroyPromise = Promise.allSettled(removePromiseList);
         if (onExitComplete) {
           allDestroyPromise.then(onExitComplete);
         }
@@ -227,7 +227,7 @@ export function buildUseExitAnimate<V>(
         }
       }
       if (addPromiseList.length) {
-        const allEnterPromise = Promise.all(addPromiseList);
+        const allEnterPromise = Promise.allSettled(addPromiseList);
         if (onEnterComplete) {
           allEnterPromise.then(onEnterComplete);
         }
@@ -249,7 +249,7 @@ export function buildUseExitAnimate<V>(
         onAnimateComplete &&
         (addPromiseList.length || removePromiseList.length)
       ) {
-        Promise.all([...addPromiseList, ...removePromiseList]).then(
+        Promise.allSettled([...addPromiseList, ...removePromiseList]).then(
           onAnimateComplete
         );
       }

@@ -114,7 +114,7 @@ export function buildEndToMove<T>({
 
     return function (callback: (change?: MoveIndex) => void) {
       if (promises.length) {
-        Promise.all(promises).then(() => {
+        Promise.allSettled(promises).then(() => {
           callback(change);
         });
       } else {
