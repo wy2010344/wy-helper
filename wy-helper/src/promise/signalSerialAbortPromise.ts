@@ -1,7 +1,13 @@
 import { Compare } from '../equal';
 import { GetValue } from '../setStateHelper';
-import { createSignal, memo, trackSignal } from '../signal';
-import { FalseType, Quote } from '../util';
+import {
+  createLateSignal,
+  createSignal,
+  memo,
+  OneSetStoreRef,
+  trackSignal,
+} from '../signal';
+import { emptyObject, FalseType, Quote } from '../util';
 import {
   AbortPromiseResult,
   hookAbortCalback,
@@ -10,14 +16,15 @@ import {
 import { AutoLoadMoreCore } from './stopCall';
 
 export function signalSerialAbortPromise<T>(
-  generatePromise: GetValue<GetValue<Promise<T>> | FalseType>
+  generatePromise: GetValue<GetValue<Promise<T>> | FalseType>,
+  signal = createLateSignal<AbortPromiseResult<T> | undefined>(undefined)
 ) {
-  const signal = createSignal<AbortPromiseResult<T> | undefined>(undefined);
+  const setSignal = signal.getOnlySet();
   const memoGeneratePromise = memo(generatePromise);
   const destroy = trackSignal(memoGeneratePromise, function (getPromise) {
     if (getPromise) {
       const abort = new AbortController();
-      hookAbortSignalPromise(abort.signal, getPromise, signal.set);
+      hookAbortSignalPromise(abort.signal, getPromise, setSignal);
       return function () {
         abort.abort();
       };
@@ -36,7 +43,7 @@ export function signalSerialAbortPromise<T>(
   function reduceSet(callback: Quote<T>) {
     const value = get();
     if (value?.type == 'success') {
-      signal.set({
+      setSignal({
         ...value,
         value: callback(value.value),
       });
@@ -97,11 +104,10 @@ function fetchWithCacheFallback<T>(
   });
 }
 export function signalMultiAbortCallback<T>(
-  generatePromise: GetValue<GetValue<Promise<T>>[] | FalseType>
+  generatePromise: GetValue<GetValue<Promise<T>>[] | FalseType>,
+  signal = createLateSignal<MultiAbortPromiseResult<T> | undefined>(undefined)
 ) {
-  const signal = createSignal<MultiAbortPromiseResult<T> | undefined>(
-    undefined
-  );
+  const setSignal = signal.getOnlySet();
   const memoGeneratePromise = memo(generatePromise);
   const destroy = trackSignal(memoGeneratePromise, function (getPromise) {
     if (getPromise) {
@@ -119,7 +125,7 @@ export function signalMultiAbortCallback<T>(
             value,
             finish,
           };
-          signal.set(o);
+          setSignal(o);
         }
       );
       return function () {
@@ -138,7 +144,7 @@ export function signalMultiAbortCallback<T>(
   function reduceSet(callback: Quote<T>) {
     const value = get();
     if (value?.type == 'success') {
-      signal.set({
+      setSignal({
         ...value,
         value: callback(value.value),
       });
@@ -160,7 +166,15 @@ export function signalSerialAbortPromiseLoadMore<T, K, M = {}>(
       }
     | FalseType
   >,
-  equals?: Compare<T>
+  {
+    equals,
+    signal,
+  }: {
+    equals?: Compare<T>;
+    signal?: OneSetStoreRef<
+      AbortPromiseResult<AutoLoadMoreCore<T, K> & M> | undefined
+    >;
+  } = emptyObject
 ) {
   const memoGenerateReload = memo(generateReload);
   const getPromise = memo(() => {
@@ -171,7 +185,7 @@ export function signalSerialAbortPromiseLoadMore<T, K, M = {}>(
       };
     }
   });
-  const d = signalSerialAbortPromise(getPromise);
+  const d = signalSerialAbortPromise(getPromise, signal);
   const loadingMore = createSignal(false);
   const lastloadMoreError = createSignal<any>(undefined);
   return {

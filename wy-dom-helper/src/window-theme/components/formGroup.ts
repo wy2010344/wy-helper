@@ -1,4 +1,4 @@
-import { emptyObject } from 'wy-helper';
+﻿import { emptyObject } from 'wy-helper';
 import { createStyle } from '../util';
 
 export const formGroup = createStyle(
@@ -19,7 +19,7 @@ export const formGroup = createStyle(
             label: {
               fontSize: '14px',
               fontWeight: '500',
-              color: tokens.onSurface,
+              color: tokens.colorOnSurface,
               marginBottom: tokens.spaceXs,
               display: 'block',
               flexDirection: 'row',
@@ -39,7 +39,7 @@ export const formGroup = createStyle(
 
             error: {
               fontSize: '12px',
-              color: tokens.error,
+              color: tokens.colorError,
               marginTop: tokens.spaceXs,
               display: 'block',
               flexDirection: 'row',

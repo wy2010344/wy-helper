@@ -1,5 +1,5 @@
 import { getOutResolvePromise, GetValue, SetValue } from '../setStateHelper';
-import { createSignal, OneSetStoreRef } from '../signal';
+import { createLateSignal, createSignal, OneSetStoreRef } from '../signal';
 import { emptyFun } from '../util';
 import {
   defaultSpringAnimationConfig,
@@ -112,7 +112,7 @@ export class AnimateSignal {
     private subscribeRequestAnimateFrame: SubscribeRequestAnimationFrame
   ) {
     const value =
-      typeof initValue == 'number' ? createSignal(initValue) : initValue;
+      typeof initValue == 'number' ? createLateSignal(initValue) : initValue;
     this.get = value.get;
     this.valueSet = value.getOnlySet();
   }

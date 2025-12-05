@@ -93,6 +93,9 @@ export function mergeEvent(
   }
   //在dom里面只能使用小写字母,含有大写字母不被识别
   eventType = eventType.toLowerCase();
+  if (eventType == 'doubleclick') {
+    eventType = 'dblclick';
+  }
   if (oldValue) {
     node.removeEventListener(eventType, oldValue, capture);
   }

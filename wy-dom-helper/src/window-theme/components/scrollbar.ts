@@ -1,4 +1,4 @@
-import { emptyObject } from 'wy-helper';
+﻿import { emptyObject } from 'wy-helper';
 import { createStyle } from '../util';
 
 export const scrollbar = createStyle(
@@ -8,29 +8,40 @@ export const scrollbar = createStyle(
         base: {
           minHeight: 0,
           overflowY: 'auto',
+          scrollbarWidth: 'thin',
+          scrollbarColor: `${tokens.colorOutline} transparent`,
 
-          // 自定义滚动条样式
+          // 自定义滚动条样式 (Webkit)
           '&::-webkit-scrollbar': {
-            width: '8px',
+            width: '10px',
+            height: '10px',
           },
 
           '&::-webkit-scrollbar-track': {
-            background: tokens.surfaceContainer,
-            borderRadius: tokens.radiusSm,
+            background: 'transparent',
+            margin: '2px',
           },
 
           '&::-webkit-scrollbar-thumb': {
-            background: tokens.outline,
-            borderRadius: tokens.radiusSm,
-            transition: tokens.transitionFast,
+            background: `color-mix(in srgb, ${tokens.colorOutline} 60%, transparent)`,
+            borderRadius: '10px',
+            border: `2px solid transparent`,
+            backgroundClip: 'padding-box',
+            transition: `background ${tokens.transitionFast}`,
 
             '&:hover': {
-              background: tokens.onSurface,
+              background: `color-mix(in srgb, ${tokens.colorOutline} 80%, transparent)`,
+              backgroundClip: 'padding-box',
+            },
+
+            '&:active': {
+              background: tokens.colorOutline,
+              backgroundClip: 'padding-box',
             },
           },
 
           '&::-webkit-scrollbar-corner': {
-            background: tokens.surfaceContainer,
+            background: 'transparent',
           },
         },
 
@@ -40,7 +51,21 @@ export const scrollbar = createStyle(
 
             thin: {
               '&::-webkit-scrollbar': {
-                width: '4px',
+                width: '6px',
+                height: '6px',
+              },
+            },
+
+            overlay: {
+              '&::-webkit-scrollbar': {
+                width: '8px',
+                height: '8px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: `color-mix(in srgb, ${tokens.colorOutline} 40%, transparent)`,
+              },
+              '&:hover::-webkit-scrollbar-thumb': {
+                background: `color-mix(in srgb, ${tokens.colorOutline} 60%, transparent)`,
               },
             },
 
@@ -48,8 +73,8 @@ export const scrollbar = createStyle(
               '&::-webkit-scrollbar': {
                 display: 'none',
               },
-              scrollbarWidth: 'none', // Firefox
-              msOverflowStyle: 'none', // IE
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
             },
           },
         },

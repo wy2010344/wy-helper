@@ -20,6 +20,9 @@ export interface ScrollHelper {
   cloneFromDistance(distance: number): ScrollHelper;
 }
 
+function defaultGetForceAnimationConfig(n: number, frictional: ScrollHelper) {
+  return frictional.cloneFromDistance(n).animationConfig();
+}
 export type DestinationWithMarginProps = {
   minScroll?: number;
   maxScroll: number;
@@ -33,9 +36,13 @@ export type DestinationWithMarginProps = {
   edgeBackConfig?: DeltaXSignalAnimationConfig;
   /**吸附 */
   targetSnap?: (n: number) => number;
-
   /**获得强制吸附的位置 */
   getForceStop?: (current: number, idealTarget: number) => number;
+  /**在force下的吸附动画 */
+  getForceAnimationConfig?(
+    distance: number,
+    frictional: ScrollHelper
+  ): AnimateSignalConfig;
   onProcess?: SetValue<number>;
   onOutProcess?: SetValue<number>;
 };
@@ -49,6 +56,7 @@ export async function destinationWithMargin({
   edgeBackConfig = defaultSpringAnimationConfig,
   targetSnap = quote,
   getForceStop = defaultGetForceStop,
+  getForceAnimationConfig = defaultGetForceAnimationConfig,
   onProcess,
   onOutProcess,
 }: DestinationWithMarginProps) {
@@ -98,8 +106,9 @@ export async function destinationWithMargin({
           destination
         );
       } else {
+        //强制吸附时
         return scroll.change(
-          frictional.cloneFromDistance(destination - current).animationConfig(),
+          getForceAnimationConfig(destination - current, frictional),
           onProcess,
           destination
         );

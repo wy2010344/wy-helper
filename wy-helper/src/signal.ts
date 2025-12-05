@@ -177,14 +177,6 @@ class Signal<T> implements OneSetStoreRef<T> {
     }
     return value;
   };
-
-  set = (v: T) => {
-    if (this.onlySet) {
-      throw this.setSymbolMessage;
-    }
-    return this.didSet(v);
-  };
-
   private onlySet = false;
   private setSymbolMessage: string = 'already get this set for only use';
   getOnlySet(message = this.setSymbolMessage): Quote<T> {
@@ -201,6 +193,12 @@ function addListener(listener: TrackSignal<any>) {
   signalCache.currentBatch.listeners.add(listener);
 }
 
+export function createLateSignal<T>(
+  value: T,
+  shouldChange: Compare<T> = simpleNotEqual
+): OneSetStoreRef<T> {
+  return new Signal(value, shouldChange);
+}
 /**
  * 信号
  * @param value
@@ -210,12 +208,17 @@ function addListener(listener: TrackSignal<any>) {
 export function createSignal<T>(
   value: T,
   shouldChange: Compare<T> = simpleNotEqual
-): OneSetStoreRef<T> {
-  return new Signal(value, shouldChange);
+): StoreRef<T> {
+  const n = new Signal(value, shouldChange);
+  const set = n.getOnlySet();
+  const m = n as unknown as StoreRef<T>;
+  m.set = set;
+  return m;
 }
 
-export interface OneSetStoreRef<T> extends StoreRef<T> {
+export interface OneSetStoreRef<T> {
   getOnlySet(): Quote<T>;
+  get: GetValue<T>;
 }
 
 export function signalOnUpdate() {

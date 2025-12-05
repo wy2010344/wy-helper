@@ -1,4 +1,4 @@
-import { emptyObject } from 'wy-helper';
+﻿import { emptyObject } from 'wy-helper';
 import { createStyle } from '../util';
 
 export const typeCard = createStyle(
@@ -6,15 +6,15 @@ export const typeCard = createStyle(
     return {
       typeCard: {
         base: {
-          background: tokens.surfaceContainer,
-          border: `1px solid ${tokens.outline}`,
+          background: tokens.colorSurfaceContainer,
+          border: `1px solid ${tokens.colorOutline}`,
           borderRadius: tokens.radiusLg,
           padding: tokens.spaceLg,
           cursor: 'pointer',
           transition: tokens.transitionFast,
 
           '&:hover': {
-            background: tokens.surfaceContainerHigh,
+            background: tokens.colorSurfaceContainerHigh,
             transform: 'translateY(-2px)',
             boxShadow: tokens.shadowMd,
           },
@@ -25,29 +25,29 @@ export const typeCard = createStyle(
             default: emptyObject,
 
             primary: {
-              borderColor: tokens.primary,
-              background: `color-mix(in srgb, ${tokens.primary} 5%, ${tokens.surfaceContainer})`,
+              borderColor: tokens.colorPrimary,
+              background: `color-mix(in srgb, ${tokens.colorPrimary} 5%, ${tokens.colorSurfaceContainer})`,
 
               '&:hover': {
-                background: `color-mix(in srgb, ${tokens.primary} 10%, ${tokens.surfaceContainer})`,
+                background: `color-mix(in srgb, ${tokens.colorPrimary} 10%, ${tokens.colorSurfaceContainer})`,
               },
             },
 
             secondary: {
-              borderColor: tokens.secondary,
-              background: `color-mix(in srgb, ${tokens.secondary} 5%, ${tokens.surfaceContainer})`,
+              borderColor: tokens.colorSecondary,
+              background: `color-mix(in srgb, ${tokens.colorSecondary} 5%, ${tokens.colorSurfaceContainer})`,
 
               '&:hover': {
-                background: `color-mix(in srgb, ${tokens.secondary} 10%, ${tokens.surfaceContainer})`,
+                background: `color-mix(in srgb, ${tokens.colorSecondary} 10%, ${tokens.colorSurfaceContainer})`,
               },
             },
 
             tertiary: {
-              borderColor: tokens.tertiary,
-              background: `color-mix(in srgb, ${tokens.tertiary} 5%, ${tokens.surfaceContainer})`,
+              borderColor: tokens.colorTertiary,
+              background: `color-mix(in srgb, ${tokens.colorTertiary} 5%, ${tokens.colorSurfaceContainer})`,
 
               '&:hover': {
-                background: `color-mix(in srgb, ${tokens.tertiary} 10%, ${tokens.surfaceContainer})`,
+                background: `color-mix(in srgb, ${tokens.colorTertiary} 10%, ${tokens.colorSurfaceContainer})`,
               },
             },
           },
@@ -66,14 +66,14 @@ export const typeCard = createStyle(
               margin: 0,
               fontSize: '18px',
               fontWeight: 600,
-              color: tokens.onSurface,
+              color: tokens.colorOnSurface,
             },
 
             count: {
               fontSize: '14px',
               fontWeight: 500,
-              color: tokens.primary,
-              background: `color-mix(in srgb, ${tokens.primary} 10%, transparent)`,
+              color: tokens.colorPrimary,
+              background: `color-mix(in srgb, ${tokens.colorPrimary} 10%, transparent)`,
               padding: `${tokens.spaceXs} ${tokens.spaceSm}`,
               borderRadius: tokens.radiusSm,
             },
@@ -106,7 +106,7 @@ export const colorPicker = createStyle(
           width: '32px',
           height: '32px',
           borderRadius: tokens.radiusMd,
-          border: `2px solid ${tokens.outline}`,
+          border: `2px solid ${tokens.colorOutline}`,
           cursor: 'pointer',
           position: 'relative',
           overflow: 'hidden',
@@ -114,7 +114,7 @@ export const colorPicker = createStyle(
 
           '&:hover': {
             transform: 'scale(1.1)',
-            borderColor: tokens.primary,
+            borderColor: tokens.colorPrimary,
           },
         },
 
@@ -166,25 +166,25 @@ export const statusIndicator = createStyle(
 
             label: {
               fontSize: '14px',
-              color: tokens.onSurface,
+              color: tokens.colorOnSurface,
             },
           },
 
           status: {
             success: {
-              background: tokens.success,
+              background: tokens.colorSuccess,
             },
 
             warning: {
-              background: tokens.warning,
+              background: tokens.colorWarning,
             },
 
             error: {
-              background: tokens.error,
+              background: tokens.colorError,
             },
 
             info: {
-              background: tokens.primary,
+              background: tokens.colorPrimary,
             },
           },
         },

@@ -1,16 +1,16 @@
-import { emptyObject } from 'wy-helper';
+﻿import { emptyObject } from 'wy-helper';
 import { createStyle } from '../util';
 
 export const card = createStyle(
   tokens => ({
     card: {
       base: {
-        background: tokens.surfaceContainer,
-        border: `1px solid ${tokens.outline}`,
+        background: tokens.colorSurfaceContainer,
+        border: `1px solid ${tokens.colorOutlineVariant}`,
         borderRadius: tokens.radiusLg,
         padding: tokens.spaceLg,
-        boxShadow: tokens.shadowSm,
-        transition: tokens.transitionNormal,
+        boxShadow: `0 1px 3px rgba(0, 0, 0, 0.06)`,
+        transition: `all ${tokens.transitionNormal}`,
         position: 'relative',
         overflow: 'hidden',
       },
@@ -20,9 +20,15 @@ export const card = createStyle(
           elevated: {
             boxShadow: tokens.shadowMd,
             border: 'none',
+            background: tokens.colorSurfaceContainerHigh,
           },
           outlined: {
-            border: `2px solid ${tokens.outline}`,
+            border: `1px solid ${tokens.colorOutline}`,
+            boxShadow: 'none',
+          },
+          filled: {
+            background: tokens.colorSurfaceContainerHighest,
+            border: 'none',
             boxShadow: 'none',
           },
         },
@@ -32,6 +38,11 @@ export const card = createStyle(
             '&:hover': {
               boxShadow: tokens.shadowMd,
               transform: 'translateY(-2px)',
+              borderColor: tokens.colorOutline,
+            },
+            '&:active': {
+              transform: 'translateY(0)',
+              boxShadow: `0 1px 3px rgba(0, 0, 0, 0.06)`,
             },
           },
           false: emptyObject,
@@ -42,7 +53,7 @@ export const card = createStyle(
       base: {
         marginBottom: tokens.spaceMd,
         paddingBottom: tokens.spaceMd,
-        borderBottom: `1px solid ${tokens.outlineVariant}`,
+        borderBottom: `1px solid ${tokens.colorOutlineVariant}`,
       },
     },
     title: {
@@ -50,7 +61,7 @@ export const card = createStyle(
         margin: 0,
         fontSize: '18px',
         fontWeight: 600,
-        color: tokens.onSurface,
+        color: tokens.colorOnSurface,
         lineHeight: '1.4',
       },
     },
@@ -65,14 +76,14 @@ export const card = createStyle(
     body: {
       base: {
         marginBottom: tokens.spaceMd,
-        color: tokens.onSurface,
+        color: tokens.colorOnSurface,
         lineHeight: '1.6',
       },
     },
     footer: {
       base: {
         paddingTop: tokens.spaceMd,
-        borderTop: `1px solid ${tokens.outlineVariant}`,
+        borderTop: `1px solid ${tokens.colorOutlineVariant}`,
       },
     },
   }),

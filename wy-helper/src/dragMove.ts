@@ -4,6 +4,7 @@ import {
   Point,
   addEffect,
   asLazy,
+  createLateSignal,
   createSignal,
   numberBetween,
   valueCenterOf,
@@ -152,11 +153,11 @@ export function movePanelResizeAuto({
   marginEnd?: number;
   getMaxSize(): number;
 }) {
-  const size = typeof _size == 'number' ? createSignal(_size) : _size;
+  const size = typeof _size == 'number' ? createLateSignal(_size) : _size;
   const sizeSet = size.getOnlySet();
   const initFromNumber = typeof _position == 'number';
   const position = initFromNumber
-    ? createSignal(
+    ? createLateSignal(
         numberBetween(
           marginBegin,
           _position,
@@ -267,6 +268,7 @@ export function movePanelResizeAuto({
     },
   };
 }
+export type MovePanelResizeAuto = ReturnType<typeof movePanelResizeAuto>;
 export type DragMoveStep =
   | {
       action: 'move';

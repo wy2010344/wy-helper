@@ -1,4 +1,4 @@
-import { emptyObject } from 'wy-helper';
+﻿import { emptyObject } from 'wy-helper';
 import { createStyle } from '../util';
 
 // 通知组件
@@ -10,8 +10,8 @@ export const notification = createStyle(
         alignItems: 'flex-start',
         gap: tokens.spaceSm,
         padding: tokens.spaceMd,
-        background: tokens.surfaceContainer,
-        border: `1px solid ${tokens.outline}`,
+        background: tokens.colorSurfaceContainer,
+        border: `1px solid ${tokens.colorOutline}`,
         borderRadius: tokens.radiusLg,
         boxShadow: tokens.shadowMd,
         position: 'relative',
@@ -21,16 +21,16 @@ export const notification = createStyle(
         variant: {
           default: emptyObject,
           success: {
-            borderColor: tokens.success,
-            background: `color-mix(in srgb, ${tokens.success} 5%, ${tokens.surfaceContainer})`,
+            borderColor: tokens.colorSuccess,
+            background: `color-mix(in srgb, ${tokens.colorSuccess} 5%, ${tokens.colorSurfaceContainer})`,
           },
           warning: {
-            borderColor: tokens.warning,
-            background: `color-mix(in srgb, ${tokens.warning} 5%, ${tokens.surfaceContainer})`,
+            borderColor: tokens.colorWarning,
+            background: `color-mix(in srgb, ${tokens.colorWarning} 5%, ${tokens.colorSurfaceContainer})`,
           },
           error: {
-            borderColor: tokens.error,
-            background: `color-mix(in srgb, ${tokens.error} 5%, ${tokens.surfaceContainer})`,
+            borderColor: tokens.colorError,
+            background: `color-mix(in srgb, ${tokens.colorError} 5%, ${tokens.colorSurfaceContainer})`,
           },
         },
       },
@@ -52,7 +52,7 @@ export const notification = createStyle(
         margin: 0,
         fontSize: '16px',
         fontWeight: 600,
-        color: tokens.onSurface,
+        color: tokens.colorOnSurface,
         marginBottom: tokens.spaceXs,
       },
     },
@@ -81,7 +81,7 @@ export const notification = createStyle(
         fontSize: '16px',
         color: tokens.colorOnSurfaceVariant,
         '&:hover': {
-          background: `color-mix(in srgb, ${tokens.onSurface} 10%, transparent)`,
+          background: `color-mix(in srgb, ${tokens.colorOnSurface} 10%, transparent)`,
         },
       },
     },
@@ -117,28 +117,28 @@ export const badge = createStyle(
         variants: {
           variant: {
             primary: {
-              background: tokens.primary,
-              color: tokens.onPrimary,
+              background: tokens.colorPrimary,
+              color: tokens.colorOnPrimary,
             },
 
             success: {
-              background: tokens.success,
-              color: tokens.onSuccess,
+              background: tokens.colorSuccess,
+              color: tokens.colorOnSuccess,
             },
 
             warning: {
-              background: tokens.warning,
-              color: tokens.onWarning,
+              background: tokens.colorWarning,
+              color: tokens.colorOnWarning,
             },
 
             error: {
-              background: tokens.error,
-              color: tokens.onError,
+              background: tokens.colorError,
+              color: tokens.colorOnError,
             },
 
             secondary: {
-              background: tokens.secondary,
-              color: tokens.onSecondary,
+              background: tokens.colorSecondary,
+              color: tokens.colorOnSecondary,
             },
           },
 
@@ -177,26 +177,26 @@ export const alert = createStyle(
         gap: tokens.spaceSm,
         padding: tokens.spaceMd,
         borderRadius: tokens.radiusMd,
-        border: `1px solid ${tokens.outline}`,
-        background: tokens.surfaceContainer,
+        border: `1px solid ${tokens.colorOutline}`,
+        background: tokens.colorSurfaceContainer,
       },
       variants: {
         variant: {
           info: {
-            borderColor: tokens.primary,
-            background: `color-mix(in srgb, ${tokens.primary} 5%, ${tokens.surfaceContainer})`,
+            borderColor: tokens.colorPrimary,
+            background: `color-mix(in srgb, ${tokens.colorPrimary} 5%, ${tokens.colorSurfaceContainer})`,
           },
           success: {
-            borderColor: tokens.success,
-            background: `color-mix(in srgb, ${tokens.success} 5%, ${tokens.surfaceContainer})`,
+            borderColor: tokens.colorSuccess,
+            background: `color-mix(in srgb, ${tokens.colorSuccess} 5%, ${tokens.colorSurfaceContainer})`,
           },
           warning: {
-            borderColor: tokens.warning,
-            background: `color-mix(in srgb, ${tokens.warning} 5%, ${tokens.surfaceContainer})`,
+            borderColor: tokens.colorWarning,
+            background: `color-mix(in srgb, ${tokens.colorWarning} 5%, ${tokens.colorSurfaceContainer})`,
           },
           error: {
-            borderColor: tokens.error,
-            background: `color-mix(in srgb, ${tokens.error} 5%, ${tokens.surfaceContainer})`,
+            borderColor: tokens.colorError,
+            background: `color-mix(in srgb, ${tokens.colorError} 5%, ${tokens.colorSurfaceContainer})`,
           },
         },
       },
@@ -210,7 +210,7 @@ export const alert = createStyle(
     alertText: {
       base: {
         fontSize: '14px',
-        color: tokens.onSurface,
+        color: tokens.colorOnSurface,
         flex: 1,
       },
     },
@@ -231,7 +231,7 @@ export const progress = createStyle(
       base: {
         width: '100%',
         height: '8px',
-        background: tokens.surfaceContainerHigh,
+        background: tokens.colorSurfaceContainerHigh,
         borderRadius: tokens.radiusSm,
         overflow: 'hidden',
         position: 'relative',
@@ -248,23 +248,23 @@ export const progress = createStyle(
     bar: {
       base: {
         height: '100%',
-        background: tokens.primary,
+        background: tokens.colorPrimary,
         borderRadius: tokens.radiusSm,
         transition: 'width 0.3s ease',
       },
       variants: {
         variant: {
           default: {
-            background: tokens.primary,
+            background: tokens.colorPrimary,
           },
           success: {
-            background: tokens.success,
+            background: tokens.colorSuccess,
           },
           warning: {
-            background: tokens.warning,
+            background: tokens.colorWarning,
           },
           error: {
-            background: tokens.error,
+            background: tokens.colorError,
           },
         },
       },

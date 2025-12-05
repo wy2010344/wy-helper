@@ -1,4 +1,10 @@
-import { EmptyFun, addEffect, createGetId } from 'wy-helper';
+import {
+  EmptyFun,
+  EqualsMap,
+  addEffect,
+  arrayMapCreater,
+  createGetId,
+} from 'wy-helper';
 import { createStyle, CSSProperties } from './util';
 import { createBodyStyleTag } from './stylis';
 
@@ -114,35 +120,37 @@ const uid = createGetId({
   min: 0,
 });
 class StoreEach<Tokens> {
-  private count = 0;
+  readonly locs = new Set<string>();
   constructor(
     readonly prefix: string,
     readonly cls: string,
     readonly id: string,
     private readonly style: HTMLStyleElement,
-    private readonly map: Map<any, StoreEach<Tokens>>,
-    private readonly theme: Tokens
+    private readonly map: EqualsMap<
+      readonly [string, Tokens],
+      StoreEach<Tokens>
+    >,
+    private readonly key: readonly [string, Tokens]
   ) {}
   //在类似useEffect里调用
-  effect(nextTimeCall: (fun: EmptyFun) => void) {
-    this.count++;
-    return () => {
-      this.count--;
-      if (this.count) {
-        return;
-      }
-      nextTimeCall(() => {
-        if (!this.count) {
-          this.style.remove();
-          this.map.delete(this.theme);
-        }
-      });
-    };
+  //这里销毁可能出现问题，比如组件切出动画，真实还要挂载一段时间
+  //而且无穷改变颜色，导致style标签无限增多。
+  //当然，事实上是依挂载位置免重复。antd就是这样，而且antd 6转而使用cssVariable
+  hookDestroy(locId: string) {
+    this.clear(locId);
+  }
+  clear(locId: string) {
+    this.locs.delete(locId);
+    if (this.locs.size) {
+      return;
+    }
+    this.map.delete(this.key);
+    this.style.remove();
   }
 }
 
 export class CreateStyle<T extends StyleConfigMap, Tokens> {
-  private map = new Map<any, StoreEach<Tokens>>();
+  private map = arrayMapCreater<readonly [string, Tokens], StoreEach<Tokens>>();
   private selfUID = createGetId({
     min: 0,
   });
@@ -150,22 +158,39 @@ export class CreateStyle<T extends StyleConfigMap, Tokens> {
   constructor(
     // readonly define: T
     // readonly name: string,
-    private readonly config: (v: Tokens) => T,
+    private readonly config: (v: Tokens, append: (v: string) => void) => T,
     private readonly defaultStyle: StyleVariantsMap<T>
   ) {}
-  getId(prefix: string, tokens: Tokens) {
+
+  /**
+   * prefix+tokens相同，则相同
+   * 但locId相同，也是相同
+   * @param prefix
+   * @param tokens
+   * @param locId
+   * @returns
+   */
+  getId(prefix: string, tokens: Tokens, locId: string) {
     const map = this.map;
-    const old = map.get(tokens);
+    const key = [prefix, tokens] as const;
+    const old = map.get(key);
+    //需要清理旧map里的locId
+    map.forEach(vv => {
+      if (vv != old) {
+        vv.clear(locId);
+      }
+    });
     if (old) {
+      old.locs.add(locId);
       return old;
     } else {
       const style = createStyle();
       const id = this.selfUID();
       const styleId = `cls-${this.id}-${id}`;
       style.id = styleId;
-      const data = new StoreEach(prefix, styleId, id, style, map, tokens);
+      const data = new StoreEach(prefix, styleId, id, style, map, key);
       const vs: string[] = [];
-      const outs = this.config(tokens);
+      const outs = this.config(tokens, vs.push.bind(vs));
       for (const name in outs) {
         const out = outs[name];
         if (out.base) {
@@ -194,7 +219,8 @@ export class CreateStyle<T extends StyleConfigMap, Tokens> {
         });
       }
       style.innerHTML = vs.join('\n');
-      map.set(tokens, data);
+      map.set(key, data);
+      data.locs.add(locId);
       return data;
     }
   }

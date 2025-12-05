@@ -1,10 +1,13 @@
 import { compile, serialize, stringify, middleware, prefixer } from 'stylis';
-import { EmptyFun, run, ValueCenter } from 'wy-helper';
+import { createGetId, EmptyFun, run, ValueCenter } from 'wy-helper';
 import { createStyle } from './util';
 
-let uid = 0;
+const uid = createGetId({
+  min: 0,
+  flag: 'S'
+});
 function newClassName() {
-  return `stylis-${uid++}`;
+  return `stylis-${uid()}`;
 }
 function toCssFragment(className: string, css: string) {
   return serialize(
@@ -142,4 +145,34 @@ export function observeCssmap<T extends CssNest, VS extends readonly any[]>(
       destroyList.forEach(run);
     },
   ] as const;
+}
+
+
+const keyframeUId = createGetId({
+  flag: "K",
+  min: 0
+})
+
+class KeyFrame {
+  constructor(
+    readonly id: string,
+    private readonly css: string
+  ) { }
+
+  private packed = false
+  pack() {
+    if (this.packed) {
+      return ''
+    }
+    this.packed = true
+    return `@keyframes ${this.id}{${this.css}} `
+  }
+  unpack() {
+    this.packed = false
+  }
+}
+
+export function genKeyframe(ts: TemplateStringsArray, ...vs: CSSParamType[]) {
+  const keyframeId = keyframeUId()
+  return new KeyFrame(keyframeId, genCSS(ts, vs))
 }

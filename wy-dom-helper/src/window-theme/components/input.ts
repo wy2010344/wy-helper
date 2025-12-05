@@ -1,4 +1,4 @@
-import { emptyObject } from 'wy-helper';
+﻿import { emptyObject } from 'wy-helper';
 import { createStyle } from '../util';
 
 export const input = createStyle(
@@ -6,33 +6,44 @@ export const input = createStyle(
     input: {
       base: {
         padding: `${tokens.spaceSm} ${tokens.spaceMd}`,
-        background: tokens.surfaceContainer,
-        border: `1px solid ${tokens.outline}`,
+        background: tokens.colorSurfaceContainerLow,
+        border: `1px solid ${tokens.colorOutlineVariant}`,
         borderRadius: tokens.radiusMd,
-        color: tokens.onSurface,
+        color: tokens.colorOnSurface,
         fontSize: '14px',
-        transition: tokens.transitionFast,
+        lineHeight: '1.5',
+        transition: `all ${tokens.transitionFast}`,
         width: '100%',
+        
+        '&:hover:not(:disabled)': {
+          borderColor: tokens.colorOutline,
+          background: tokens.colorSurfaceContainer,
+        },
+
         '&:focus': {
           outline: 'none',
-          borderColor: tokens.primary,
-          boxShadow: `0 0 0 3px color-mix(in srgb, ${tokens.primary} 30%, transparent)`,
-          background: tokens.surfaceContainerHigh,
+          borderColor: tokens.colorPrimary,
+          boxShadow: `0 0 0 3px color-mix(in srgb, ${tokens.colorPrimary} 15%, transparent)`,
+          background: tokens.colorSurfaceContainerHigh,
         },
+
         '&::placeholder': {
           color: tokens.colorOnSurfaceVariant,
+          opacity: 0.7,
         },
+
         '&:disabled': {
-          background: tokens.surfaceContainer,
-          color: 'color-mix(in srgb, var(--on-surface) 38%, transparent)',
+          background: tokens.colorSurfaceContainer,
+          color: `color-mix(in srgb, ${tokens.colorOnSurface} 38%, transparent)`,
           cursor: 'not-allowed',
+          opacity: 0.6,
         },
       },
       variants: {
         error: {
           true: {
-            borderColor: tokens.error,
-            boxShadow: `0 0 0 3px color-mix(in srgb, ${tokens.error} 20%, transparent)`,
+            borderColor: tokens.colorError,
+            boxShadow: `0 0 0 3px color-mix(in srgb, ${tokens.colorError} 20%, transparent)`,
           },
           false: emptyObject,
         },
@@ -52,10 +63,10 @@ export const input = createStyle(
     textarea: {
       base: {
         padding: `${tokens.spaceSm} ${tokens.spaceMd}`,
-        background: tokens.surfaceContainer,
-        border: `1px solid ${tokens.outline}`,
+        background: tokens.colorSurfaceContainer,
+        border: `1px solid ${tokens.colorOutline}`,
         borderRadius: tokens.radiusMd,
-        color: tokens.onSurface,
+        color: tokens.colorOnSurface,
         fontSize: '14px',
         transition: tokens.transitionFast,
         width: '100%',
@@ -64,15 +75,15 @@ export const input = createStyle(
         fontFamily: 'inherit',
         '&:focus': {
           outline: 'none',
-          borderColor: tokens.primary,
-          boxShadow: `0 0 0 3px color-mix(in srgb, ${tokens.primary} 30%, transparent)`,
-          background: tokens.surfaceContainerHigh,
+          borderColor: tokens.colorPrimary,
+          boxShadow: `0 0 0 3px color-mix(in srgb, ${tokens.colorPrimary} 30%, transparent)`,
+          background: tokens.colorSurfaceContainerHigh,
         },
         '&::placeholder': {
           color: tokens.colorOnSurfaceVariant,
         },
         '&:disabled': {
-          background: tokens.surfaceContainer,
+          background: tokens.colorSurfaceContainer,
           color: 'color-mix(in srgb, var(--on-surface) 38%, transparent)',
           cursor: 'not-allowed',
         },
@@ -80,8 +91,8 @@ export const input = createStyle(
       variants: {
         error: {
           true: {
-            borderColor: tokens.error,
-            boxShadow: `0 0 0 3px color-mix(in srgb, ${tokens.error} 20%, transparent)`,
+            borderColor: tokens.colorError,
+            boxShadow: `0 0 0 3px color-mix(in srgb, ${tokens.colorError} 20%, transparent)`,
           },
           false: emptyObject,
         },
@@ -90,22 +101,22 @@ export const input = createStyle(
     select: {
       base: {
         padding: `${tokens.spaceSm} ${tokens.spaceMd}`,
-        background: tokens.surfaceContainer,
-        border: `1px solid ${tokens.outline}`,
+        background: tokens.colorSurfaceContainer,
+        border: `1px solid ${tokens.colorOutline}`,
         borderRadius: tokens.radiusMd,
-        color: tokens.onSurface,
+        color: tokens.colorOnSurface,
         fontSize: '14px',
         transition: tokens.transitionFast,
         width: '100%',
         cursor: 'pointer',
         '&:focus': {
           outline: 'none',
-          borderColor: tokens.primary,
-          boxShadow: `0 0 0 3px color-mix(in srgb, ${tokens.primary} 30%, transparent)`,
-          background: tokens.surfaceContainerHigh,
+          borderColor: tokens.colorPrimary,
+          boxShadow: `0 0 0 3px color-mix(in srgb, ${tokens.colorPrimary} 30%, transparent)`,
+          background: tokens.colorSurfaceContainerHigh,
         },
         '&:disabled': {
-          background: tokens.surfaceContainer,
+          background: tokens.colorSurfaceContainer,
           color: 'color-mix(in srgb, var(--on-surface) 38%, transparent)',
           cursor: 'not-allowed',
         },
@@ -113,8 +124,8 @@ export const input = createStyle(
       variants: {
         error: {
           true: {
-            borderColor: tokens.error,
-            boxShadow: `0 0 0 3px color-mix(in srgb, ${tokens.error} 20%, transparent)`,
+            borderColor: tokens.colorError,
+            boxShadow: `0 0 0 3px color-mix(in srgb, ${tokens.colorError} 20%, transparent)`,
           },
           false: emptyObject,
         },
@@ -127,11 +138,11 @@ export const input = createStyle(
         gap: tokens.spaceSm,
         cursor: 'pointer',
         fontSize: '14px',
-        color: tokens.onSurface,
+        color: tokens.colorOnSurface,
         '& input': {
           width: '16px',
           height: '16px',
-          accentColor: tokens.primary,
+          accentColor: tokens.colorPrimary,
           cursor: 'pointer',
         },
       },
@@ -143,11 +154,11 @@ export const input = createStyle(
         gap: tokens.spaceSm,
         cursor: 'pointer',
         fontSize: '14px',
-        color: tokens.onSurface,
+        color: tokens.colorOnSurface,
         '& input': {
           width: '16px',
           height: '16px',
-          accentColor: tokens.primary,
+          accentColor: tokens.colorPrimary,
           cursor: 'pointer',
         },
       },

@@ -1,4 +1,4 @@
-import { emptyObject } from 'wy-helper';
+﻿import { emptyObject } from 'wy-helper';
 import { createStyle } from '../util';
 
 // 开关组件
@@ -38,8 +38,8 @@ export const switchComponent = createStyle(
         left: 0,
         right: 0,
         bottom: 0,
-        background: tokens.surfaceContainerHigh,
-        border: `1px solid ${tokens.outline}`,
+        background: tokens.colorSurfaceContainerHigh,
+        border: `1px solid ${tokens.colorOutline}`,
         transition: tokens.transitionNormal,
         borderRadius: '12px',
         '&:before': {
@@ -49,7 +49,7 @@ export const switchComponent = createStyle(
           width: '18px',
           left: '2px',
           bottom: '2px',
-          background: tokens.onSurface,
+          background: tokens.colorOnSurface,
           transition: tokens.transitionNormal,
           borderRadius: '50%',
           boxShadow: tokens.shadowSm,
@@ -58,10 +58,10 @@ export const switchComponent = createStyle(
       variants: {
         checked: {
           true: {
-            background: tokens.primary,
-            borderColor: tokens.primary,
+            background: tokens.colorPrimary,
+            borderColor: tokens.colorPrimary,
             '&:before': {
-              background: tokens.onPrimary,
+              background: tokens.colorOnPrimary,
               transform: 'translateX(20px)',
             },
           },
@@ -92,38 +92,38 @@ export const tag = createStyle(
         fontSize: '12px',
         fontWeight: 500,
         borderRadius: tokens.radiusSm,
-        border: `1px solid ${tokens.outline}`,
-        background: tokens.surfaceContainer,
-        color: tokens.onSurface,
+        border: `1px solid ${tokens.colorOutline}`,
+        background: tokens.colorSurfaceContainer,
+        color: tokens.colorOnSurface,
         transition: tokens.transitionFast,
       },
       variants: {
         variant: {
           default: emptyObject,
           primary: {
-            background: `color-mix(in srgb, ${tokens.primary} 10%, ${tokens.surfaceContainer})`,
-            borderColor: tokens.primary,
-            color: tokens.primary,
+            background: `color-mix(in srgb, ${tokens.colorPrimary} 10%, ${tokens.colorSurfaceContainer})`,
+            borderColor: tokens.colorPrimary,
+            color: tokens.colorPrimary,
           },
           secondary: {
-            background: `color-mix(in srgb, ${tokens.secondary} 10%, ${tokens.surfaceContainer})`,
-            borderColor: tokens.secondary,
-            color: tokens.secondary,
+            background: `color-mix(in srgb, ${tokens.colorSecondary} 10%, ${tokens.colorSurfaceContainer})`,
+            borderColor: tokens.colorSecondary,
+            color: tokens.colorSecondary,
           },
           success: {
-            background: `color-mix(in srgb, ${tokens.success} 10%, ${tokens.surfaceContainer})`,
-            borderColor: tokens.success,
-            color: tokens.success,
+            background: `color-mix(in srgb, ${tokens.colorSuccess} 10%, ${tokens.colorSurfaceContainer})`,
+            borderColor: tokens.colorSuccess,
+            color: tokens.colorSuccess,
           },
           warning: {
-            background: `color-mix(in srgb, ${tokens.warning} 10%, ${tokens.surfaceContainer})`,
-            borderColor: tokens.warning,
-            color: tokens.warning,
+            background: `color-mix(in srgb, ${tokens.colorWarning} 10%, ${tokens.colorSurfaceContainer})`,
+            borderColor: tokens.colorWarning,
+            color: tokens.colorWarning,
           },
           error: {
-            background: `color-mix(in srgb, ${tokens.error} 10%, ${tokens.surfaceContainer})`,
-            borderColor: tokens.error,
-            color: tokens.error,
+            background: `color-mix(in srgb, ${tokens.colorError} 10%, ${tokens.colorSurfaceContainer})`,
+            borderColor: tokens.colorError,
+            color: tokens.colorError,
           },
         },
       },
@@ -141,7 +141,7 @@ export const tag = createStyle(
         justifyContent: 'center',
         fontSize: '12px',
         '&:hover': {
-          background: `color-mix(in srgb, ${tokens.onSurface} 10%, transparent)`,
+          background: `color-mix(in srgb, ${tokens.colorOnSurface} 10%, transparent)`,
         },
       },
     },
@@ -164,8 +164,8 @@ export const avatar = createStyle(
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: '50%',
-          background: tokens.primary,
-          color: tokens.onPrimary,
+          background: tokens.colorPrimary,
+          color: tokens.colorOnPrimary,
           fontWeight: 600,
           position: 'relative',
           overflow: 'hidden',
@@ -201,9 +201,9 @@ export const avatar = createStyle(
                 right: '2px',
                 width: '8px',
                 height: '8px',
-                background: tokens.success,
+                background: tokens.colorSuccess,
                 borderRadius: '50%',
-                border: `2px solid ${tokens.surface}`,
+                border: `2px solid ${tokens.colorSurface}`,
               },
             },
 
@@ -215,9 +215,9 @@ export const avatar = createStyle(
                 right: '2px',
                 width: '8px',
                 height: '8px',
-                background: tokens.outline,
+                background: tokens.colorOutline,
                 borderRadius: '50%',
-                border: `2px solid ${tokens.surface}`,
+                border: `2px solid ${tokens.colorSurface}`,
               },
             },
           },
@@ -252,7 +252,7 @@ export const rating = createStyle(
     star: {
       base: {
         fontSize: '20px',
-        color: tokens.outline,
+        color: tokens.colorOutline,
         cursor: 'pointer',
         transition: tokens.transitionFast,
         '&:hover': {
@@ -262,7 +262,7 @@ export const rating = createStyle(
       variants: {
         filled: {
           true: {
-            color: tokens.warning,
+            color: tokens.colorWarning,
           },
           false: emptyObject,
         },
@@ -295,7 +295,7 @@ export const skeleton = createStyle(
     return {
       skeleton: {
         base: {
-          background: `linear-gradient(90deg, ${tokens.surfaceContainer} 25%, ${tokens.surfaceContainerHigh} 50%, ${tokens.surfaceContainer} 75%)`,
+          background: `linear-gradient(90deg, ${tokens.colorSurfaceContainer} 25%, ${tokens.colorSurfaceContainerHigh} 50%, ${tokens.colorSurfaceContainer} 75%)`,
           backgroundSize: '200% 100%',
           animation: 'skeletonLoading 1.5s infinite',
           borderRadius: tokens.radiusSm,

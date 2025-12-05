@@ -1,4 +1,4 @@
-import { emptyObject } from 'wy-helper';
+﻿import { emptyObject } from 'wy-helper';
 import { createStyle } from '../util';
 
 export const statusBar = createStyle(
@@ -9,13 +9,13 @@ export const statusBar = createStyle(
           height: '24px',
           padding: `0 ${tokens.spaceMd}`,
           backdropFilter: 'blur(12px)',
-          color: tokens.onSurface,
+          color: tokens.colorOnSurface,
           fontSize: '14px',
           borderRadius: `0 0 ${tokens.radiusXl} ${tokens.radiusXl}`,
           boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.1)',
           display: 'flex',
           alignItems: 'center',
-          background: `color-mix(in srgb, ${tokens.surfaceContainer} 80%, transparent)`,
+          background: `color-mix(in srgb, ${tokens.colorSurfaceContainer} 80%, transparent)`,
         },
 
         variants: {
@@ -23,23 +23,23 @@ export const statusBar = createStyle(
             default: emptyObject,
 
             primary: {
-              background: `color-mix(in srgb, ${tokens.primary} 80%, transparent)`,
-              color: tokens.onPrimary,
+              background: `color-mix(in srgb, ${tokens.colorPrimary} 80%, transparent)`,
+              color: tokens.colorOnPrimary,
             },
 
             success: {
-              background: `color-mix(in srgb, ${tokens.success} 80%, transparent)`,
-              color: tokens.onSuccess,
+              background: `color-mix(in srgb, ${tokens.colorSuccess} 80%, transparent)`,
+              color: tokens.colorOnSuccess,
             },
 
             warning: {
-              background: `color-mix(in srgb, ${tokens.warning} 80%, transparent)`,
-              color: tokens.onWarning,
+              background: `color-mix(in srgb, ${tokens.colorWarning} 80%, transparent)`,
+              color: tokens.colorOnWarning,
             },
 
             error: {
-              background: `color-mix(in srgb, ${tokens.error} 80%, transparent)`,
-              color: tokens.onError,
+              background: `color-mix(in srgb, ${tokens.colorError} 80%, transparent)`,
+              color: tokens.colorOnError,
             },
           },
 
