@@ -1,3 +1,4 @@
+import { effectsAddLevel } from './effectLevel';
 import { Compare, simpleNotEqual } from './equal';
 import { GetValue, SetValue } from './setStateHelper';
 import { StoreRef } from './storeRef';
@@ -75,21 +76,6 @@ function updateGlobalVersion(v: Version) {
   }
   v.uid = v.uid + 1;
   v.version = v.uid;
-}
-
-function effectsAddLevel(
-  effects: Map<number, EmptyFun[]>,
-  level: number,
-  effect: EmptyFun
-) {
-  let olds = effects.get(level);
-  const has = olds;
-  if (!olds) {
-    olds = [];
-    effects.set(level, olds);
-  }
-  olds.push(effect);
-  return has;
 }
 
 /**

@@ -124,11 +124,6 @@ export async function quotePromise<T>(v: T, ...vs: any[]) {
 export function expandFunCall<T extends AnyFunction>(fun: T) {
   fun();
 }
-export interface ManageValue<T> {
-  add(v: T): void;
-  remove(v: T): void;
-}
-
 export function iterableToList<T>(entity: IterableIterator<T>) {
   const list: T[] = [];
   while (true) {

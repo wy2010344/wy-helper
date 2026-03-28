@@ -136,7 +136,7 @@ export function updateDomProps(value: any, node: any, key: string) {
 }
 export function updateSvgProps(value: any, node: any, key: string) {
   if (key == 'innerHTML' || key == 'textContent') {
-    updateDomProps(node, key, value);
+    updateDomProps(value, node, key);
   } else {
     updateSvg(value, node, key);
   }
@@ -221,7 +221,7 @@ function createMergeAttr(updateProp: UpdateProp) {
           if (isSyncFun(value)) {
             keepMap[key] = value(setProp, node, key, updateProp);
           } else {
-            updateProp(node, key, value);
+            updateProp(value, node, key);
           }
         }
       }

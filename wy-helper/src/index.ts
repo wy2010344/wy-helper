@@ -26,6 +26,7 @@ export * from './recycleView';
 export * from './interpolate';
 export * from './WeekVirtualView';
 export * from './signal';
+export * from './effectLevel';
 export * from './promise/resourceCenter';
 export * from './mapKV';
 export * from './signal+animation';

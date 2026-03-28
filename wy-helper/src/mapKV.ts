@@ -2,11 +2,13 @@ import { arrayEqual, simpleEqual } from './equal';
 import { EqualsMap } from './EqualsMap';
 import { ReadArray } from './util';
 
-export interface RMap<K, V> {
+export interface BaseRMap<K, V> {
   get(key: K): V | undefined;
   set(key: K, value: V): void;
   forEach(fun: (value: V, key: K) => void): void;
+}
 
+export interface RMap<K, V> extends BaseRMap<K, V> {
   has(key: K): boolean;
   readonly size: number;
 }

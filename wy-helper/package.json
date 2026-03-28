@@ -1,7 +1,7 @@
 {
   "name": "wy-helper",
   "author": "wy2010344",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "license": "MIT",
   "description": "A comprehensive JavaScript utility library with various helper functions",
   "keywords": [
@@ -79,6 +79,12 @@
       "types": "./dist/infix-o.d.ts",
       "import": "./dist/infix-o.mjs",
       "require": "./dist/infix-o.js"
+    },
+    "./state-function": {
+      "development": "./src/state-function/index.ts",
+      "types": "./dist/state-function.d.ts",
+      "import": "./dist/state-function.mjs",
+      "require": "./dist/state-function.js"
     }
   },
   "files": [
