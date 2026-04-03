@@ -67,7 +67,7 @@
     "type-check": "tsc --noEmit"
   },
   "devDependencies": {
-    "@material/material-color-utilities": "^0.3.0",
+    "@material/material-color-utilities": "^0.4.0",
     "@repo/eslint-config": "workspace:*",
     "@repo/prettier-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
@@ -83,5 +83,5 @@
     "linebreak": "^1.1.0",
     "stylis": "^4.3.1"
   },
-  "packageManager": "pnpm@10.18.2+sha512.9fb969fa749b3ade6035e0f109f0b8a60b5d08a1a87fdf72e337da90dcc93336e2280ca4e44f2358a649b83c17959e9993e777c2080879f3801e6f0d999ad3dd"
+  "packageManager": "pnpm@10.33.0"
 }

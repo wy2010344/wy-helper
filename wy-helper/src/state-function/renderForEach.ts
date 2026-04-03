@@ -29,8 +29,7 @@ export function createRenderForEach<T extends IStateHolder>(
    * @param forEach
    * @param render
    */
-  return function <K, Z = void, M = void>(
-    forEach: (callback: (key: K, render: (v: K) => Z) => Z) => M,
+  return function <K, Z = void>(
     createMap: RMapCreater<K, IStateHolder[]> = normalMapCreater
   ) {
     const mapRef = createMemo(createMap); //useBaseMemo(alawaysFalse, createMapRef, createMap);
@@ -39,7 +38,31 @@ export function createRenderForEach<T extends IStateHolder>(
     const beforeHolder = hookStateHoder();
     const envModel = hookEnvModel();
     const thisTimeAdd: IStateHolder[] = [];
-    const out = forEach((key, render) => {
+    let commited = false;
+    envModel.commitChange(function () {
+      commited = true;
+      //考虑useEffect双次执行，似乎不受影响
+      oldMap.forEach(function (values) {
+        values.forEach(value => {
+          envModel.addDelete(value);
+        });
+      });
+      mapRef.set(newMap);
+      beforeHolder.children = beforeHolder.children || new Set();
+      const children = beforeHolder.children;
+      thisTimeAdd.forEach(env => {
+        children.add(env);
+      });
+      oldMap.forEach(function (values) {
+        values.forEach(value => {
+          children.delete(value);
+        });
+      });
+    });
+    return function (key: K, render: (v: K) => Z) {
+      if (commited) {
+        throw new Error(`can not call it after commit`);
+      }
       const envs = oldMap.get(key);
       let holder: IStateHolder;
       if (envs?.length) {
@@ -63,27 +86,6 @@ export function createRenderForEach<T extends IStateHolder>(
       }
       newMap.set(key, newEnvs);
       return z;
-    });
-
-    oldMap.forEach(function (values) {
-      values.forEach(value => {
-        envModel.addDelete(value);
-      });
-    });
-    envModel.commitChange(function () {
-      //考虑useEffect双次执行，似乎不受影响
-      mapRef.set(newMap);
-      beforeHolder.children = beforeHolder.children || new Set();
-      const children = beforeHolder.children;
-      thisTimeAdd.forEach(env => {
-        children.add(env);
-      });
-      oldMap.forEach(function (values) {
-        values.forEach(value => {
-          children.delete(value);
-        });
-      });
-    });
-    return out;
+    };
   };
 }
