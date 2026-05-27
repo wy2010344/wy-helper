@@ -15,6 +15,13 @@ export default defineConfig({
   },
   platform: 'neutral',
   dts: true,
-  external: [/^d3-binarytree(\/)?/, /^d3-quadtree(\/)?/, /^d3-octree(\/)?/],
+  deps: {
+    neverBundle: [
+      /^d3-binarytree(\/)?/,
+      /^d3-quadtree(\/)?/,
+      /^d3-octree(\/)?/,
+      /^vite(\/)?/,
+    ],
+  },
   format: ['esm', 'cjs'],
 });

@@ -2,20 +2,47 @@ import { emptyObject, quote, Quote, valueOrGetToGet } from 'wy-helper';
 import { CanvasStyle } from './canvasStyle';
 import LineBreaker from 'linebreak';
 
-export type OCanvasTextDrawingStyles = Partial<
-  Omit<CanvasTextDrawingStyles, 'font'>
-> & {
+export type FontStyle = {
   //italic
-  fontStyle?: string;
+  fontStyle: string;
   //small-caps
-  fontVariant?: string;
+  fontVariant: string;
   //bold,600,700
-  fontWeight?: string;
+  fontWeight: string;
   //16px
-  fontSize?: string;
+  fontSize: string;
   //Arial, sans-serif
-  fontFamily?: string;
+  fontFamily: string;
 };
+
+let currentDefaultFont: CSSStyleDeclaration = undefined as any;
+
+export function makeCurrentDefaultFont(out: Partial<FontStyle>) {
+  if (!currentDefaultFont) {
+    currentDefaultFont = getComputedStyle(document.body);
+  }
+  const def = currentDefaultFont;
+  out.fontFamily = out.fontFamily || def.fontFamily;
+  out.fontSize = out.fontSize || def.fontSize;
+  out.fontStyle = out.fontStyle || def.fontStyle;
+  out.fontWeight = out.fontWeight || def.fontWeight;
+}
+export function makeFontString(n: Partial<FontStyle>): string {
+  const parts: string[] = [];
+  if (n.fontStyle) parts.push(n.fontStyle);
+  if (n.fontVariant) parts.push(n.fontVariant);
+  if (n.fontWeight) parts.push(n.fontWeight);
+  if (n.fontSize) parts.push(n.fontSize);
+  if (n.fontFamily) parts.push(n.fontFamily);
+  return parts.join(' ');
+}
+
+export type OCanvasTextDrawingStyles = Partial<
+  Omit<CanvasTextDrawingStyles, 'font' | 'letterSpacing'>
+> &
+  Partial<FontStyle> & {
+    letterSpacing?: string | number;
+  };
 
 /**
  *
@@ -33,27 +60,14 @@ export function setDrawingStyle(
     ctx.textBaseline = n.textBaseline || 'alphabetic';
     ctx.textAlign = n.textAlign || 'start';
   }
-  const fontVS = [];
-  if (n.fontStyle) {
-    fontVS.push(n.fontStyle);
-  }
-  if (n.fontVariant) {
-    fontVS.push(n.fontVariant);
-  }
-  if (n.fontWeight) {
-    fontVS.push(n.fontWeight);
-  }
-  if (n.fontSize) {
-    fontVS.push(n.fontSize);
-  }
-  if (n.fontFamily) {
-    fontVS.push(n.fontFamily);
-  }
-  ctx.font = fontVS.join(' ');
+  ctx.font = makeFontString(n);
   ctx.fontKerning = n.fontKerning || 'auto';
   ctx.fontStretch = n.fontStretch || 'normal';
   ctx.fontVariantCaps = n.fontVariantCaps || 'normal';
-  ctx.letterSpacing = n.letterSpacing || '0px';
+  ctx.letterSpacing =
+    (typeof n.letterSpacing == 'number'
+      ? n.letterSpacing + 'px'
+      : n.letterSpacing) || '0px';
   ctx.textRendering = n.textRendering || 'auto';
   ctx.wordSpacing = n.wordSpacing || '0px';
 }
@@ -116,6 +130,25 @@ export type TextWrapTextConfig = Omit<
   OCanvasTextDrawingStyles,
   'direction' | 'textAlign' | 'textBaseline'
 >;
+
+export function measureLineHeight(
+  m: TextMetrics,
+  _lineHeight?: number | Quote<number>
+) {
+  // const m = ctx.measureText('M');
+  const fontHeight = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+  const configLineHeight = valueOrGetToGet(_lineHeight || quote);
+  let lineHeight = configLineHeight(fontHeight);
+  const minLineHeight = fontHeight * 1.5;
+  if (lineHeight < minLineHeight) {
+    lineHeight = minLineHeight;
+  }
+  const lineDiffStart = (lineHeight - fontHeight) / 2;
+  return {
+    lineHeight,
+    lineDiffStart,
+  };
+}
 /**
  * 参考 https://github.com/Flipboard/react-canvas/blob/master/lib/measureText.js
  * @param ctx
@@ -142,15 +175,7 @@ export function measureTextWrap(
   }
   setDrawingStyle(ctx, config, true);
   const m = ctx.measureText(text);
-  const configLineHeight = valueOrGetToGet(config.lineHeight || quote);
-  const fontHeight = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
-  let lineHeight = configLineHeight(fontHeight);
-  const minLineHeight = fontHeight * 1.5;
-  if (lineHeight < minLineHeight) {
-    lineHeight = minLineHeight;
-  }
-  const lineDiffStart = (lineHeight - fontHeight) / 2;
-
+  const { lineDiffStart, lineHeight } = measureLineHeight(m, config.lineHeight);
   if (m.width <= width) {
     return {
       ...config,

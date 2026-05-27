@@ -1,5 +1,14 @@
 # wy-dom-helper
 
+## 2.0.2
+
+### Patch Changes
+
+- version update
+
+- Updated dependencies []:
+  - wy-helper@1.1.2
+
 ## 2.0.1
 
 ### Patch Changes

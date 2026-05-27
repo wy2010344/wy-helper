@@ -1,5 +1,11 @@
 # wy-helper
 
+## 1.1.2
+
+### Patch Changes
+
+- version update
+
 ## 1.1.1
 
 ### Patch Changes
