@@ -4,6 +4,7 @@ import {
   DeltaXSignalAnimationConfig,
   SubscribeRequestAnimationFrame,
 } from './animation';
+import { getGlobalThis } from './getGlobalThis';
 import { GetValue, SetValue } from './setStateHelper';
 import { addEffect, trackSignal } from './signal';
 import { emptyObject } from './util';
@@ -38,7 +39,7 @@ export function createObserverAnimateSignal(
     return [value.get.bind(value), destroy] as const;
   };
 }
-const g = globalThis as unknown as {
+const g = getGlobalThis() as unknown as {
   _signal_animation_with_?: DeltaXSignalAnimationConfig;
 };
 

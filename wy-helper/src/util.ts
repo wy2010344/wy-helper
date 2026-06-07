@@ -209,22 +209,28 @@ export function getTimeoutPromise(time: number, then = emptyFun) {
   };
 }
 
-export const supportMicrotask = !!globalThis.queueMicrotask;
-export const supportMessageChannel = typeof MessageChannel !== 'undefined';
-
+/**
+ * 
+方式	每次调用开销	内存泄漏风险	批量处理
+queueMicrotask(fn)	函数引用入队，~0 额外分配	无（出队即释放）	优
+setTimeout(fn, 0)	创建 Timer 对象，~百字节	低（触发释放）	差（有 1ms 最小延迟）
+new MessageChannel()	~3.5KB，含端口 + libuv handle	高（pending 消息阻止 GC）	差
+ * @param callback 
+ * @returns 
+ */
 export function messageChannelCallback(callback: EmptyFun) {
-  if (supportMessageChannel) {
-    const { port1, port2 } = new MessageChannel();
-    if ('on' in port1) {
-      (port1 as any).on('message', callback);
-    } else {
-      (port1 as any).onmessage = callback;
-    }
+  const { port1, port2 } = new MessageChannel();
+  port1.onmessage = callback;
+  return function () {
     return port2.postMessage(null);
-  } else {
-    setTimeout(callback);
-  }
+  };
 }
+
+export const queueMicrotask =
+  globalThis.queueMicrotask ||
+  (callback => {
+    new Promise(callback);
+  });
 
 export function asLazy<T>(v: T) {
   return function () {

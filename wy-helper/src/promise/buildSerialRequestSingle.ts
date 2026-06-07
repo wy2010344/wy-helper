@@ -1,18 +1,6 @@
-import {
-  GetValue,
-  ReduceState,
-  SetThisValue,
-  SetValue,
-} from '../setStateHelper';
-import {
-  EmptyFun,
-  FalseType,
-  Flatten,
-  emptyFun,
-  messageChannelCallback,
-  run,
-  supportMicrotask,
-} from '../util';
+import { getGlobalThis } from '../getGlobalThis';
+import { GetValue, ReduceState, SetValue } from '../setStateHelper';
+import { FalseType, Flatten, emptyFun, run } from '../util';
 
 export type PromiseResult<T> =
   | {
@@ -48,7 +36,7 @@ export type VersionPromiseResult<T> = Flatten<
 
 export type RequestVersionPromiseFinally<T> = SetValue<VersionPromiseResult<T>>;
 
-const w = globalThis as {
+const w = getGlobalThis() as {
   __abort_signal__?: AbortSignal;
 };
 

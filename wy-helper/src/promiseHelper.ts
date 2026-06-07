@@ -1,11 +1,6 @@
 import { splitList } from './ArrayHelper';
 import { getOutResolvePromise, SetValue } from './setStateHelper';
-import {
-  emptyArray,
-  EmptyFun,
-  emptyObject,
-  messageChannelCallback,
-} from './util';
+import { emptyArray, EmptyFun, emptyObject } from './util';
 
 /**
  * 如果正在请求,则加入这个队列
@@ -125,7 +120,7 @@ export async function mapPromiseAll<K extends string, V>(map: {
 export function createBuilkSet<K extends string | number, T>(
   save: (map: Map<K, T>) => void,
   {
-    nextTime = messageChannelCallback,
+    nextTime = queueMicrotask,
   }: {
     nextTime?: SetValue<EmptyFun>;
   } = emptyObject
@@ -164,7 +159,7 @@ export function createBuilkGet<K extends string | number, T>(
   getId: (v: T) => K,
   {
     limit = Infinity,
-    nextTime = messageChannelCallback,
+    nextTime = queueMicrotask,
   }: {
     limit?: number;
     nextTime?: SetValue<EmptyFun>;

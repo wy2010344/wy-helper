@@ -48,5 +48,7 @@ export * from './signal-ext';
 export * from './diffMove';
 export * from './material';
 export * from './debounceAndThrottle';
+export * from './getGlobalThis';
+export * from './tasks';
 // export * as kanren from './kanren'
 // export * as tokenParser from './tokenParser'

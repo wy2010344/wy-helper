@@ -1,5 +1,6 @@
 import { effectsAddLevel } from './effectLevel';
 import { Compare, simpleNotEqual } from './equal';
+import { getGlobalThis } from './getGlobalThis';
 import { GetValue, SetValue } from './setStateHelper';
 import { StoreRef } from './storeRef';
 import {
@@ -14,7 +15,7 @@ import {
   run,
 } from './util';
 
-const m = globalThis as any;
+const m = getGlobalThis() as any;
 const DepKey = 'wy-helper-signal-cache';
 
 function createBatch(): CurrentBatch {
@@ -51,7 +52,7 @@ interface Version {
 const signalCache = m[DepKey] as {
   currentFun?: TrackSignal<any>;
   //为react而处理
-  currentFunRemove?: boolean;
+  // currentFunRemove?: boolean;
   //开始了异步任务
   beginBatch?: boolean;
   currentBatch: CurrentBatch;
@@ -122,7 +123,7 @@ class Signal<T> implements OneSetStoreRef<T> {
     public shouldChange: Compare<T>
   ) {}
   private didSet(v: T) {
-    if (signalCache.onWorkBatch && this.listeners.length) {
+    if (signalCache.onWorkBatch && this.listeners.size) {
       //如果在计算期间,且有依赖项,不能安全更新
       throw '计算期间不允许修改值';
     }
@@ -132,17 +133,17 @@ class Signal<T> implements OneSetStoreRef<T> {
         signalCache.callGet = false;
       }
       this.value = v;
-      if (this.listeners.length) {
+      if (this.listeners.size) {
         //有listener才通知更新
         this.listeners.forEach(addListener);
-        this.listeners.length = 0;
+        this.listeners.clear();
         beginCurrentBatch();
       }
     }
     return v;
   }
 
-  private listeners: TrackSignal<any>[] = [];
+  private listeners = new Set<TrackSignal<any>>();
   get = () => {
     const value = this.value;
     addRelay(this.get, value);
@@ -151,15 +152,7 @@ class Signal<T> implements OneSetStoreRef<T> {
     //   console.warn('get signal value not in observer,check if it is right');
     // }
     if (signalCache.currentFun) {
-      //只收集自己的依赖
-      if (signalCache.currentFunRemove) {
-        //因为react的render可能很多,所以禁止重入
-        if (!this.listeners.includes(signalCache.currentFun)) {
-          this.listeners.push(signalCache.currentFun);
-        }
-      } else {
-        this.listeners.push(signalCache.currentFun);
-      }
+      this.listeners.add(signalCache.currentFun);
     }
     return value;
   };
@@ -210,10 +203,11 @@ export interface OneSetStoreRef<T> {
 export function signalOnUpdate() {
   return Boolean(signalCache.onWorkBatch);
 }
+
 function beginCurrentBatch() {
   if (!signalCache.beginBatch) {
     signalCache.beginBatch = true;
-    messageChannelCallback(batchSignalEnd);
+    messageCall();
   }
 }
 
@@ -265,6 +259,7 @@ export function batchSignalEnd() {
   //   console.log("render", c)
   // }
 }
+const messageCall = messageChannelCallback(batchSignalEnd);
 
 function runListener(o: TrackSignal<any>) {
   o.addFun();
@@ -366,12 +361,12 @@ export function collectSignal(callback: EmptyFun) {
      * @param fun
      * @returns
      */
-    collect<T>(fun: GetValue<T>, remove?: boolean) {
+    collect<T>(fun: GetValue<T>) {
       signalCache.currentFun = t;
-      signalCache.currentFunRemove = remove;
+      // signalCache.currentFunRemove = remove;
       const value = fun();
       signalCache.currentFun = undefined;
-      signalCache.currentFunRemove = false;
+      // signalCache.currentFunRemove = false;
       return value;
     },
   };

@@ -1,3 +1,4 @@
+import { getGlobalThis } from '../getGlobalThis';
 import { GetValue } from '../setStateHelper';
 
 export type LayoutModel<K extends string> = {
@@ -22,7 +23,7 @@ export interface HookInfo<K extends string> {
   children: GetValue<LayoutModel<K>[]>;
 }
 
-const m = globalThis as unknown as {
+const m = getGlobalThis() as unknown as {
   _wy_current_layout_children_: HookInfo<any>;
 };
 export function hookLayout<T>(info: HookInfo<any>, calculate: GetValue<T>) {

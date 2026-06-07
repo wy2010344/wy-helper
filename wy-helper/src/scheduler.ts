@@ -58,6 +58,7 @@ export function getScheduleAskTime({
     realTime,
     getArg,
   }: AskNextTimeWorkParam<T>) {
+    const messageCall = messageChannelCallback(flush);
     let onWork = false;
     let lastRenderFinishTime = 0;
     function finishWork() {
@@ -69,7 +70,7 @@ export function getScheduleAskTime({
      * 本次没执行完,下次执行.
      * 下次一定需要在宏任务中执行
      */
-    const flush = () => {
+    function flush() {
       const time = getCurrentTimePerformance();
       currentThread = time;
       const deadline = time + taskTimeThreadhold;
@@ -98,7 +99,7 @@ export function getScheduleAskTime({
             callback = askNextWork();
           } else {
             //需要中止,进入宏任务.原列表未处理完
-            messageChannelCallback(flush);
+            messageCall();
             break;
           }
         }
@@ -107,8 +108,7 @@ export function getScheduleAskTime({
         finishWork();
       }
       currentThread = 0;
-    };
-
+    }
     //render期间必须执行完成
     //这个守卫方法是为了让render在一帧内强制完成
     function requestAnimationFrameCheck() {
@@ -130,7 +130,7 @@ export function getScheduleAskTime({
     }
 
     function beginAsyncWork() {
-      messageChannelCallback(flush);
+      messageCall();
       limitFlush?.(requestAnimationFrameCheck);
     }
     return function () {
