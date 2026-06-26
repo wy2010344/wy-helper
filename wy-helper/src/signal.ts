@@ -125,7 +125,7 @@ class Signal<T> implements OneSetStoreRef<T> {
   private didSet(v: T) {
     if (signalCache.onWorkBatch && this.listeners.size) {
       //如果在计算期间,且有依赖项,不能安全更新
-      throw '计算期间不允许修改值';
+      throw new Error('计算期间不允许修改值');
     }
     if (this.shouldChange(v, this.value)) {
       if (signalCache.callGet) {
@@ -160,7 +160,7 @@ class Signal<T> implements OneSetStoreRef<T> {
   private setSymbolMessage: string = 'already get this set for only use';
   getOnlySet(message = this.setSymbolMessage): Quote<T> {
     if (this.onlySet) {
-      throw message;
+      throw new Error(message);
     }
     this.setSymbolMessage = message;
     this.onlySet = true;
@@ -403,15 +403,21 @@ export interface MemoGet<T> {
 export interface MemoFun<T> {
   (): T;
   memorized: true;
-  after?: SetValue<T>;
+  afters: SetValue<T>[];
 }
 function mapInject(value: any, key: GetValue<any>) {
   key();
 }
 export function memo<T>(get: MemoGet<T> | MemoFun<T>, after?: SetValue<T>) {
   const target = get as any;
-  if (target.memorized && (after == target.after || after == emptyFun)) {
+  if (target.memorized) {
     //减少不必要的声明
+    if (after) {
+      const afters = target.afters;
+      if (!afters.include(after)) {
+        afters.push(after);
+      }
+    }
     return get as MemoFun<T>;
   }
   const relays = new Map<GetValue<any>, any>() as MapGetDep;
@@ -419,6 +425,10 @@ export function memo<T>(get: MemoGet<T> | MemoFun<T>, after?: SetValue<T>) {
   let inited = false;
   let stateVersion: any = relays;
   let listenerVersion: any = undefined;
+  const afters: SetValue<T>[] = [];
+  if (after) {
+    afters.push(after);
+  }
   const myGet = function () {
     signalCache.callGet = true;
     //每一次都不能跳过,主要是trackSignal需要流入依赖
@@ -456,14 +466,14 @@ export function memo<T>(get: MemoGet<T> | MemoFun<T>, after?: SetValue<T>) {
     signalCache.currentRelay = oldRelay;
 
     addRelay(myGet, lastValue);
-    if (shouldAfter && after) {
+    if (shouldAfter) {
       //是需要控制每次函数执行后执行,还是每次结果不同才执行?
-      after(lastValue);
+      afters.forEach(after => after(lastValue));
     }
     return lastValue;
   } as MemoFun<T>;
   myGet.memorized = true;
-  myGet.after = after;
+  myGet.afters = afters;
   return myGet;
 }
 

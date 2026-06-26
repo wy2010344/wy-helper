@@ -64,27 +64,30 @@ export function hookAbortSignalPromise<T>(
   w.__abort_signal__ = signal;
   const p = fun();
   w.__abort_signal__ = undefined;
-  p.then(v => {
-    if (signal.aborted) {
-      return;
+  p.then(
+    v => {
+      if (signal.aborted) {
+        return;
+      }
+      callback({
+        type: 'success',
+        promise: p,
+        request: fun,
+        value: v,
+      });
+    },
+    err => {
+      if (signal.aborted) {
+        return;
+      }
+      callback({
+        type: 'error',
+        promise: p,
+        request: fun,
+        value: err,
+      });
     }
-    callback({
-      type: 'success',
-      promise: p,
-      request: fun,
-      value: v,
-    });
-  }).catch(err => {
-    if (signal.aborted) {
-      return;
-    }
-    callback({
-      type: 'error',
-      promise: p,
-      request: fun,
-      value: err,
-    });
-  });
+  );
 }
 export function hookGetAbortSignal() {
   return w.__abort_signal__;
