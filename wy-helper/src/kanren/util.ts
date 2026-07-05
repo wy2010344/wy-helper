@@ -19,9 +19,6 @@ export class KVar {
   toString() {
     return `{${this.flag}}`;
   }
-  equals(v: any) {
-    return v == this || (v instanceof KVar && v.flag == this.flag);
-  }
   static create() {
     return new KVar();
   }
@@ -31,8 +28,8 @@ export class KVar {
  * 只需要扩展KEqual,列表都用Pair去模拟而不是js的Array,js的Array无递归友好性.
  * 即只需要扩展原子
  */
-export abstract class KEqual {
-  abstract equals(b: any): any;
+export abstract class KCustom {
+  abstract unify(b: any, sub: KSubsitution): [boolean, KSubsitution];
 }
 /**所有类型 */
 export type KType =
@@ -41,7 +38,7 @@ export type KType =
   | string
   | number
   | null
-  | KEqual;
+  | KCustom;
 export type List<T> = KPair<T, List<T>> | null;
 type KVPair = KPair<KVar, KType>;
 /**
@@ -61,7 +58,7 @@ export function findVarDefine<V>(
   while (sub != null) {
     const kv = sub.left;
     const theV = kv.left;
-    if (v.equals(theV)) {
+    if (v == theV) {
       return kv;
     }
     sub = sub.right;
@@ -101,26 +98,10 @@ export function baseUnify(
   if (a == b) {
     return [true, sub];
   }
-  if (a instanceof KEqual) {
-    if (a.equals(b)) {
-      return [true, sub];
-    }
-  }
-  if (b instanceof KEqual) {
-    if (b.equals(a)) {
-      return [true, sub];
-    }
-  }
   if (a instanceof KVar) {
-    if (a.equals(b)) {
-      return [true, sub];
-    }
     return [true, extendSubsitution(a, b, sub)];
   }
   if (b instanceof KVar) {
-    if (b.equals(a)) {
-      return [true, sub];
-    }
     return [true, extendSubsitution(b, a, sub)];
   }
   if (a instanceof KPair && b instanceof KPair) {
@@ -128,6 +109,12 @@ export function baseUnify(
     if (success) {
       return baseUnify(a.right, b.right, leftSub);
     }
+  }
+  if (a instanceof KCustom) {
+    return a.unify(b, sub);
+  }
+  if (b instanceof KCustom) {
+    return b.unify(a, sub);
   }
   return [false, null];
 }
@@ -189,7 +176,7 @@ export class MergeSub {
   changeSub(outSub: KSubsitution, newSub: KSubsitution = null) {
     this.set.forEach(value => {
       const toValue = walk(value, outSub);
-      if (!value.equals(toValue)) {
+      if (value != toValue) {
         newSub = extendSubsitution(value, toValue, newSub);
       }
     });

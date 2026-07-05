@@ -1,5 +1,6 @@
 import { getGlobalThis } from '../getGlobalThis';
 import { GetValue } from '../setStateHelper';
+import { AlignSelfFun } from './stack';
 
 export type LayoutModel<K extends string> = {
   index(): number;
@@ -9,11 +10,6 @@ export type LayoutModel<K extends string> = {
   getOuterSizeForParentLayout(key: K): number;
   /**作为flex/stack的伸缩 */
   getAlign(key: K): AlignSelfFun | void;
-};
-
-export type AlignSelfFun = {
-  position(pWidth: number, getSelfWidth: GetValue<number>): number;
-  size(pWidth: number): number;
 };
 
 export interface HookInfo<K extends string> {

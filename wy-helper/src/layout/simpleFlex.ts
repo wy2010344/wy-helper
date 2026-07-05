@@ -6,16 +6,13 @@
  */
 
 import { PointKey } from '../geometry';
-import { emptyObject } from '../util';
 import {
-  AlignItem,
   CrossAxisConfig,
-  DirectionFix,
-  DirectionFixBetweenWhenOne,
   flexDisplayUtil,
   MainAxisConfig,
   stackDisplayUtil,
 } from './flexUtil';
+import { AlignItem } from './stack';
 
 export function oppositeDirection(x: PointKey): PointKey {
   if (x == 'x') {

@@ -4,12 +4,14 @@ import { PointKey } from '../geometry';
 import { GetValue } from '../setStateHelper';
 import { memo, ValueOrGet, valueOrGetToGet } from '../signal';
 import { asLazy, cacheGetFun, emptyObject } from '../util';
-import { AlignSelfFun, hookGetLayoutChildren, HookInfo } from './util';
+import { DirectionJustify, DirectionFixBetweenWhenOne } from './flex';
+import { AlignItem } from './stack';
+import { hookGetLayoutChildren, HookInfo } from './util';
 
 export type MainAxisConfig = {
   reverse?: boolean;
   /**主轴方向固定时分布方式 */
-  directionFix?: DirectionFix;
+  directionFix?: DirectionJustify;
   directionFixBetweenWhenOne?: DirectionFixBetweenWhenOne;
   gap?: number;
 };
@@ -18,41 +20,6 @@ export type CrossAxisConfig = {
   /**辅助轴方向尺寸是否固定 */
   alignFix?: boolean;
 };
-
-export type DirectionFixBetweenWhenOne = 'center' | 'end' | 'start';
-
-export type DirectionFix =
-  | 'start'
-  | 'end'
-  | 'center'
-  | 'between'
-  | 'around'
-  | 'evenly';
-
-export type AlignItem = 'center' | 'start' | 'end' | 'stretch';
-
-export function alignSelf(getAlign: ValueOrGet<AlignItem>): AlignSelfFun {
-  const gAlign = valueOrGetToGet(getAlign);
-  return {
-    position(pWidth, getSelfWidth) {
-      const align = gAlign();
-      if (align == 'center') {
-        return (pWidth - getSelfWidth()) / 2;
-      } else if (align == 'end') {
-        return pWidth - getSelfWidth();
-      } else {
-        return 0;
-      }
-    },
-    size(pWidth) {
-      const align = gAlign();
-      if (align == 'stretch') {
-        return pWidth;
-      }
-      throw 'you should make your own size';
-    },
-  };
-}
 
 /**
  * 在ext里面使用align与grow,在控制在两个轴的伸长,还有notFlex
