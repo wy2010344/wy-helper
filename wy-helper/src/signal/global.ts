@@ -100,6 +100,10 @@ export function batchSignalEnd() {
   }
 
   let c = 0;
+  if (signalCache.memoStack.length) {
+    console.error(`memo没有正常退出`, ...signalCache.memoStack);
+    throw new Error(`之前有memo没有正常退出--${signalCache.memoStack.length}`);
+  }
   while (signalCache.beginBatch) {
     //执行观察事件,即trackSignal的两个函数参数,与上游的memo参数
     signalCache.beginBatch = false;
