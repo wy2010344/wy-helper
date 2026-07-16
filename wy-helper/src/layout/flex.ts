@@ -1,8 +1,7 @@
 import { arrayReduceLeft, arrayReduceRight } from '..';
 import { GetValue } from '../setStateHelper';
 import { memo } from '../signal';
-import { Layout, LayoutInsideObject } from './layout';
-import { StackChildConvert } from './stack';
+import { Layout, LayoutError, LayoutInsideObject } from './layout';
 
 export type DirectionFixBetweenWhenOne = 'center' | 'end' | 'start';
 
@@ -22,14 +21,14 @@ export interface FlexChildConvert<T> {
 
 export class FlexLayout<T> implements Layout {
   constructor(
-    private arg: {
+    arg: {
       reverse(): boolean;
       gap(): number;
       directionJustify(): DirectionJustify;
       directionFixBetweenWhenOne(): DirectionFixBetweenWhenOne;
     },
     private inside: LayoutInsideObject<T>,
-    private convert: FlexChildConvert<T>
+    convert: FlexChildConvert<T>
   ) {
     this.cache = memo(() => {
       const reverse = arg.reverse();
@@ -40,16 +39,8 @@ export class FlexLayout<T> implements Layout {
       const children = inside.children();
       const forEach = reverse ? arrayReduceRight : arrayReduceLeft;
 
-      var insideSize = 0;
-      var getInsideSize = true;
-      try {
-        insideSize = inside.innerSize();
-      } catch (err) {
-        getInsideSize = false;
-      }
-
       const gap = arg.gap();
-      if (getInsideSize) {
+      if (inside.sizeFromParent()) {
         const growIndex = new Map<number, number>();
         let growAll = 0;
         let totalLength = 0;
@@ -135,7 +126,6 @@ export class FlexLayout<T> implements Layout {
       return {
         childLengths,
         list,
-        getInsideSize,
         length,
       };
     });
@@ -144,13 +134,12 @@ export class FlexLayout<T> implements Layout {
   cache: GetValue<{
     childLengths: number[];
     list: number[];
-    getInsideSize: boolean;
     length: number;
   }>;
 
   sizeFromChildren(): number {
-    if (this.cache().getInsideSize) {
-      throw new Error('out provide a size');
+    if (this.inside.sizeFromParent()) {
+      throw new LayoutError('out provide a size');
     }
     return this.cache().length;
   }

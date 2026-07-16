@@ -1,6 +1,6 @@
 import { GetValue } from '../setStateHelper';
 import { memo, ValueOrGet, valueOrGetToGet } from '../signal';
-import { Layout, LayoutInsideObject } from './layout';
+import { Layout, LayoutError, LayoutInsideObject } from './layout';
 
 export type AlignSelfFun = {
   position(pWidth: number, getSelfWidth: GetValue<number>): number;
@@ -45,15 +45,8 @@ export class StackLayout<T> implements Layout {
     private convert: StackChildConvert<T>
   ) {
     this.size = memo(function () {
-      var insideSize = 0;
-      var getInsideSize = true;
-      try {
-        insideSize = inside.innerSize();
-      } catch (err) {
-        getInsideSize = false;
-      }
-      if (getInsideSize) {
-        return insideSize;
+      if (inside.sizeFromParent()) {
+        return inside.innerSize();
       }
       let width = 0;
       inside.children().forEach(it => {
@@ -86,7 +79,7 @@ export class StackLayout<T> implements Layout {
       return 0;
     }
     if (isSize) {
-      throw new Error(`child should have it's own size`);
+      throw new LayoutError(`child should have it's own size`);
     }
     if (alignItem == 'start') {
       return 0;
@@ -97,7 +90,7 @@ export class StackLayout<T> implements Layout {
     if (alignItem == 'end') {
       return this.size() - this.convert.outerSize(child);
     }
-    throw new Error(`never reach`);
+    throw new LayoutError(`never reach`);
   }
 
   sizeFromChildren(): number {

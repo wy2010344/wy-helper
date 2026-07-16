@@ -55,7 +55,7 @@ export function memo<T>(get: MemoGet<T> | MemoFun<T>, after?: SetValue<T>) {
   const target = get as any;
   if (target.memorized) {
     //减少不必要的声明
-    if (after) {
+    if (after && after != emptyFun) {
       const afters = target.afters;
       if (!afters.include(after)) {
         afters.push(after);
@@ -69,7 +69,7 @@ export function memo<T>(get: MemoGet<T> | MemoFun<T>, after?: SetValue<T>) {
   let stateVersion: any = relays;
   let listenerVersion: any = undefined;
   const afters: SetValue<T>[] = [];
-  if (after) {
+  if (after && after != emptyFun) {
     afters.push(after);
   }
   const myGet = function () {
@@ -109,17 +109,18 @@ export function memo<T>(get: MemoGet<T> | MemoFun<T>, after?: SetValue<T>) {
       shouldAfter = true;
     }
     signalCache.currentRelay = oldRelay;
-
     addRelay(myGet, lastValue);
+    //必须放在前面
+    checkLeave(myGet);
     if (shouldAfter) {
       //是需要控制每次函数执行后执行,还是每次结果不同才执行?
       afters.forEach(after => after(lastValue));
     }
-    checkLeave(myGet);
     return lastValue;
   } as MemoFun<T>;
   myGet.memorized = true;
   myGet.afters = afters;
+  (myGet as any).get = get;
   return myGet;
 }
 

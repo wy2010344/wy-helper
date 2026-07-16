@@ -7,6 +7,9 @@ export interface Layout {
 }
 
 export interface LayoutInsideObject<T> {
+  sizeFromParent(): boolean;
   children(): Array<T>;
   innerSize(): number;
 }
+
+export class LayoutError extends Error {}

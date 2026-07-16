@@ -3,6 +3,8 @@ import { GetValue } from '../setStateHelper';
 import { asLazy } from '../util';
 export * from './simpleFlex';
 export * from './layoutNode';
+export * from './stack';
+export * from './flex';
 export type SizeKey = 'width' | 'height';
 
 export type LayoutKey = SizeKey | PointKey;
