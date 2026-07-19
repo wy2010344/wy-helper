@@ -11,7 +11,8 @@ export type DirectionJustify =
   | 'center'
   | 'between'
   | 'around'
-  | 'evenly';
+  | 'evenly'
+  | 'grow';
 
 export interface FlexChildConvert<T> {
   index(n: T): number;
@@ -21,13 +22,13 @@ export interface FlexChildConvert<T> {
 
 export class FlexLayout<T> implements Layout {
   constructor(
-    arg: {
+    private arg: {
       reverse(): boolean;
       gap(): number;
       directionJustify(): DirectionJustify;
       directionFixBetweenWhenOne(): DirectionFixBetweenWhenOne;
     },
-    private inside: LayoutInsideObject<T>,
+    inside: LayoutInsideObject<T>,
     convert: FlexChildConvert<T>
   ) {
     this.cache = memo(() => {
@@ -40,7 +41,19 @@ export class FlexLayout<T> implements Layout {
       const forEach = reverse ? arrayReduceRight : arrayReduceLeft;
 
       const gap = arg.gap();
-      if (inside.sizeFromParent()) {
+
+      const directionFix = arg.directionJustify();
+      if (directionFix == 'grow') {
+        forEach(children, child => {
+          const childLength = convert.outerSize(child);
+          childLengths[convert.index(child)] = childLength;
+          length = length + childLength + gap;
+          list.push(length);
+        });
+        if (length) {
+          length = length - gap;
+        }
+      } else {
         const growIndex = new Map<number, number>();
         let growAll = 0;
         let totalLength = 0;
@@ -70,7 +83,6 @@ export class FlexLayout<T> implements Layout {
             list.push(length);
           });
         } else {
-          const directionFix = arg.directionJustify();
           let tGap = gap;
           const allRemaing = inside.innerSize() - totalLength;
           const remaing = allRemaing - (gap * children.length - gap);
@@ -108,16 +120,6 @@ export class FlexLayout<T> implements Layout {
             list.push(length);
           });
         }
-      } else {
-        forEach(children, child => {
-          const childLength = convert.outerSize(child);
-          childLengths[convert.index(child)] = childLength;
-          length = length + childLength + gap;
-          list.push(length);
-        });
-        if (length) {
-          length = length - gap;
-        }
       }
       list.pop();
       if (reverse) {
@@ -138,10 +140,10 @@ export class FlexLayout<T> implements Layout {
   }>;
 
   sizeFromChildren(): number {
-    if (this.inside.sizeFromParent()) {
-      throw new LayoutError('out provide a size');
+    if (this.arg.directionJustify() == 'grow') {
+      return this.cache().length;
     }
-    return this.cache().length;
+    throw new LayoutError('out provide a size');
   }
   childSize(i: number): number {
     return this.cache().childLengths[i];

@@ -7,7 +7,7 @@ export type AlignSelfFun = {
   size(pWidth: number): number;
 };
 export interface StackChildConvert<T> {
-  align(n: T): AlignSelfFun;
+  align(n: T): AlignSelfFun | void;
   outerSize(n: T): number;
 }
 
@@ -40,12 +40,13 @@ export class StackLayout<T> implements Layout {
   constructor(
     private arg: {
       alignItem(): AlignItem;
+      alignFix(): boolean;
     },
     private inside: LayoutInsideObject<T>,
     private convert: StackChildConvert<T>
   ) {
     this.size = memo(function () {
-      if (inside.sizeFromParent()) {
+      if (arg.alignFix()) {
         return inside.innerSize();
       }
       let width = 0;

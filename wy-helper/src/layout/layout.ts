@@ -1,5 +1,3 @@
-import { ReadArray } from '../util';
-
 export interface Layout {
   sizeFromChildren(): number;
   childSize(i: number): number;
@@ -7,9 +5,12 @@ export interface Layout {
 }
 
 export interface LayoutInsideObject<T> {
-  sizeFromParent(): boolean;
   children(): Array<T>;
   innerSize(): number;
 }
 
 export class LayoutError extends Error {}
+
+export interface LayoutFun<T> {
+  createLayout(o: LayoutInsideObject<T>): Layout;
+}
