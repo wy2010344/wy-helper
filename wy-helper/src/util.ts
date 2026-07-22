@@ -22,7 +22,11 @@ export type NullType = undefined | null | void;
 /**6种情况为false,NaN是数字类型*/
 export type FalseType = false | 0 | 0n | '' | NullType;
 export type EmptyFun = (...vs: any[]) => void;
-export type Quote<T> = (v: T, ...vs: any[]) => T;
+export type Quote<T, This = void, Args extends any[] = []> = (
+  this: This,
+  v: T,
+  ...vs: Args
+) => T;
 export function quote<T>(v: T, ...vs: any[]) {
   return v;
 }
@@ -560,3 +564,15 @@ export function createGetId({
 }
 
 export type OneOrArray<T> = T | T[];
+
+export function superCall<V, K extends keyof V>(
+  v: V,
+  k: K,
+  ...vs: V[K] extends (...vs: any[]) => any ? Parameters<V[K]> : never
+) {
+  return Object.getPrototypeOf(v)[k].apply(v, vs) as V[K] extends (
+    ...vs: any[]
+  ) => any
+    ? ReturnType<V[K]>
+    : never;
+}

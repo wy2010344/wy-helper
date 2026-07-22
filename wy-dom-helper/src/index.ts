@@ -41,3 +41,14 @@ export type ReadURLSearchParam = Omit<
   URLSearchParams,
   'append' | 'delete' | 'set'
 >;
+
+export const devicePixelRatio = createSignal(window?.devicePixelRatio || 1);
+if (globalThis.window) {
+  matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`).addEventListener(
+    'change',
+    e => {
+      devicePixelRatio.set(window.devicePixelRatio);
+      batchSignalEnd();
+    }
+  );
+}

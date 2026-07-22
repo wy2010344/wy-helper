@@ -1,7 +1,10 @@
 import { GetValue } from '../setStateHelper';
 import { asLazy } from '../util';
 
-export type ValueOrGet<T> = T | GetValue<T>;
+export type ValueOrGet<T, This = void, Args extends any[] = []> =
+  | T
+  | GetValue<T, This, Args>;
+
 export function getValueOrGet<T>(o: ValueOrGet<T>) {
   if (typeof o == 'function') {
     return (o as GetValue<T>)();
@@ -12,16 +15,21 @@ export function getValueOrGet<T>(o: ValueOrGet<T>) {
 /**
  * 转化成信号
  * @param o
- * @param toMemo
- * @param shouldChange
+ * @param def
  * @returns
  */
-export function valueOrGetToGet<T>(o: ValueOrGet<T>): GetValue<T> {
-  if (typeof o == 'function') {
+export function valueOrGetToGet<T, This = void, Args extends any[] = []>(
+  o: ValueOrGet<T, This, Args> | undefined,
+  def: GetValue<T, This, Args> = () => o as any
+): GetValue<T, This, Args> {
+  const to = typeof o;
+  if (to == 'function') {
     return o as any;
-  } else {
-    return asLazy(o);
   }
+  if (to == 'undefined') {
+    return def;
+  }
+  return () => o as any;
 }
 
 export { addEffect } from './effect';

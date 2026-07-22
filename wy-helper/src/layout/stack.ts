@@ -37,16 +37,19 @@ export function alignSelf(getAlign: ValueOrGet<AlignItem>): AlignSelfFun {
 }
 
 export class StackLayout<T> implements Layout {
+  alignItem: GetValue<AlignItem>;
   constructor(
     private arg: {
-      alignItem(): AlignItem;
-      alignFix(): boolean;
+      alignItem?: ValueOrGet<AlignItem>;
+      alignFix?: ValueOrGet<boolean>;
     },
     private inside: LayoutInsideObject<T>,
     private convert: StackChildConvert<T>
   ) {
+    this.alignItem = valueOrGetToGet(arg.alignItem ?? 'center');
+    const alignFix = valueOrGetToGet(arg.alignFix ?? false);
     this.size = memo(function () {
-      if (arg.alignFix()) {
+      if (alignFix()) {
         return inside.innerSize();
       }
       let width = 0;
@@ -72,7 +75,7 @@ export class StackLayout<T> implements Layout {
       }
       return align.position(this.size(), () => this.convert.outerSize(child));
     }
-    const alignItem = this.arg.alignItem();
+    const alignItem = this.alignItem();
     if (alignItem == 'stretch') {
       if (isSize) {
         return this.size();
@@ -102,5 +105,8 @@ export class StackLayout<T> implements Layout {
   }
   childPosition(i: number): number {
     return this.child(i, false);
+  }
+  allowSizeFromChildren(): boolean {
+    return true;
   }
 }

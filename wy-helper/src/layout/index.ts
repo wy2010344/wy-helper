@@ -14,6 +14,9 @@ export const absoluteLayoutObject: Layout = {
   childSize(i) {
     throw new LayoutError('没有子节点的尺寸');
   },
+  allowSizeFromChildren() {
+    return false;
+  },
 };
 
 export const absoluteLayoutFun: LayoutFun<any> = {

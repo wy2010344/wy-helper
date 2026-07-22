@@ -9,6 +9,13 @@ export interface Point<T = number> {
 
 export type PointKey = keyof Point;
 
+export function toOpposite(key: PointKey): PointKey {
+  if (key == 'x') {
+    return 'y';
+  }
+  return 'x';
+}
+
 export const pointZero = {
   x: 0,
   y: 0,

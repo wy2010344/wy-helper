@@ -2,10 +2,11 @@ export interface Layout {
   sizeFromChildren(): number;
   childSize(i: number): number;
   childPosition(i: number): number;
+  allowSizeFromChildren(): boolean;
 }
 
 export interface LayoutInsideObject<T> {
-  children(): Array<T>;
+  children(): readonly T[];
   innerSize(): number;
 }
 

@@ -1,6 +1,6 @@
 import { arrayReduceLeft, arrayReduceRight } from '..';
 import { GetValue } from '../setStateHelper';
-import { memo } from '../signal';
+import { memo, ValueOrGet, valueOrGetToGet } from '../signal';
 import { Layout, LayoutError, LayoutInsideObject } from './layout';
 
 export type DirectionFixBetweenWhenOne = 'center' | 'end' | 'start';
@@ -21,18 +21,25 @@ export interface FlexChildConvert<T> {
 }
 
 export class FlexLayout<T> implements Layout {
+  directionJustify: GetValue<DirectionJustify>;
   constructor(
-    private arg: {
-      reverse(): boolean;
-      gap(): number;
-      directionJustify(): DirectionJustify;
-      directionFixBetweenWhenOne(): DirectionFixBetweenWhenOne;
+    arg: {
+      reverse?: ValueOrGet<boolean>;
+      gap?: ValueOrGet<number>;
+      directionJustify?: ValueOrGet<DirectionJustify>;
+      directionFixBetweenWhenOne?: ValueOrGet<DirectionFixBetweenWhenOne>;
     },
-    inside: LayoutInsideObject<T>,
+    private inside: LayoutInsideObject<T>,
     convert: FlexChildConvert<T>
   ) {
+    const aReverse = valueOrGetToGet(arg.reverse ?? false);
+    const aGap = valueOrGetToGet(arg.gap ?? 0);
+    this.directionJustify = valueOrGetToGet(arg.directionJustify ?? 'grow');
+    const aDirectionFixBetweenWhenOne = valueOrGetToGet(
+      arg.directionFixBetweenWhenOne ?? 'center'
+    );
     this.cache = memo(() => {
-      const reverse = arg.reverse();
+      const reverse = aReverse();
       let length = 0;
       const list: number[] = [0];
       const childLengths: number[] = [];
@@ -40,9 +47,9 @@ export class FlexLayout<T> implements Layout {
       const children = inside.children();
       const forEach = reverse ? arrayReduceRight : arrayReduceLeft;
 
-      const gap = arg.gap();
+      const gap = aGap();
 
-      const directionFix = arg.directionJustify();
+      const directionFix = this.directionJustify();
       if (directionFix == 'grow') {
         forEach(children, child => {
           const childLength = convert.outerSize(child);
@@ -100,8 +107,7 @@ export class FlexLayout<T> implements Layout {
               const rGap = allRemaing / (children.length - 1);
               tGap = rGap;
             } else if (children.length == 1) {
-              const directionFixBetweenWhenOne =
-                arg.directionFixBetweenWhenOne();
+              const directionFixBetweenWhenOne = aDirectionFixBetweenWhenOne();
               if (directionFixBetweenWhenOne == 'center') {
                 list[0] = allRemaing / 2;
               } else if (directionFixBetweenWhenOne == 'end') {
@@ -140,15 +146,18 @@ export class FlexLayout<T> implements Layout {
   }>;
 
   sizeFromChildren(): number {
-    if (this.arg.directionJustify() == 'grow') {
+    if (this.directionJustify() == 'grow') {
       return this.cache().length;
     }
-    throw new LayoutError('out provide a size');
+    return this.inside.innerSize();
   }
   childSize(i: number): number {
     return this.cache().childLengths[i];
   }
   childPosition(i: number): number {
     return this.cache().list[i];
+  }
+  allowSizeFromChildren(): boolean {
+    return true;
   }
 }

@@ -182,6 +182,19 @@ export function requestBatchAnimationFrame(fun: SetValue<number>) {
     requestAnimationFrame(clearCacheList);
   }
 }
+
+let onAnimateFrame = false;
+export function debounceRequestBatchAnimationFrame(callback: SetValue<number>) {
+  if (onAnimateFrame) {
+    return;
+  }
+  onAnimateFrame = true;
+  requestBatchAnimationFrame(function (n) {
+    onAnimateFrame = false;
+    callback(n);
+  });
+}
+
 const cacheList: [SetValue<number>[], SetValue<number>[]] = [[], []];
 function clearCacheList(n: number) {
   const list = cacheList.shift()!;
