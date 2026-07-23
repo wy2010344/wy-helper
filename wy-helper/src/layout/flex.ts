@@ -158,6 +158,6 @@ export class FlexLayout<T> implements Layout {
     return this.cache().list[i];
   }
   allowSizeFromChildren(): boolean {
-    return true;
+    return this.directionJustify() == 'grow';
   }
 }

@@ -38,6 +38,7 @@ export function alignSelf(getAlign: ValueOrGet<AlignItem>): AlignSelfFun {
 
 export class StackLayout<T> implements Layout {
   alignItem: GetValue<AlignItem>;
+  alignFix: GetValue<boolean>;
   constructor(
     private arg: {
       alignItem?: ValueOrGet<AlignItem>;
@@ -47,9 +48,9 @@ export class StackLayout<T> implements Layout {
     private convert: StackChildConvert<T>
   ) {
     this.alignItem = valueOrGetToGet(arg.alignItem ?? 'center');
-    const alignFix = valueOrGetToGet(arg.alignFix ?? false);
-    this.size = memo(function () {
-      if (alignFix()) {
+    this.alignFix = valueOrGetToGet(arg.alignFix ?? false);
+    this.size = memo(() => {
+      if (this.alignFix()) {
         return inside.innerSize();
       }
       let width = 0;
@@ -107,6 +108,6 @@ export class StackLayout<T> implements Layout {
     return this.child(i, false);
   }
   allowSizeFromChildren(): boolean {
-    return true;
+    return !this.alignFix();
   }
 }

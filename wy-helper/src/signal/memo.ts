@@ -29,13 +29,13 @@ function relayChange(relays: MapGetDep) {
 
 function memoGet<T>(
   relays: MapGetDep,
-  get: GetValue<T>,
+  get: MemoGet<T>,
   lastValue: T,
   init: boolean
 ) {
   relays.clear();
   signalCache.currentRelay = relays;
-  const v = get(lastValue, init);
+  const v = (get as any)(lastValue, init);
   return v;
 }
 
@@ -51,17 +51,19 @@ function checkLeave(memo: any) {
     throw new Error('进出必须成对存在');
   }
 }
+function isMemoFun<T>(get: MemoGet<T> | MemoFun<T>): get is MemoFun<T> {
+  return (get as any).memorized;
+}
 export function memo<T>(get: MemoGet<T> | MemoFun<T>, after?: SetValue<T>) {
-  const target = get as any;
-  if (target.memorized) {
+  if (isMemoFun(get)) {
     //减少不必要的声明
     if (after && after != emptyFun) {
-      const afters = target.afters;
-      if (!afters.include(after)) {
+      const afters = get.afters;
+      if (!afters.includes(after)) {
         afters.push(after);
       }
     }
-    return get as MemoFun<T>;
+    return get;
   }
   const relays = new Map<GetValue<any>, any>() as MapGetDep;
   let lastValue!: T;
