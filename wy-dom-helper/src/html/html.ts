@@ -9,8 +9,10 @@ type NativeFocusEvent = FocusEvent;
 type NativeTransitionEvent = TransitionEvent;
 type NativeToggleEvent = ToggleEvent;
 export declare namespace React {
-  export interface CompositionEvent<T = Element>
-    extends SyntheticEvent<T, NativeCompositionEvent> {
+  export interface CompositionEvent<T = Element> extends SyntheticEvent<
+    T,
+    NativeCompositionEvent
+  > {
     data: string;
   }
   type AriaRole =
@@ -322,16 +324,22 @@ export declare namespace React {
   type SyntheticEvent<T = Element, E = Event> = Omit<E, 'currentTarge'> & {
     currentTarge: T;
   };
-  export interface ClipboardEvent<T = Element>
-    extends SyntheticEvent<T, NativeClipboardEvent> {
+  export interface ClipboardEvent<T = Element> extends SyntheticEvent<
+    T,
+    NativeClipboardEvent
+  > {
     clipboardData: DataTransfer;
   }
-  export interface CompositionEvent<T = Element>
-    extends SyntheticEvent<T, NativeCompositionEvent> {
+  export interface CompositionEvent<T = Element> extends SyntheticEvent<
+    T,
+    NativeCompositionEvent
+  > {
     data: string;
   }
-  export interface FocusEvent<Target = Element, RelatedTarget = Element>
-    extends SyntheticEvent<Target, NativeFocusEvent> {
+  export interface FocusEvent<
+    Target = Element,
+    RelatedTarget = Element,
+  > extends SyntheticEvent<Target, NativeFocusEvent> {
     relatedTarget: (EventTarget & RelatedTarget) | null;
     target: EventTarget & Target;
   }
@@ -366,28 +374,30 @@ export declare namespace React {
   //     which: number;
   //     isComposing: boolean;
   // }
-  interface AbstractView {
-    styleMedia: StyleMedia;
-    document: Document;
-  }
   // interface UIEvent<T = Element, E = NativeUIEvent> extends SyntheticEvent<T, E> {
   //     detail: number;
   //     view: AbstractView;
   // }
-  export interface AnimationEvent<T = Element>
-    extends SyntheticEvent<T, NativeAnimationEvent> {
+  export interface AnimationEvent<T = Element> extends SyntheticEvent<
+    T,
+    NativeAnimationEvent
+  > {
     animationName: string;
     elapsedTime: number;
     pseudoElement: string;
   }
-  interface ToggleEvent<T = Element>
-    extends SyntheticEvent<T, NativeToggleEvent> {
+  interface ToggleEvent<T = Element> extends SyntheticEvent<
+    T,
+    NativeToggleEvent
+  > {
     oldState: 'closed' | 'open';
     newState: 'closed' | 'open';
   }
 
-  export interface TransitionEvent<T = Element>
-    extends SyntheticEvent<T, NativeTransitionEvent> {
+  export interface TransitionEvent<T = Element> extends SyntheticEvent<
+    T,
+    NativeTransitionEvent
+  > {
     elapsedTime: number;
     propertyName: string;
     pseudoElement: string;

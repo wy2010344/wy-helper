@@ -137,7 +137,7 @@ export function measureLineHeight(
 ) {
   // const m = ctx.measureText('M');
   const fontHeight = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
-  const configLineHeight = valueOrGetToGet(_lineHeight || quote);
+  const configLineHeight = valueOrGetToGet(_lineHeight, quote);
   let lineHeight = configLineHeight(fontHeight);
   const minLineHeight = fontHeight * 1.5;
   if (lineHeight < minLineHeight) {

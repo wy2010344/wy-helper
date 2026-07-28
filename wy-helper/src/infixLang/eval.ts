@@ -31,7 +31,7 @@ export function topEvalExp(sub: ISubsitution, topRules: RuleScope, exp: IType) {
       let newSub = sub;
       set.forEach(value => {
         const toValue = walk(value, outSub);
-        if (!value.equals(toValue)) {
+        if (value != toValue) {
           newSub = extendSubsitution(value, toValue, newSub);
         }
       });

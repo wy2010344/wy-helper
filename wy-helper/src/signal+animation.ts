@@ -36,7 +36,7 @@ export function createObserverAnimateSignal(
         });
       }
     });
-    return [value.get.bind(value), destroy] as const;
+    return [value.get, destroy] as const;
   };
 }
 const g = getGlobalThis() as unknown as {

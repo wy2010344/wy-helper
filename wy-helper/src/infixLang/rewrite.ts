@@ -45,15 +45,9 @@ export function baseUnify(
     return [true, sub];
   }
   if (a instanceof KVar) {
-    if (a.equals(b)) {
-      return [true, sub];
-    }
     return [true, extendSubsitution(a, b, sub)];
   }
   if (b instanceof KVar) {
-    if (b.equals(a)) {
-      return [true, sub];
-    }
     return [true, extendSubsitution(b, a, sub)];
   }
   if (a instanceof IPair && b instanceof IPair && a.type == b.type) {
