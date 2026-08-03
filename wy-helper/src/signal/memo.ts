@@ -83,7 +83,10 @@ export function memo<T>(get: MemoGet<T> | MemoFun<T>, after?: SetValue<T>) {
       if (currentFun && listenerVersion != currentFun) {
         //在依赖注入期间
         listenerVersion = currentFun;
+        const oldRelay = signalCache.currentRelay;
+        signalCache.currentRelay = undefined;
         relays.forEach(mapInject);
+        signalCache.currentRelay = oldRelay;
       }
       addRelay(myGet, lastValue);
       checkLeave(myGet);
