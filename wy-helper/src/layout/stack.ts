@@ -9,6 +9,7 @@ export type AlignSelfFun = {
 export interface StackChildConvert<T> {
   align(n: T): AlignSelfFun | void;
   outerSize(n: T): number;
+  ignore(n: T): boolean;
 }
 
 export type AlignItem = 'center' | 'start' | 'end' | 'stretch';
@@ -55,6 +56,9 @@ export class StackLayout<T> implements Layout {
       }
       let width = 0;
       inside.children().forEach(it => {
+        if (convert.ignore(it)) {
+          return;
+        }
         if (convert.align(it)) {
           return;
         }
@@ -102,9 +106,17 @@ export class StackLayout<T> implements Layout {
     return this.size();
   }
   childSize(i: number): number {
+    const children = this.inside.children();
+    if (this.convert.ignore(children[i])) {
+      throw new LayoutError(`${i} is ignored, its size is not available in StackLayout`);
+    }
     return this.child(i, true);
   }
   childPosition(i: number): number {
+    const children = this.inside.children();
+    if (this.convert.ignore(children[i])) {
+      throw new LayoutError(`${i} is ignored, its position is not available in StackLayout`);
+    }
     return this.child(i, false);
   }
   allowSizeFromChildren(): boolean {
