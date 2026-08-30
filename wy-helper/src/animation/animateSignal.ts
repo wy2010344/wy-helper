@@ -144,9 +144,11 @@ export class AnimateSignal {
   private reSubscribe(callback: SetValue<number>) {
     return this.subscribeRequestAnimateFrame(time => {
       this.lock = true;
-      const v = callback(time);
-      this.lock = false;
-      return v;
+      try {
+        return callback(time);
+      } finally {
+        this.lock = false;
+      }
     }, this.didFinish);
   }
   set(n: number) {
@@ -192,10 +194,14 @@ export class AnimateSignal {
     this.didFinish(false);
     //config构造期间禁止修改
     this.lock = true;
-
-    const out = new SilentDiff(this.valueSet, this.get, onProcess, target);
-    const callback = config(out);
-    this.lock = false;
+    let out: SilentDiff;
+    let callback: ReturnType<AnimateSignalConfig>;
+    try {
+      out = new SilentDiff(this.valueSet, this.get, onProcess, target);
+      callback = config(out);
+    } finally {
+      this.lock = false;
+    }
     if (callback) {
       const [promise, resolve] = getOutResolvePromise<boolean>();
       this._onAnimation.set(true);
@@ -228,6 +234,10 @@ export class AnimateSignal {
     config: DeltaXSignalAnimationConfig = defaultSpringAnimationConfig,
     onProcess?: SetValue<number>
   ) {
+    //先检查锁再打断旧动画:锁内调用抛异常时,进行中的动画不受副作用影响
+    if (this.lock) {
+      throw '禁止在此时修改';
+    }
     this.didFinish(false);
     const diff = n - this.get();
     if (diff) {

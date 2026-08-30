@@ -1,6 +1,7 @@
 import { getGlobalThis } from '../getGlobalThis';
 import { GetValue } from '../setStateHelper';
 import {
+  emptyArray,
   EmptyFun,
   iterableToList,
   messageChannelCallback,
@@ -99,6 +100,10 @@ export function batchSignalEnd() {
     return;
   }
 
+  // 批次执行期间的错误（memo 出入栈不匹配、listener/effect 异常等）代表程序错误，
+  // 捕获后批次数据已部分消费、无法恢复一致性，因此不在此吞掉：
+  // 由调用方（引擎各事件处理器）独立捕获记录。
+  // 这里仅用 finally 还原批次标志，防止异常路径下批次系统永久停摆。
   let c = 0;
   if (signalCache.memoStack.length) {
     console.error(`memo没有正常退出`, ...signalCache.memoStack);
@@ -112,29 +117,37 @@ export function batchSignalEnd() {
     signalCache.nextBatch = currentBatch;
     //交换后
     const { deps, effects, listeners } = currentBatch;
+    // 监听器执行期间的错误同样向上传播；onWorkBatch 需要及时还原
     signalCache.onWorkBatch = currentBatch;
-    listeners.forEach(runListener);
-    listeners.clear();
+    try {
+      listeners.forEach(runListener);
+      listeners.clear();
 
-    while (deps.length) {
-      //因为可能在执行中动态增加,所以使用这个shift的方式
-      const fun = deps.shift()!;
-      fun.addFun();
+      while (deps.length) {
+        //因为可能在执行中动态增加,所以使用这个shift的方式
+        const fun = deps.shift()!;
+        fun.addFun();
+      }
+    } finally {
+      signalCache.onWorkBatch = undefined;
     }
-    signalCache.onWorkBatch = undefined;
-
     ///执行effect事件
+    // 效果执行期间的错误向上传播；onEffectRun 相关标志需要及时还原
     signalCache.onEffectRun = true;
-
     const keys = iterableToList(effects.keys()).sort(numberSortDesc);
     signalCache.onEffectKeys = keys;
-    while (keys.length) {
-      const key = keys.pop()!;
-      signalCache.onEffectLevel = key;
-      effects.get(key)?.forEach(run);
+    try {
+      while (keys.length) {
+        const key = keys.pop()!;
+        signalCache.onEffectLevel = key;
+        effects.get(key)?.forEach(run);
+      }
+      effects.clear();
+    } finally {
+      signalCache.onEffectRun = false;
+      signalCache.onEffectKeys = emptyArray;
+      signalCache.onEffectLevel = 0;
     }
-    effects.clear();
-    signalCache.onEffectRun = undefined;
     c++;
   }
   // if (c) {
