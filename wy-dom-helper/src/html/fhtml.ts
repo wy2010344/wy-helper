@@ -75,7 +75,7 @@ export type FSvgAttribute<T extends SvgElementType> = BSvgAttribute<T> &
   FStyleProps &
   FCssVaribute;
 
-export type FGetChildAttr<T> =
+export type FGetChildAttr<T, This = void> =
   | {
       childrenType: 'text';
       children: ValueOrGet<number | string>;
@@ -86,10 +86,18 @@ export type FGetChildAttr<T> =
     }
   | {
       childrenType?: never;
-      children?: CommonChildrenType<T>;
+      children?: CommonChildrenType<T, This>;
     };
 
-export type CommonChildrenType<T> = SetValue<T> | GetChild | number | string;
+type NestValue<T, This = void> =
+  | ((this: This, v: T) => void)
+  | NestValue<T, This>[];
+
+export type CommonChildrenType<T, This> =
+  | NestValue<T, This>
+  | GetChild
+  | number
+  | string;
 export interface GetChild {
   type: 'text' | 'html';
   (): string | number;
@@ -123,11 +131,15 @@ export function toHtml(ts: TemplateStringsArray, ...vs: VType[]) {
   });
 }
 
+type RenderPortal<T, This> = (
+  n: Node,
+  children: (this: This, node: T) => void
+) => void;
 export function renderFGetChildAttr<T>(
   node: Node,
   arg: FGetChildAttr<T>,
   mergeValue: MergeValue,
-  renderPortal: (n: Node, children: SetValue<Node>) => void
+  renderPortal: (n: Node, children: SetValue<T>) => void
 ) {
   if (arg.childrenType == 'text') {
     mergeValue(node, arg.children, setText);
@@ -142,11 +154,28 @@ export function renderFGetChildAttr<T>(
       } else if ((children as any).type == 'html') {
         mergeValue(node, arg.children, setHtml);
       } else {
+        //children就是函数。。。
         renderPortal(node, children as any);
       }
     } else if (tp == 'number' || tp == 'string') {
       mergeValue(node, children, setText);
+    } else if (Array.isArray(children)) {
+      renderPortal(node, function () {
+        //循环设值
+        children.forEach(child => {
+          circleSet.call(this, node, child as any);
+        });
+      });
     }
+  }
+}
+function circleSet<T, This>(this: This, node: T, children: NestValue<T, This>) {
+  if (Array.isArray(children)) {
+    children.forEach(child => {
+      circleSet.call(this, node, child as any);
+    });
+  } else {
+    children.call(this, node);
   }
 }
 
