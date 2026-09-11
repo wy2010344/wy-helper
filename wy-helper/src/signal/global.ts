@@ -83,10 +83,33 @@ export function signalOnUpdate() {
   return Boolean(signalCache.onWorkBatch);
 }
 
+// 批处理调度惰性创建：不在模块加载时创建 MessageChannel 端口，
+// 避免仅 import wy-helper 就常驻句柄，导致 node --test 跑完用例进程不退出。
+// 测试可用 setBatchRunner 注入确定性调度（如 setTimeout / 同步 flush），
+// 不再依赖环境里是否支持 MessageChannel。
+let messageCall: EmptyFun | undefined;
+/**
+ * 注入自定义批处理调度。
+ * - runner 接收 flush 函数，由调用方决定何时执行批次（可异步推迟、可同步）。
+ * - 传 null/undefined 复位为默认调度（MessageChannel，不支持则 setTimeout）。
+ */
+export function setBatchRunner(runner?: (flush: EmptyFun) => void) {
+  if (runner == null) {
+    messageCall = undefined;
+  } else {
+    messageCall = () => runner(batchSignalEnd);
+  }
+}
+function batchSignalCall() {
+  if (!messageCall) {
+    messageCall = messageChannelCallback(batchSignalEnd);
+  }
+  messageCall();
+}
 export function beginCurrentBatch() {
   if (!signalCache.beginBatch) {
     signalCache.beginBatch = true;
-    messageCall();
+    batchSignalCall();
   }
 }
 
@@ -154,7 +177,6 @@ export function batchSignalEnd() {
   //   console.log("render", c)
   // }
 }
-const messageCall = messageChannelCallback(batchSignalEnd);
 
 function runListener(o: TrackSignal<any>) {
   o.addFun();

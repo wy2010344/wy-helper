@@ -33,7 +33,12 @@ export function valueOrGetToGet<T, This = void, Args extends any[] = []>(
 }
 
 export { addEffect } from './effect';
-export { signalOnUpdate, signalCache, batchSignalEnd } from './global';
+export {
+  signalOnUpdate,
+  signalCache,
+  batchSignalEnd,
+  setBatchRunner,
+} from './global';
 export { type MemoGet, type MemoFun, memo, memoFun } from './memo';
 export {
   type OneSetStoreRef,
