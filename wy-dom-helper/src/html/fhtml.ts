@@ -180,11 +180,17 @@ function circleSet<T, This>(this: This, node: T, children: NestValue<T, This>) {
 }
 
 export interface MergeValue {
-  (node: Node, value: any, setValue: (value: any, v: Node) => void): void;
+  (
+    node: Node,
+    value: any,
+    setValue: (value: any, v: Node) => void,
+    noCache?: boolean
+  ): void;
   (
     node: Node,
     value: any,
     setValue: (value: any, v: Node, ext: string) => void,
+    noCache: boolean,
     ext: string
   ): void;
 }
@@ -213,21 +219,27 @@ function createRenderFAttr(updateMAttr: UpdateProp) {
         addEvent(node, key, arg[key]);
       } else if (key.startsWith(DATA_PREFIX)) {
         const dataAttr = key.slice(DATA_PREFIX.length);
-        mergeValue(node, arg[key], updateDataSet, dataAttr);
+        mergeValue(node, arg[key], updateDataSet, false, dataAttr);
       } else if (key.startsWith(ARIA_PREFIX)) {
         const ariaKey = key.slice(ARIA_PREFIX.length);
-        mergeValue(node, arg[key], updateAttr, `aria-${ariaKey}`);
+        mergeValue(node, arg[key], updateAttr, false, `aria-${ariaKey}`);
       } else if (key.startsWith(S_PREFIX)) {
         const styleKey = key.slice(S_PREFIX.length);
-        mergeValue(node, arg[key], updateStyle, styleKey);
+        mergeValue(node, arg[key], updateStyle, false, styleKey);
       } else if (key.startsWith(CSS_PREFIX)) {
         const cssVariable = key.slice(CSS_PREFIX.length);
-        mergeValue(node, arg[key], updateCssVariable, `--${cssVariable}`);
+        mergeValue(
+          node,
+          arg[key],
+          updateCssVariable,
+          false,
+          `--${cssVariable}`
+        );
       } else if (
         !key.startsWith(CHILDREN_PREFIX) &&
         !ignoreKeys.includes(key)
       ) {
-        mergeValue(node, arg[key], updateMAttr, key);
+        mergeValue(node, arg[key], updateMAttr, false, key);
       }
     }
     renderFGetChildAttr(node, arg, mergeValue, renderPortal);
@@ -263,24 +275,38 @@ function updateProp(
   oldDes[key]?.();
   if (key.startsWith(DATA_PREFIX)) {
     const dataAttr = key.slice(DATA_PREFIX.length);
-    oldDes[key] = mergeValueDes(node, value, updateDataSet, dataAttr);
+    oldDes[key] = mergeValueDes(node, value, updateDataSet, false, dataAttr);
   } else if (key.startsWith(ARIA_PREFIX)) {
     const ariaKey = key.slice(ARIA_PREFIX.length);
-    oldDes[key] = mergeValueDes(node, value, updateAttr, `aria-${ariaKey}`);
+    oldDes[key] = mergeValueDes(
+      node,
+      value,
+      updateAttr,
+      false,
+      `aria-${ariaKey}`
+    );
   } else if (key.startsWith(S_PREFIX)) {
     const styleKey = key.slice(S_PREFIX.length);
-    oldDes[key] = mergeValueDes(node, value, updateStyle, styleKey);
+    oldDes[key] = mergeValueDes(node, value, updateStyle, false, styleKey);
   } else if (key.startsWith(CSS_PREFIX)) {
     const cssVariable = key.slice(CSS_PREFIX.length);
     oldDes[key] = mergeValueDes(
       node,
       value,
       updateCssVariable,
+      false,
       `--${cssVariable}`
     );
   } else if (!key.startsWith(CHILDREN_PREFIX) && !ignoreKeys.includes(key)) {
     //普通属性key
-    oldDes[key] = mergeValueDes(node, value, updateMAttr, key);
+    oldDes[key] = mergeValueDes(
+      node,
+      value,
+      updateMAttr,
+      //目前简单处理这种
+      key == 'value' || key == 'checked',
+      key
+    );
   }
 }
 

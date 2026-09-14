@@ -1,7 +1,7 @@
 {
   "name": "wy-helper",
   "author": "wy2010344",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "license": "MIT",
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
@@ -20,9 +20,8 @@
   "bugs": {
     "url": "https://github.com/wy2010344/wy-helper/issues"
   },
-  "typings": "dist/index.d.ts",
-  "module": "dist/index.mjs",
-  "main": "dist/index.js",
+  "module": "./dist/index.mjs",
+  "main": "./dist/index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wy2010344/wy-helper.git",
@@ -124,5 +123,6 @@
     "tsdown": "catalog:",
     "vite": "catalog:",
     "vitest": "^4.1.7"
-  }
+  },
+  "types": "./dist/index.d.ts"
 }

@@ -29,6 +29,9 @@ export function updateDom(value: any, node: any, key: string) {
       value = '';
     }
   }
+  if ((key == 'value' || key == 'checked') && node[key] == value) {
+    return;
+  }
   node[key] = value;
 }
 
