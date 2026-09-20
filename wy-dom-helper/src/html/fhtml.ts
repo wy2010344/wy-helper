@@ -12,10 +12,10 @@ import {
 } from 'wy-helper';
 import { PureCSSProperties } from '../util';
 import {
+  AriaAttributes,
   BDomAttribute,
   BSvgAttribute,
   DomElementType,
-  React,
   SvgElementType,
 } from './html';
 import {
@@ -60,7 +60,7 @@ type FReplaceAria<Key> = Key extends string
   : Key;
 
 export type FAriaAttribute = {
-  [key in keyof React.AriaAttributes as FReplaceAria<key>]: React.AriaAttributes[key];
+  [key in keyof AriaAttributes as FReplaceAria<key>]: AriaAttributes[key];
 };
 
 export type FDomAttribute<T extends DomElementType> = BDomAttribute<T> &
@@ -250,7 +250,7 @@ export const renderFDomAttr = createRenderFAttr(updateDom);
 export const renderFSvgAttr = createRenderFAttr(updateSvg);
 
 export const mergeValueDes: MergeValue = function (node, value, setValue) {
-  const ext = arguments[3];
+  const ext = arguments[4];
   if (isSyncFun(value)) {
     return value(setValue, node, ext);
   } else {
@@ -258,7 +258,7 @@ export const mergeValueDes: MergeValue = function (node, value, setValue) {
   }
 };
 export const mergeValueSkipDes: MergeValue = function (node, value, setValue) {
-  const ext = arguments[3];
+  const ext = arguments[4];
   if (isSyncFun(value)) {
     return value(setValue, node, ext);
   }

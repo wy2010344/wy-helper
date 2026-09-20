@@ -1,9 +1,9 @@
 import { MergeValue, mergeValueDes, mergeValueSkipDes } from './fhtml';
 import {
+  AriaAttributes,
   BDomAttribute,
   BSvgAttribute,
   DomElementType,
-  React,
   SvgElementType,
 } from './html';
 import { DataAttr, Props } from './updateDom';
@@ -32,7 +32,7 @@ type XCssVaribute = {
 export type XDomAttribute<T extends DomElementType> = {
   className?: string;
 } & DataAttr &
-  React.AriaAttributes &
+  AriaAttributes &
   BDomAttribute<T> &
   XStyleProps &
   XCssVaribute;
@@ -40,7 +40,7 @@ export type XDomAttribute<T extends DomElementType> = {
 export type XSvgAttribute<T extends SvgElementType> = {
   className?: string;
 } & DataAttr &
-  React.AriaAttributes &
+  AriaAttributes &
   BSvgAttribute<T> &
   XStyleProps &
   XCssVaribute;
@@ -65,18 +65,31 @@ function updateProp(
   oldDes[key] = undefined;
   if (key.startsWith(DATA_PREFIX)) {
     const dataAttr = key.slice(DATA_PREFIX.length);
-    oldDes[key] = mergeValueDes(node, value, updateDataSet, dataAttr);
+    oldDes[key] = mergeValueDes(node, value, updateDataSet, false, dataAttr);
   } else if (key.startsWith(ARIA_PREFIX)) {
-    oldDes[key] = mergeValueDes(node, value, updateAttr, key);
+    oldDes[key] = mergeValueDes(node, value, updateAttr, false, key);
   } else if (key.startsWith(S_PREFIX)) {
     const styleKey = key.slice(S_PREFIX.length);
-    oldDes[key] = mergeValueDes(node, value, updateStyle, styleKey);
+    oldDes[key] = mergeValueDes(node, value, updateStyle, false, styleKey);
   } else if (key.startsWith(CSS_PREFIX)) {
     const cssVariable = key.slice(CSS_PREFIX.length);
     const cssVariableKey = `--${cssVariable}`;
-    oldDes[key] = mergeValueDes(node, value, updateCssVariable, cssVariableKey);
+    oldDes[key] = mergeValueDes(
+      node,
+      value,
+      updateCssVariable,
+      false,
+      cssVariableKey
+    );
   } else if (!key.startsWith(CHILDREN_PREFIX) && !ingoreKeys.includes(key)) {
-    oldDes[key] = mergeValueDes(node, value, updateMAttr, key);
+    oldDes[key] = mergeValueDes(
+      node,
+      value,
+      updateMAttr,
+      //目前简单处理这种
+      key == 'value' || key == 'checked',
+      key
+    );
   }
 }
 

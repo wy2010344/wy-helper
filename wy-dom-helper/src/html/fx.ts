@@ -1,3 +1,4 @@
+import { EmptyFun } from 'wy-helper';
 import { getAttributeAlias } from '../getAttributeAlias';
 
 // export type FDomAttributeC<T extends DomElementType> = Omit<BDomAttribute<T>, 'className'>
@@ -82,12 +83,45 @@ export function isEvent(key: string) {
 }
 const ON_PREFIX = 'on';
 const CAPTURE_SUFFIX = 'Capture';
+const VALUE_CHANGE_KEY = 'onValueChange';
+
+function inputWithComposition(node: any, fun: EmptyFun) {
+  const input = (e: InputEvent) => {
+    if (e.isComposing || e.inputType == 'insertCompositionText') {
+      return;
+    }
+    fun(e);
+  };
+  node.addEventListener('input', input, false);
+  node.addEventListener('compositionend', fun, false);
+  return function () {
+    node.removeEventListener('input', input, false);
+    node.removeEventListener('compositionend', fun, false);
+  };
+}
+
 export function mergeEvent(
   node: any,
   key: string,
   oldValue: any,
   newValue?: any
 ) {
+  // Special handling for onValueChange - bind to input event
+  if (key === VALUE_CHANGE_KEY) {
+    const wrapperKey = '__onValueChangeWrapper__';
+    if (oldValue) {
+      const oldWrapper = node[wrapperKey];
+      if (oldWrapper) {
+        oldWrapper();
+        delete node[wrapperKey];
+      }
+    }
+    if (newValue) {
+      node[wrapperKey] = inputWithComposition(node, newValue);
+    }
+    return;
+  }
+
   let eventType = key.slice(ON_PREFIX.length);
   let capture = false;
   if (eventType.endsWith(CAPTURE_SUFFIX)) {

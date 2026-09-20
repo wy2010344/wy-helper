@@ -1,5 +1,4 @@
 import { GetValue, SetValue, StoreRef } from 'wy-helper';
-import { React } from '../html/html';
 import { MbRange, browser, initRecord, mb } from '../mb';
 export * from '../mb';
 export * from './editFix';
@@ -339,7 +338,7 @@ export function addSimpleEvent(
   model: StoreRef<ContentEditableModel>,
   div: HTMLElement
 ) {
-  div.addEventListener('input', function (e: React.FormEvent) {
+  div.addEventListener('input', function (e: InputEvent) {
     if (e.isComposing) {
       return;
     }

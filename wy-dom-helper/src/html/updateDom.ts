@@ -8,12 +8,12 @@ import {
   SyncFun,
 } from 'wy-helper';
 import {
+  AriaAttributes,
   BDomAttribute,
   BDomEvent,
   BSvgAttribute,
   BSvgEvent,
   DomElementType,
-  React,
   SvgElementType,
 } from './html';
 import { CSSProperties } from '../util';
@@ -43,7 +43,7 @@ export type DataAttr = {
 };
 
 export type DomAttribute<T extends DomElementType> = WithCenterMap<
-  BDomAttribute<T> & React.AriaAttributes & DataAttr
+  BDomAttribute<T> & AriaAttributes & DataAttr
 > &
   BDomEvent<T>;
 
@@ -56,7 +56,7 @@ export type DomAttributeSO<T extends DomElementType> = DomAttribute<T> & {
 };
 
 export type SvgAttribute<T extends SvgElementType> = WithCenterMap<
-  BSvgAttribute<T> & React.AriaAttributes & DataAttr
+  BSvgAttribute<T> & AriaAttributes & DataAttr
 > &
   BSvgEvent<T>;
 
