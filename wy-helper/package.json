@@ -70,11 +70,11 @@
       "import": "./dist/forceLayout.mjs",
       "require": "./dist/forceLayout.js"
     },
-    "./viteImportmap": {
-      "development": "./src/viteImportmap/index.ts",
-      "types": "./dist/viteImportmap.d.ts",
-      "import": "./dist/viteImportmap.mjs",
-      "require": "./dist/viteImportmap.js"
+    "./viteImportMap": {
+      "development": "./src/viteImportMap/index.ts",
+      "types": "./dist/viteImportMap.d.ts",
+      "import": "./dist/viteImportMap.mjs",
+      "require": "./dist/viteImportMap.js"
     },
     "./infix-o": {
       "development": "./src/infix-o/index.ts",
@@ -87,16 +87,13 @@
       "types": "./dist/state-function.d.ts",
       "import": "./dist/state-function.mjs",
       "require": "./dist/state-function.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
+  "sideEffects": false,
   "files": [
     "dist",
-    "src",
-    "tokenParser",
-    "kanren",
-    "Vue",
-    "router",
-    "infix-o"
+    "src"
   ],
   "scripts": {
     "build": "tsdown",

@@ -22,12 +22,17 @@ export function createRunSyncTasks() {
     syncTasks.push(fun);
     if (!startSyncTask) {
       startSyncTask = true;
-      let task = syncTasks.pop();
-      while (task) {
-        task();
-        task = syncTasks.pop();
+      try {
+        let task = syncTasks.pop();
+        while (task) {
+          task();
+          task = syncTasks.pop();
+        }
+      } finally {
+        // 任务抛错时立即恢复锁并丢弃未执行任务,错误继续向上抛
+        syncTasks.length = 0;
+        startSyncTask = false;
       }
-      startSyncTask = false;
     }
   };
 }

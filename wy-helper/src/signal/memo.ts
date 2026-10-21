@@ -33,10 +33,15 @@ function memoGet<T>(
   lastValue: T,
   init: boolean
 ) {
+  const oldRelay = signalCache.currentRelay;
   relays.clear();
   signalCache.currentRelay = relays;
-  const v = (get as any)(lastValue, init);
-  return v;
+  try {
+    return (get as any)(lastValue, init) as T;
+  } finally {
+    // 只复位追踪状态,错误继续向上抛
+    signalCache.currentRelay = oldRelay;
+  }
 }
 
 function checkEnter(memo: any) {
@@ -75,53 +80,67 @@ export function memo<T>(get: MemoGet<T> | MemoFun<T>, after?: SetValue<T>) {
     afters.push(after);
   }
   const myGet = function () {
+    const stackDepth = signalCache.memoStack.length;
     checkEnter(myGet);
-    signalCache.callGet = true;
-    //每一次都不能跳过,主要是trackSignal需要流入依赖
-    if (stateVersion == signalCache.state.version) {
-      const currentFun = signalCache.currentFun;
-      if (currentFun && listenerVersion != currentFun) {
-        //在依赖注入期间
-        listenerVersion = currentFun;
-        const oldRelay = signalCache.currentRelay;
-        signalCache.currentRelay = undefined;
-        relays.forEach(mapInject);
+    try {
+      signalCache.callGet = true;
+      //每一次都不能跳过,主要是trackSignal需要流入依赖
+      if (stateVersion == signalCache.state.version) {
+        const currentFun = signalCache.currentFun;
+        if (currentFun && listenerVersion != currentFun) {
+          //在依赖注入期间
+          listenerVersion = currentFun;
+          const oldRelay = signalCache.currentRelay;
+          signalCache.currentRelay = undefined;
+          try {
+            relays.forEach(mapInject);
+          } finally {
+            signalCache.currentRelay = oldRelay;
+          }
+        }
+        addRelay(myGet, lastValue);
+        checkLeave(myGet);
+        return lastValue;
+      }
+      //这里一定要重置
+      listenerVersion = undefined;
+      stateVersion = signalCache.state.version;
+
+      let shouldAfter = false;
+      const oldRelay = signalCache.currentRelay;
+      signalCache.currentRelay = undefined;
+      try {
+        if (inited) {
+          //这个relayChange,会检查上游的更新
+          if (relayChange(relays)) {
+            const value = memoGet(relays, get, lastValue, inited);
+            if (value != lastValue) {
+              lastValue = value;
+              shouldAfter = true;
+            }
+          }
+        } else {
+          lastValue = memoGet(relays, get, lastValue, inited);
+          inited = true;
+          shouldAfter = true;
+        }
+      } finally {
         signalCache.currentRelay = oldRelay;
       }
       addRelay(myGet, lastValue);
+      //必须放在前面
       checkLeave(myGet);
-      return lastValue;
-    }
-    //这里一定要重置
-    listenerVersion = undefined;
-    stateVersion = signalCache.state.version;
-
-    let shouldAfter = false;
-    const oldRelay = signalCache.currentRelay;
-    signalCache.currentRelay = undefined;
-    if (inited) {
-      //这个relayChange,会检查上游的更新
-      if (relayChange(relays)) {
-        const value = memoGet(relays, get, lastValue, inited);
-        if (value != lastValue) {
-          lastValue = value;
-          shouldAfter = true;
-        }
+      if (shouldAfter) {
+        //是需要控制每次函数执行后执行,还是每次结果不同才执行?
+        afters.forEach(after => after(lastValue));
       }
-    } else {
-      lastValue = memoGet(relays, get, lastValue, inited);
-      inited = true;
-      shouldAfter = true;
+      return lastValue;
+    } finally {
+      // 异常退出时清掉残留的 memo 栈,不吞错误
+      if (signalCache.memoStack.length > stackDepth) {
+        signalCache.memoStack.length = stackDepth;
+      }
     }
-    signalCache.currentRelay = oldRelay;
-    addRelay(myGet, lastValue);
-    //必须放在前面
-    checkLeave(myGet);
-    if (shouldAfter) {
-      //是需要控制每次函数执行后执行,还是每次结果不同才执行?
-      afters.forEach(after => after(lastValue));
-    }
-    return lastValue;
   } as MemoFun<T>;
   myGet.memorized = true;
   myGet.afters = afters;

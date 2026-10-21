@@ -1,63 +1,91 @@
 # wy-helper
 
-A comprehensive JavaScript utility library with various helper functions.
+MVE 的底层工具库：响应式 Signal、调度器、状态容器，以及 Promise、动画、几何、日期等通用工具。
 
-## Installation
+## 安装
 
 ```bash
 npm install wy-helper
-# or
-pnpm add wy-helper
-# or
-yarn add wy-helper
 ```
 
-## Features
+## 响应式
 
-### Core Modules
+```ts
+import {
+  addEffect,
+  batchSignalEnd,
+  createLateSignal,
+  createSignal,
+  memo,
+  trackSignal,
+} from 'wy-helper'
 
-- **tokenParser** - Token parsing utilities
-- **infixLang** - Infix language processing
-- **kanren** - Logic programming utilities
-- **ObserverCenter** - Observer pattern implementation
-- **router** - Routing utilities
-- **forceLayout** - Force-directed layout algorithms
-- **viteImportmap** - Vite import map utilities
-- **infix-o** - Infix operation utilities
+const count = createSignal(0)
 
-### Dependencies
+// memo 的回调参数：(上一次的值, 是否已初始化)
+const double = memo(() => count.get() * 2)
 
-- `d3-binarytree` - Binary tree data structures
-- `d3-octree` - Octree data structures
-- `d3-quadtree` - Quadtree data structures
+// 建立依赖追踪，返回值用于解除追踪
+const dispose = trackSignal(double, value => {
+  console.log('double =', value)
+})
 
-## Usage
+count.set(1)
+batchSignalEnd() // 立即冲刷当前批次
 
-```typescript
-// Import from main module
-import {} from /* utilities */ 'wy-helper';
+addEffect(() => {
+  console.log('本批更新完成')
+})
 
-// Import specific modules
-import {} from /* parser utilities */ 'wy-helper/tokenParser';
-import {} from /* kanren utilities */ 'wy-helper/kanren';
-import {} from /* router utilities */ 'wy-helper/router';
-import {} from /* observer utilities */ 'wy-helper/ObserverCenter';
+dispose()
 ```
 
-## Submodule Exports
+| API | 说明 |
+| --- | --- |
+| `createSignal(value, shouldChange?)` | 可读可写信号，返回 `{ get, set }`；默认 `simpleNotEqual` |
+| `createLateSignal(value, shouldChange?)` | 只暴露 `get` 与一次性的 `getOnlySet()` |
+| `memo(get, after?)` | 缓存计算值，结果未变化时不向下游传播；`after` 在结果变化后执行 |
+| `trackSignal(get, set?)` | 依赖追踪，返回解除函数 |
+| `addEffect(fn, level?)` | 批量更新结束后的回调，`level` 控制执行顺序 |
+| `batchSignalEnd()` | 手动结束当前批次 |
+| `toProxySignal(obj)` | 把对象的每个字段转为独立信号 |
+| `signalCache` / `setBatchRunner` | 调度内部状态与自定义批量执行器 |
 
-- `wy-helper/tokenParser` - Token parsing functionality
-- `wy-helper/infixLang` - Infix language processing
-- `wy-helper/kanren` - Logic programming tools
-- `wy-helper/ObserverCenter` - Observer pattern utilities
-- `wy-helper/router` - Routing functionality
-- `wy-helper/forceLayout` - Layout algorithms
-- `wy-helper/viteImportmap` - Vite integration
-- `wy-helper/infix-o` - Infix operations
+## 主入口其它模块
 
-## Development
+- `storeRef` - `StoreRef` 类型与 store 工具
+- `equal` - `simpleEqual` / `simpleNotEqual` / 数组与对象比较
+- `setStateHelper` - `GetValue` / `SetValue` / `Quote` 等类型
+- `scheduler` - 同步/异步任务调度
+- `effectLevel` - effect 层级常量
+- `ValueCenter` / `ModelValue` / `LinkValue` - 值中心、双向模型、联动值
+- `promise` - `PromiseResult`、串行请求、可中止 Promise、资源中心
+- `animation` / `signal+animation` / `interpolate` - 动画、插值、缓动
+- `geometry` / `layout` / `computePosition` - 几何与布局计算
+- `date` / `YearMonthVirtualView` / `WeekVirtualView` - 日期与日历虚拟视图
+- `recycleView` / `reorder` / `dragMove` / `diffMove` - 回收视图、排序、拖拽、diff 移动
+- `path` / `color` / `material` / `input` / `canInput` - 路径、颜色、材质、输入判定
+- `createOrProxy` - 按 key 懒创建代理对象
+- `getGlobalThis` - 跨环境全局对象
+- `debounceAndThrottle` / `tasks` - 防抖节流与任务队列
 
-See the [main README](../README.md) for development setup instructions.
+## 子路径
+
+| 子路径 | 内容 |
+| --- | --- |
+| `wy-helper/tokenParser` | 词法/语法解析工具 |
+| `wy-helper/infixLang` | 中缀表达式语言 |
+| `wy-helper/kanren` | 逻辑编程 |
+| `wy-helper/ObserverCenter` | 观察者中心 |
+| `wy-helper/router` | 路由 |
+| `wy-helper/forceLayout` | 力导向布局 |
+| `wy-helper/viteImportMap` | 生成 Vite import map |
+| `wy-helper/infix-o` | 中缀运算 |
+| `wy-helper/state-function` | 状态函数 |
+
+```ts
+import * as kanren from 'wy-helper/kanren'
+```
 
 ## License
 

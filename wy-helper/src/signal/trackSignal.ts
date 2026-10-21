@@ -33,9 +33,15 @@ export class TrackSignal<T> {
       return;
     }
 
+    const before = signalCache.currentFun;
     signalCache.currentFun = this;
-    const value = this.get(this.lastValue, this.inited as true);
-    signalCache.currentFun = undefined;
+    let value: T;
+    try {
+      value = this.get(this.lastValue, this.inited as true);
+    } finally {
+      // 只复位追踪状态,错误继续向上抛
+      signalCache.currentFun = before;
+    }
 
     if (this.inited) {
       if (value != this.lastValue) {
@@ -87,12 +93,13 @@ export function collectSignal(callback: EmptyFun) {
      * @returns
      */
     collect<T>(fun: GetValue<T>) {
+      const before = signalCache.currentFun;
       signalCache.currentFun = t;
-      // signalCache.currentFunRemove = remove;
-      const value = fun();
-      signalCache.currentFun = undefined;
-      // signalCache.currentFunRemove = false;
-      return value;
+      try {
+        return fun();
+      } finally {
+        signalCache.currentFun = before;
+      }
     },
   };
 }

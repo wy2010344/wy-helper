@@ -1,4 +1,4 @@
-import { batchSignalEnd, createSignal } from 'wy-helper';
+import { batchSignalEnd, createSignal, getGlobalThis } from 'wy-helper';
 
 export * from './dragMove';
 export * from './hightlightHelper';
@@ -25,16 +25,32 @@ export * from './cssObjectToString';
 export { isEvent, addEvent } from './html/fx';
 export type { UpdateProp } from './html/fx';
 
-const w = createSignal(window?.innerWidth);
-const h = createSignal(window?.innerHeight);
-window?.addEventListener('resize', function () {
-  w.set(window.innerWidth);
-  h.set(window.innerHeight);
-  batchSignalEnd();
-});
+const win = getGlobalThis().window;
+const w = createSignal(win?.innerWidth ?? 0);
+const h = createSignal(win?.innerHeight ?? 0);
+
+let resizeListening = false;
+function ensureResizeListener() {
+  if (resizeListening || !win) {
+    return;
+  }
+  resizeListening = true;
+  win.addEventListener('resize', function () {
+    w.set(win.innerWidth);
+    h.set(win.innerHeight);
+    batchSignalEnd();
+  });
+}
+
 export const windowSize = {
-  width: w.get,
-  height: h.get,
+  width() {
+    ensureResizeListener();
+    return w.get();
+  },
+  height() {
+    ensureResizeListener();
+    return h.get();
+  },
 };
 
 export type ReadURLSearchParam = Omit<
@@ -42,13 +58,29 @@ export type ReadURLSearchParam = Omit<
   'append' | 'delete' | 'set'
 >;
 
-export const devicePixelRatio = createSignal(window?.devicePixelRatio || 1);
-if (globalThis.window) {
-  matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`).addEventListener(
-    'change',
-    e => {
-      devicePixelRatio.set(window.devicePixelRatio);
+const dpr = createSignal(win?.devicePixelRatio || 1);
+
+let dprListening = false;
+function ensureDprListener() {
+  if (dprListening || !win || typeof win.matchMedia != 'function') {
+    return;
+  }
+  dprListening = true;
+  win
+    .matchMedia(`(resolution: ${win.devicePixelRatio}dppx)`)
+    .addEventListener('change', () => {
+      dpr.set(win.devicePixelRatio);
       batchSignalEnd();
-    }
-  );
+    });
 }
+
+export const devicePixelRatio = {
+  get() {
+    ensureDprListener();
+    return dpr.get();
+  },
+  set(v: number) {
+    ensureDprListener();
+    return dpr.set(v);
+  },
+};

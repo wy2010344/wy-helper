@@ -53,11 +53,10 @@
     "url": "git+https://github.com/wy2010344/wy-helper.git",
     "directory": "wy-dom-helper"
   },
+  "sideEffects": false,
   "files": [
     "dist",
-    "src",
-    "contentEditable",
-    "canvas"
+    "src"
   ],
   "scripts": {
     "build": "tsdown",
