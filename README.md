@@ -2,6 +2,9 @@
 
 A comprehensive JavaScript utility library with various helper functions.
 
+<!-- TODO(P0-1): 可选：加一张 GIF 展示信号驱动更新（标题下、定位句后）-->
+
+
 ## Packages
 
 - **wy-helper** - Core JavaScript utilities and helper functions
